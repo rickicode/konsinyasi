@@ -5,8 +5,7 @@
   import Dashboard from './pages/Dashboard.svelte';
   import VisitList from './pages/VisitList.svelte';
   import OutletList from './pages/OutletList.svelte';
-  import RawMaterialList from './pages/RawMaterialList.svelte';
-  import ProductList from './pages/ProductList.svelte';
+  import MasterPage from './pages/MasterPage.svelte';
   import Users from './pages/Users.svelte';
 
   type User = {
@@ -17,7 +16,7 @@
     status?: string;
   };
 
-  type Tab = 'beranda' | 'kunjungan' | 'warung' | 'bahan-baku' | 'produk' | 'pengguna';
+  type Tab = 'beranda' | 'kunjungan' | 'warung' | 'master' | 'pengguna';
 
   let user = $state<User | null>(null);
   let tab = $state<Tab>('beranda');
@@ -27,8 +26,7 @@
     { key: 'beranda', label: 'Beranda' },
     { key: 'kunjungan', label: 'Kunjungan' },
     { key: 'warung', label: 'Warung' },
-    { key: 'bahan-baku', label: 'Bahan' },
-    { key: 'produk', label: 'Produk' },
+    { key: 'master', label: 'Master' },
   ];
 
   async function restoreSession() {
@@ -118,10 +116,8 @@
         <VisitList />
       {:else if tab === 'warung'}
         <OutletList />
-      {:else if tab === 'bahan-baku'}
-        <RawMaterialList />
-      {:else if tab === 'produk'}
-        <ProductList />
+      {:else if tab === 'master'}
+        <MasterPage />
       {:else if tab === 'pengguna'}
         <Users />
       {/if}
