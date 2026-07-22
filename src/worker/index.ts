@@ -1,6 +1,7 @@
 import { Hono } from "hono";
+import type { Env } from "./types.js";
 
-const app = new Hono();
+const app = new Hono<Env>();
 
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 
