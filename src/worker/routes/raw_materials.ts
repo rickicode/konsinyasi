@@ -5,6 +5,7 @@ import type { Env } from "../types.js";
 import { createClient } from "../db/client.js";
 import { raw_materials as rawMaterials } from "../db/schema.js";
 import { AppError, ValidationError } from "../lib/errors.js";
+import { recalculateAllProductsUsingMaterial } from "../services/hpp.js";
 
 const baseUnitEnum = ["ml", "l", "cl", "gr", "kg", "pcs"] as const;
 
@@ -114,6 +115,12 @@ rawMaterialsRoute.patch("/:id", async (c) => {
     .update(rawMaterials)
     .set(setValues)
     .where(eq(rawMaterials.id, id));
+
+  const shouldRecalcHPP =
+    setValues.price_per_base_unit !== undefined || setValues.base_unit !== undefined;
+  if (shouldRecalcHPP) {
+    await recalculateAllProductsUsingMaterial(db, id);
+  }
 
   const rows = await db
     .select()

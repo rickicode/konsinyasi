@@ -7,6 +7,7 @@ import auth from "./routes/auth.js";
 import users from "./routes/users.js";
 import settings from "./routes/settings.js";
 import rawMaterials from "./routes/raw_materials.js";
+import products from "./routes/products.js";
 
 const app = new Hono<Env>();
 
@@ -17,6 +18,7 @@ app.use("/api/auth/me", requireAuth);
 
 app.use("/api/users/*", requirePermission("users:manage"));
 app.use("/api/raw-materials/*", requirePermission("raw_materials:manage"));
+app.use("/api/products/*", requirePermission("products:manage"));
 
 app.get("/api/settings", requireAuth);
 app.put("/api/settings/geofence", requirePermission("settings:write"));
@@ -25,6 +27,7 @@ app.route("/api/auth", auth);
 app.route("/api/users", users);
 app.route("/api/settings", settings);
 app.route("/api/raw-materials", rawMaterials);
+app.route("/api/products", products);
 
 app.onError((err, c) => {
   if (err instanceof AppError) {
