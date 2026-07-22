@@ -23,7 +23,7 @@ mediaRoute.get("/*", async (c) => {
 
   return c.body(object.body, 200, {
     "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
-    "Cache-Control": "public, max-age=86400",
+    "Cache-Control": "private, max-age=86400",
   });
 });
 

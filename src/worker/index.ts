@@ -26,6 +26,8 @@ app.use("/api/outlets/*", requirePermission("outlets:manage"));
 app.get("/api/settings", requireAuth);
 app.put("/api/settings/geofence", requirePermission("settings:write"));
 
+app.use("/api/media/*", requireAuth);
+
 app.route("/api/media", media);
 
 app.route("/api/auth", auth);
