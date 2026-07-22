@@ -6,6 +6,7 @@ import { requirePermission } from "./lib/rbac.js";
 import auth from "./routes/auth.js";
 import users from "./routes/users.js";
 import settings from "./routes/settings.js";
+import rawMaterials from "./routes/raw_materials.js";
 
 const app = new Hono<Env>();
 
@@ -15,6 +16,7 @@ app.use("/api/auth/logout", requireAuth);
 app.use("/api/auth/me", requireAuth);
 
 app.use("/api/users/*", requirePermission("users:manage"));
+app.use("/api/raw-materials/*", requirePermission("raw_materials:manage"));
 
 app.get("/api/settings", requireAuth);
 app.put("/api/settings/geofence", requirePermission("settings:write"));
@@ -22,6 +24,7 @@ app.put("/api/settings/geofence", requirePermission("settings:write"));
 app.route("/api/auth", auth);
 app.route("/api/users", users);
 app.route("/api/settings", settings);
+app.route("/api/raw-materials", rawMaterials);
 
 app.onError((err, c) => {
   if (err instanceof AppError) {

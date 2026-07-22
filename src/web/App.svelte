@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { api } from './lib/api.js';
   import Login from './pages/Login.svelte';
   import Dashboard from './pages/Dashboard.svelte';
   import VisitList from './pages/VisitList.svelte';
   import OutletList from './pages/OutletList.svelte';
+  import RawMaterialList from './pages/RawMaterialList.svelte';
   import Users from './pages/Users.svelte';
 
   type User = {
@@ -14,7 +16,7 @@
     status?: string;
   };
 
-  type Tab = 'beranda' | 'kunjungan' | 'warung' | 'pengguna';
+  type Tab = 'beranda' | 'kunjungan' | 'warung' | 'bahan-baku' | 'pengguna';
 
   let user = $state<User | null>(null);
   let tab = $state<Tab>('beranda');
@@ -24,11 +26,8 @@
     { key: 'beranda', label: 'Beranda' },
     { key: 'kunjungan', label: 'Kunjungan' },
     { key: 'warung', label: 'Warung' },
+    { key: 'bahan-baku', label: 'Bahan' },
   ];
-
-  async function api(path: string, options?: RequestInit) {
-    return fetch(path, { ...options, credentials: 'include' });
-  }
 
   async function restoreSession() {
     try {
@@ -117,6 +116,8 @@
         <VisitList />
       {:else if tab === 'warung'}
         <OutletList />
+      {:else if tab === 'bahan-baku'}
+        <RawMaterialList />
       {:else if tab === 'pengguna'}
         <Users />
       {/if}
