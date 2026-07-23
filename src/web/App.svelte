@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api } from './lib/api.js';
+  import { allowedTabs } from './lib/role.js';
   import Login from './pages/Login.svelte';
   import Dashboard from './pages/Dashboard.svelte';
   import VisitList from './pages/VisitList.svelte';
@@ -37,12 +38,15 @@
     tab = 'kunjungan';
   }
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'beranda', label: 'Beranda' },
-    { key: 'kunjungan', label: 'Kunjungan' },
-    { key: 'warung', label: 'Warung' },
-    { key: 'master', label: 'Master' },
-  ];
+  const tabs = $derived(allowedTabs(user?.role ?? ''));
+  const allowedTabKeys = $derived(new Set(tabs.map((tab) => tab.key)));
+  const tabAllowed = $derived(allowedTabKeys.has(tab));
+
+  $effect(() => {
+    if (user && !tabAllowed) {
+      tab = 'beranda';
+    }
+  });
 
   async function restoreSession() {
     try {
@@ -125,7 +129,12 @@
 
     <!-- Main content -->
     <main class="flex-1 p-4">
-      {#if tab === 'beranda'}
+      {#if !tabAllowed}
+        <div class="rounded-xl border border-gray-200 bg-white p-6 text-center">
+          <p class="text-sm font-medium text-gray-900">Akses ditolak</p>
+          <p class="mt-1 text-sm text-gray-500">Anda tidak memiliki akses ke halaman ini.</p>
+        </div>
+      {:else if tab === 'beranda'}
         <Dashboard />
       {:else if tab === 'kunjungan'}
         {#if visitTarget}
@@ -157,17 +166,6 @@
             {label}
           </button>
         {/each}
-
-        {#if user.role === 'owner'}
-          <button
-            onclick={() => (tab = 'pengguna')}
-            class="flex flex-1 flex-col items-center py-3 text-xs font-medium transition-colors"
-            class:text-blue-600={tab === 'pengguna'}
-            class:text-gray-500={tab !== 'pengguna'}
-          >
-            Pengguna
-          </button>
-        {/if}
       </div>
     </nav>
   </div>

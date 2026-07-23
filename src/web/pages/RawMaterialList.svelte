@@ -1,6 +1,8 @@
 <script lang="ts">
   import { api } from '../lib/api.js';
 
+  type User = { id: string; email: string; name: string; role: string; status?: string };
+
   type RawMaterial = {
     id: string;
     name: string;
@@ -19,6 +21,7 @@
     { value: 'pcs', label: 'pcs' },
   ];
 
+  let user = $state<User | null>(null);
   let items = $state<RawMaterial[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
@@ -29,6 +32,17 @@
   let formPrice = $state('');
   let isSaving = $state(false);
   let deletingItem = $state<RawMaterial | null>(null);
+
+  const isOwner = $derived(user?.role === 'owner');
+
+  async function loadUser() {
+    try {
+      const res = await api('/api/auth/me');
+      if (res.ok) user = (await res.json()) as User;
+    } catch {
+      // ignore
+    }
+  }
 
   async function load() {
     loading = true;
@@ -135,7 +149,8 @@
   }
 
   $effect(() => {
-    load();
+    user = null;
+    Promise.all([loadUser(), load()]);
   });
 </script>
 
@@ -176,7 +191,7 @@
             <div>
               <p class="font-medium text-gray-900">{item.name}</p>
               <p class="text-sm text-gray-500">
-                {item.base_unit} · {formatRupiah(item.price_per_base_unit)}
+                {item.base_unit}{#if isOwner} · {formatRupiah(item.price_per_base_unit)}{/if}
               </p>
             </div>
             <div class="flex gap-2">
@@ -235,17 +250,19 @@
         </select>
       </label>
 
-      <label class="mb-5 block">
-        <span class="mb-1 block text-sm font-medium text-gray-700">Harga per Satuan (Rp)</span>
-        <input
-          type="number"
-          min="0"
-          step="1"
-          bind:value={formPrice}
-          placeholder="0"
-          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-        />
-      </label>
+      {#if isOwner}
+        <label class="mb-5 block">
+          <span class="mb-1 block text-sm font-medium text-gray-700">Harga per Satuan (Rp)</span>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            bind:value={formPrice}
+            placeholder="0"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          />
+        </label>
+      {/if}
 
       <div class="flex gap-2">
         <button
