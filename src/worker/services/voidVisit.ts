@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema.js";
-import { AppError, ConflictError, ForbiddenError, ValidationError } from "../lib/errors.js";
+import { ConflictError, ForbiddenError, ValidationError } from "../lib/errors.js";
 
 function nowUtcIso(): string {
   return new Date().toISOString();
@@ -44,8 +44,9 @@ export async function voidVisit(
     .where(eq(schema.visit_submissions.idempotency_key, idempotencyKey))
     .limit(1);
   const submission = submissionRows[0];
-  if (!submission) throw new AppError(404, "NOT_FOUND", "Kunjungan tidak ditemukan");
-  if (submission.status === "voided") throw new ConflictError("Kunjungan sudah dibatalkan");
+  if (!submission || submission.status === "voided") {
+    throw new ConflictError("Kunjungan tidak ditemukan atau sudah dibatalkan");
+  }
 
   const newer = await hasNewerCommittedSubmission(db, submission.outlet_id, submission.created_at);
   if (newer) {
@@ -55,6 +56,26 @@ export async function voidVisit(
   }
 
   const now = nowUtcIso();
+  const lockResult = await db
+    .update(schema.visit_submissions)
+    .set({
+      status: "voided",
+      voided_at: now,
+      voided_by: actor.id,
+      void_reason: trimmedReason,
+    })
+    .where(
+      and(
+        eq(schema.visit_submissions.idempotency_key, idempotencyKey),
+        eq(schema.visit_submissions.status, "committed"),
+      ),
+    )
+    .run();
+
+  if ((lockResult.meta?.changes ?? 0) === 0) {
+    throw new ConflictError("Kunjungan sudah dibatalkan");
+  }
+
   const closedCycles = await db
     .select()
     .from(schema.consignment_cycles)
@@ -110,17 +131,7 @@ export async function voidVisit(
     );
   }
 
-  statements.push(
-    db
-      .update(schema.visit_submissions)
-      .set({
-        status: "voided",
-        voided_at: now,
-        voided_by: actor.id,
-        void_reason: trimmedReason,
-      })
-      .where(eq(schema.visit_submissions.idempotency_key, idempotencyKey)),
-  );
-
-  await db.batch(statements as never);
+  if (statements.length > 0) {
+    await db.batch(statements as never);
+  }
 }
