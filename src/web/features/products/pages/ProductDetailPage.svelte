@@ -9,29 +9,25 @@
   import Card from '../../../shared/ui/Card.svelte';
   import ErrorState from '../../../shared/ui/ErrorState.svelte';
   import Icon from '../../../shared/ui/icons/Icon.svelte';
-
   type Props = {
     params?: Record<string, string>;
   };
-
   let { params = {} }: Props = $props();
-
   const queryClient = useQueryClient();
   const auth = getAuth();
-
   const id = $derived(params.id ?? '');
   const detailQuery = createQuery(() => productDetailQueryOptions(id));
-
   const product = $derived($detailQuery.data);
   const statusLabel: Record<'active' | 'inactive', string> = {
     active: 'Aktif',
     inactive: 'Nonaktif',
   };
-
   function goBack() {
     push('/produk');
   }
-
+  function goToEdit() {
+    push(`/master/produk/${id}/edit`);
+  }
   async function refresh() {
     await queryClient.refetchQueries({ queryKey: queryKeys.products.detail(id) });
   }
@@ -44,8 +40,12 @@
       <span class="sr-only">Kembali</span>
     </Button>
     <h1 class="text-lg font-bold text-coffee-900">Detail Produk</h1>
+    {#if auth.isOwner}
+      <Button variant="ghost" size="sm" onclick={goToEdit} aria-label="Edit produk" class="ml-auto">
+        <Icon name="edit" size={18} />
+      </Button>
+    {/if}
   </div>
-
   {#if $detailQuery.isLoading}
     <div class="space-y-4">
       <div class="aspect-[4/3] animate-pulse rounded-2xl bg-coffee-100"></div>
@@ -74,7 +74,6 @@
           <Icon name="package" size={64} />
         </div>
       {/snippet}
-
       <div class="space-y-4">
         <div>
           <h2 class="text-xl font-bold text-coffee-900">{product.name}</h2>
@@ -88,7 +87,6 @@
             {statusLabel[product.status]}
           </span>
         </div>
-
         {#if auth.isOwner}
           <dl class="space-y-3 rounded-xl border border-coffee-100 bg-milk p-4 text-sm">
             {#if product.price_to_outlet !== undefined}

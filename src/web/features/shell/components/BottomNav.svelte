@@ -10,12 +10,16 @@
     User,
     Users,
     Settings,
+    FileText,
+    Shield,
   } from 'lucide-svelte';
+
   type NavItem = {
     path: string;
     label: string;
     icon: typeof Home;
   };
+
   const mainItems: NavItem[] = [
     { path: '/beranda', label: 'Beranda', icon: Home },
     { path: '/produk', label: 'Produk', icon: Package },
@@ -24,10 +28,14 @@
     { path: '/master', label: 'Master', icon: LayoutGrid },
     { path: '/profil', label: 'Profil', icon: User },
   ];
+
   const ownerItems: NavItem[] = [
+    { path: '/owner', label: 'Admin', icon: Shield },
+    { path: '/laporan', label: 'Laporan', icon: FileText },
     { path: '/pengguna', label: 'Pengguna', icon: Users },
     { path: '/pengaturan', label: 'Pengaturan', icon: Settings },
   ];
+
   const auth = getAuth();
   const items = $derived(auth.isOwner ? [...mainItems, ...ownerItems] : mainItems);
   const current = $derived(router.location ?? '/');

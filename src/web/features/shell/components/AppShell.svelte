@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { router } from 'svelte-spa-router';
   import { useNetwork } from '$lib/stores/network.svelte.js';
   import { getAuth } from '../../auth/stores/auth.svelte.js';
   import TopBar from './TopBar.svelte';
@@ -14,6 +15,20 @@
 
   const auth = getAuth();
   const network = useNetwork();
+
+  const ownerPaths = [
+    '/owner',
+    '/pengguna',
+    '/pengaturan',
+    '/laporan',
+    '/master/produk',
+    '/master/bahan',
+    '/master/warung',
+  ];
+  const current = $derived($router.location ?? '/');
+  const hideBottomNav = $derived(
+    ownerPaths.some((path) => current === path || current.startsWith(`${path}/`))
+  );
 </script>
 
 <div class="min-h-screen bg-milk text-coffee-900">
@@ -45,6 +60,8 @@
         {@render children?.()}
       </div>
     </main>
-    <BottomNav />
+    {#if !hideBottomNav}
+      <BottomNav />
+    {/if}
   </div>
 </div>

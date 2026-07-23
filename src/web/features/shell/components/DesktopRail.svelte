@@ -9,17 +9,23 @@
     User,
     Users,
     Settings,
+    FileText,
+    Shield,
   } from 'lucide-svelte';
+
   type Props = {
     /** The rail only renders owner-only links when this is true. */
     isOwner?: boolean;
   };
+
   let { isOwner = false }: Props = $props();
+
   type RailItem = {
     path: string;
     label: string;
     icon: typeof Home;
   };
+
   const mainItems: RailItem[] = [
     { path: '/beranda', label: 'Beranda', icon: Home },
     { path: '/produk', label: 'Produk', icon: Package },
@@ -28,10 +34,14 @@
     { path: '/master', label: 'Master', icon: LayoutGrid },
     { path: '/profil', label: 'Profil', icon: User },
   ];
+
   const ownerItems: RailItem[] = [
+    { path: '/owner', label: 'Admin', icon: Shield },
+    { path: '/laporan', label: 'Laporan', icon: FileText },
     { path: '/pengguna', label: 'Pengguna', icon: Users },
     { path: '/pengaturan', label: 'Pengaturan', icon: Settings },
   ];
+
   const items = $derived(isOwner ? [...mainItems, ...ownerItems] : mainItems);
   const current = $derived(router.location ?? '/');
 </script>
@@ -48,7 +58,7 @@
     <span class="text-lg font-bold text-coffee-900">Konsi</span>
   </div>
   <nav class="flex-1 space-y-1 px-3 pt-4">
-    {#each items as item (item.key)}
+    {#each items as item (item.path)}
       {@const Icon = item.icon}
       {@const active =
         current === item.path || (item.path !== '/' && current.startsWith(item.path))}

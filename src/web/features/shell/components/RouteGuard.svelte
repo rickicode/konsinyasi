@@ -15,7 +15,15 @@
   let {
     children,
     publicPaths = ['/login'],
-    ownerOnlyPaths = ['/pengguna', '/pengaturan'],
+    ownerOnlyPaths = [
+      '/owner',
+      '/pengguna',
+      '/pengaturan',
+      '/laporan',
+      '/master/produk',
+      '/master/bahan',
+      '/master/warung',
+    ],
   }: Props = $props();
 
   const auth = getAuth();

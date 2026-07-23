@@ -1,5 +1,5 @@
 import { lazy } from './lib/router/lazy.js';
-import { requireAuth } from './lib/router/guards.svelte.js';
+import { requireAuth, requireOwner } from './lib/router/guards.svelte.js';
 
 /**
  * Hash-based SPA route map.
@@ -38,8 +38,53 @@ export const routes = {
     conditions: [requireAuth],
   }),
 
+  // Master landing (tabbed view).
   '/master': lazy(() => import('./features/master/pages/MasterPage.svelte'), {
     conditions: [requireAuth],
+  }),
+
+  // Phase E: master / owner-admin screens.
+  '/master/produk/baru': lazy(() => import('./features/products/pages/ProductFormPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
+  '/master/produk/:id/edit': lazy(
+    () => import('./features/products/pages/ProductFormPage.svelte'),
+    { conditions: [requireAuth, requireOwner] }
+  ),
+  '/master/produk': lazy(() => import('./features/products/pages/ProductListPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
+
+  '/master/bahan/baru': lazy(
+    () => import('./features/raw-materials/pages/RawMaterialFormPage.svelte'),
+    { conditions: [requireAuth, requireOwner] }
+  ),
+  '/master/bahan/:id/edit': lazy(
+    () => import('./features/raw-materials/pages/RawMaterialFormPage.svelte'),
+    { conditions: [requireAuth, requireOwner] }
+  ),
+  '/master/bahan': lazy(() => import('./features/raw-materials/pages/RawMaterialListPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
+
+  '/master/warung': lazy(() => import('./features/outlets/pages/OutletListPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
+
+  // Phase E: users & settings.
+  '/pengguna': lazy(() => import('./features/users/pages/UsersPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
+  '/pengaturan': lazy(() => import('./features/settings/pages/SettingsPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
+
+  // Phase E: owner hub & reports.
+  '/owner': lazy(() => import('./features/reports/pages/OwnerHubPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
+  '/laporan': lazy(() => import('./features/reports/pages/ReportsPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
   }),
 
   // Design system kitchen sink for manual primitive verification.
