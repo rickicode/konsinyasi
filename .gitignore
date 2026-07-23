@@ -12,3 +12,4 @@ node_modules/
 .codegraph/
 *.tsbuildinfo
 run-continuation/
+scripts/seed-owner.generated.sql
