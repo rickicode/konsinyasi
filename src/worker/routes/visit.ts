@@ -5,6 +5,7 @@ import type { Env } from "../types.js";
 import { createClient } from "../db/client.js";
 import { app_settings, consignment_cycles, outlets, products } from "../db/schema.js";
 import { AppError, ValidationError } from "../lib/errors.js";
+import { requirePermission } from "../lib/rbac.js";
 import { loadOpenCycles, processVisit, type VisitResult } from "../services/visit.js";
 import { voidVisit } from "../services/voidVisit.js";
 
@@ -60,19 +61,12 @@ function formatRupiah(n: number): string {
   }).format(n);
 }
 
-function pickVisitResult(result: VisitResult, includeFinancial: boolean): VisitResult {
+export function pickVisitResult(result: VisitResult, includeFinancial: boolean): VisitResult {
   if (includeFinancial) return result;
-  return {
-    ...result,
-    closed_cycles: result.closed_cycles.map((c) => ({
-      ...c,
-      amount_collected: 0,
-    })),
-    amount_collected_total: 0,
-  };
+  return result;
 }
 
-visitRoute.get("/outlets/:id/visit", async (c) => {
+visitRoute.get("/outlets/:id/visit", requirePermission("visit:read"), async (c) => {
   const outletId = c.req.param("id");
   const user = c.get("user");
   const includeFinancial = user.role === "owner";
@@ -129,7 +123,7 @@ visitRoute.get("/outlets/:id/visit", async (c) => {
   });
 });
 
-visitRoute.post("/outlets/:id/visit", async (c) => {
+visitRoute.post("/outlets/:id/visit", requirePermission("visit:write"), async (c) => {
   const outletId = c.req.param("id");
   const user = c.get("user");
   const body = await c.req.json();
@@ -167,7 +161,7 @@ visitRoute.post("/outlets/:id/visit", async (c) => {
   return c.json(pickVisitResult(result, user.role === "owner"), 201);
 });
 
-visitRoute.post("/visits/:idempotencyKey/void", async (c) => {
+visitRoute.post("/visits/:idempotencyKey/void", requirePermission("visit:void"), async (c) => {
   const idempotencyKey = c.req.param("idempotencyKey");
   const user = c.get("user");
   const body = await c.req.json();

@@ -24,11 +24,8 @@ app.use("/api/users/*", requirePermission("users:manage"));
 app.use("/api/raw-materials/*", requirePermission("bom:write"));
 app.use("/api/products/*", requirePermission("products:write"));
 app.use("/api/outlets/*", requirePermission("outlets:write"));
-app.use("/api/outlets/:id/visit", requirePermission("visit:read"));
-app.post("/api/outlets/:id/visit", requirePermission("visit:write"));
-app.post("/api/visits/:idempotencyKey/void", requirePermission("visit:void"));
 
-app.get("/api/settings", requireAuth);
+app.use("/api/settings/*", requirePermission("settings:read"));
 app.put("/api/settings/geofence", requirePermission("settings:write"));
 
 app.use("/api/dashboard", requirePermission("dashboard:read"));
