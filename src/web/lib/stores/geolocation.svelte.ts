@@ -4,6 +4,11 @@ const GEOLOCATION_CONTEXT_KEY = Symbol('konsi-geolocation-context');
 
 export type GeolocationPermissionState = 'granted' | 'denied' | 'prompt' | 'unknown';
 
+/**
+ * Qualify an accuracy value into a coarse quality bucket.
+ */
+export type AccuracyQuality = 'good' | 'fair' | 'poor' | 'unknown';
+
 export interface GeolocationState {
   /** Last known position coordinates, or null. */
   readonly coords: GeolocationCoordinates | null;
@@ -15,19 +20,70 @@ export interface GeolocationState {
   readonly error: GeolocationPositionError | null;
   /** True when a watch is active. */
   readonly watching: boolean;
-
   /** Request a one-time position update and permission check. */
-  request(): Promise<void>;
+  request(options?: PositionOptions): Promise<void>;
   /** Start watching the device position. Idempotent. */
   watch(options?: PositionOptions): void;
   /** Stop watching the device position. */
   stop(): void;
   /** Great-circle distance in kilometers from the last fix to a target lat/lng. */
   distanceTo(latitude: number, longitude: number): number | null;
+  /** Great-circle distance in meters from the last fix to a target lat/lng. */
+  distanceToMeters(latitude: number, longitude: number): number | null;
 }
 
 function toRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
+}
+
+/**
+ * Compute great-circle distance (km) between two lat/lng pairs using the
+ * haversine formula.
+ */
+export function distanceBetween(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371;
+  const dLat = toRadians(lat2 - lat1);
+  const dLng = toRadians(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Convert a kilometer distance into a human-friendly string.
+ */
+export function formatDistance(km: number | null | undefined): string {
+  if (km == null || Number.isNaN(km)) return '–';
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(1)} km`;
+}
+
+/**
+ * Format an accuracy value as a reader-friendly label.
+ */
+export function formatAccuracy(accuracy: number | null | undefined): string {
+  if (accuracy == null || Number.isNaN(accuracy)) return '–';
+  return `±${Math.round(accuracy)} m`;
+}
+
+/**
+ * Bucket an accuracy value into a quality label.
+ */
+export function accuracyQuality(accuracy: number | null | undefined): AccuracyQuality {
+  if (accuracy == null || Number.isNaN(accuracy)) return 'unknown';
+  if (accuracy <= 10) return 'good';
+  if (accuracy <= 50) return 'fair';
+  return 'poor';
 }
 
 async function queryPermission(): Promise<GeolocationPermissionState> {
@@ -42,7 +98,6 @@ async function queryPermission(): Promise<GeolocationPermissionState> {
 
 function createGeolocationState(): GeolocationState {
   const isBrowser = typeof navigator !== 'undefined' && 'geolocation' in navigator;
-
   let coords = $state<GeolocationCoordinates | null>(null);
   let permission = $state<GeolocationPermissionState>('prompt');
   let error = $state<GeolocationPositionError | null>(null);
@@ -76,10 +131,13 @@ function createGeolocationState(): GeolocationState {
     get watching() {
       return watchId !== null;
     },
-    async request() {
+    async request(options = {}) {
       if (!isBrowser) return;
       permission = await queryPermission();
-      navigator.geolocation.getCurrentPosition(onSuccess, onFailure, { enableHighAccuracy: true });
+      navigator.geolocation.getCurrentPosition(onSuccess, onFailure, {
+        enableHighAccuracy: true,
+        ...options,
+      });
     },
     watch(options = {}) {
       if (!isBrowser || watchId !== null) return;
@@ -117,6 +175,10 @@ function createGeolocationState(): GeolocationState {
           Math.sin(dLng / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
+    },
+    distanceToMeters(latitude: number, longitude: number) {
+      const km = this.distanceTo(latitude, longitude);
+      return km === null ? null : km * 1000;
     },
   };
 }

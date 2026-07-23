@@ -1,6 +1,7 @@
 import { queryOptions, mutationOptions } from '@tanstack/svelte-query';
 import { z } from 'zod';
 import { apiClient, type ApiClient } from '$lib/api/client.js';
+import { queryKeys } from '$lib/api/query-keys.js';
 import {
   outletCreateSchema,
   outletListSchema,
@@ -11,30 +12,48 @@ import {
 import type {
   Outlet,
   OutletCreateInput,
-  OutletPhotoUploadResponse,
   OutletUpdateInput,
+  OutletPhotoUploadResponse,
 } from '@shared/schemas/outlet.schema.js';
-import { queryKeys } from '$lib/api/query-keys.js';
 
 const okResponseSchema = z.object({ ok: z.boolean() });
 
-// ---------------- raw fetch helpers ----------------
-export async function listOutlets(client: ApiClient = apiClient): Promise<Outlet[]> {
-  return client.get('/api/outlets/', outletListSchema);
+export interface OutletPhotoUploadArgs {
+  id: string;
+  photo: File;
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
 }
 
-export async function getOutlet(id: string, client: ApiClient = apiClient): Promise<Outlet> {
+/**
+ * Fetch the full list of outlets.
+ */
+export async function fetchOutlets(client: ApiClient = apiClient): Promise<Outlet[]> {
+  return client.get('/api/outlets', outletListSchema);
+}
+
+/**
+ * Fetch a single outlet by id.
+ */
+export async function fetchOutletById(id: string, client: ApiClient = apiClient): Promise<Outlet> {
   return client.get(`/api/outlets/${id}`, outletResponseSchema);
 }
 
+/**
+ * Create a new outlet.
+ */
 export async function createOutlet(
   input: OutletCreateInput,
   client: ApiClient = apiClient
 ): Promise<Outlet> {
   outletCreateSchema.parse(input);
-  return client.post('/api/outlets/', input, outletResponseSchema);
+  return client.post('/api/outlets', input, outletResponseSchema);
 }
 
+/**
+ * Update an existing outlet.
+ */
 export async function updateOutlet(
   id: string,
   input: OutletUpdateInput,
@@ -44,6 +63,9 @@ export async function updateOutlet(
   return client.patch(`/api/outlets/${id}`, input, outletResponseSchema);
 }
 
+/**
+ * Soft-delete an outlet.
+ */
 export async function deleteOutlet(
   id: string,
   client: ApiClient = apiClient
@@ -51,55 +73,63 @@ export async function deleteOutlet(
   return client.delete(`/api/outlets/${id}`, okResponseSchema);
 }
 
-export interface PhotoUploadInput {
-  outletId: string;
-  file: File;
-  latitude?: number;
-  longitude?: number;
-  accuracyM?: number;
-  updateLocation?: boolean;
-}
-
+/**
+ * Upload an outlet photo and optionally refresh its captured location.
+ */
 export async function uploadOutletPhoto(
-  input: PhotoUploadInput,
+  { id, photo, latitude, longitude, accuracy }: OutletPhotoUploadArgs,
   client: ApiClient = apiClient
 ): Promise<OutletPhotoUploadResponse> {
-  const formData = new FormData();
-  formData.append('photo', input.file);
-  if (input.latitude !== undefined) formData.append('latitude', String(input.latitude));
-  if (input.longitude !== undefined) formData.append('longitude', String(input.longitude));
-  if (input.accuracyM !== undefined) formData.append('accuracy_m', String(input.accuracyM));
-  formData.append('update_location', input.updateLocation ? 'true' : 'false');
-  return client.post(
-    `/api/outlets/${input.outletId}/photo`,
-    formData,
-    outletPhotoUploadResponseSchema
-  );
+  const body = new FormData();
+  body.append('photo', photo);
+  body.append('update_location', 'true');
+  body.append('latitude', String(latitude));
+  body.append('longitude', String(longitude));
+  if (accuracy !== undefined && accuracy !== null) {
+    body.append('accuracy_m', String(accuracy));
+  }
+  return client.post(`/api/outlets/${id}/photo`, body, outletPhotoUploadResponseSchema);
 }
 
 // ---------------- queryOptions factories ----------------
+
+/**
+ * TanStack Query options for the outlet list.
+ */
 export function outletsQueryOptions(client: ApiClient = apiClient) {
   return queryOptions({
     queryKey: queryKeys.outlets.all,
-    queryFn: () => listOutlets(client),
+    queryFn: () => fetchOutlets(client),
+    staleTime: 1000 * 60 * 2,
   });
 }
 
+/**
+ * TanStack Query options for a single outlet detail.
+ */
 export function outletDetailQueryOptions(id: string, client: ApiClient = apiClient) {
   return queryOptions({
     queryKey: queryKeys.outlets.detail(id),
-    queryFn: () => getOutlet(id, client),
+    queryFn: () => fetchOutletById(id, client),
     enabled: Boolean(id),
+    staleTime: 1000 * 60 * 2,
   });
 }
 
-// ---------------- mutation factories ----------------
+// ---------------- mutationOptions factories ----------------
+
+/**
+ * TanStack Query mutation options for creating an outlet.
+ */
 export function createOutletMutationOptions(client: ApiClient = apiClient) {
   return mutationOptions({
     mutationFn: (input: OutletCreateInput) => createOutlet(input, client),
   });
 }
 
+/**
+ * TanStack Query mutation options for updating an outlet.
+ */
 export function updateOutletMutationOptions(client: ApiClient = apiClient) {
   return mutationOptions({
     mutationFn: ({ id, input }: { id: string; input: OutletUpdateInput }) =>
@@ -107,14 +137,20 @@ export function updateOutletMutationOptions(client: ApiClient = apiClient) {
   });
 }
 
+/**
+ * TanStack Query mutation options for deleting an outlet.
+ */
 export function deleteOutletMutationOptions(client: ApiClient = apiClient) {
   return mutationOptions({
     mutationFn: (id: string) => deleteOutlet(id, client),
   });
 }
 
+/**
+ * TanStack Query mutation options for uploading an outlet photo.
+ */
 export function uploadOutletPhotoMutationOptions(client: ApiClient = apiClient) {
   return mutationOptions({
-    mutationFn: (input: PhotoUploadInput) => uploadOutletPhoto(input, client),
+    mutationFn: (args: OutletPhotoUploadArgs) => uploadOutletPhoto(args, client),
   });
 }

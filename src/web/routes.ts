@@ -38,6 +38,19 @@ export const routes = {
     conditions: [requireAuth],
   }),
 
+  // Phase F: outlet directory and visit launch-pad.
+  '/warung': lazy(() => import('./features/outlets/pages/OutletListPage.svelte'), {
+    conditions: [requireAuth],
+  }),
+  '/warung/baru': lazy(() => import('./features/outlets/pages/OutletFormPage.svelte'), {
+    conditions: [requireAuth],
+  }),
+  '/warung/:id/edit': lazy(() => import('./features/outlets/pages/OutletFormPage.svelte'), {
+    conditions: [requireAuth],
+  }),
+  '/warung/:id': lazy(() => import('./features/outlets/pages/OutletDetailPage.svelte'), {
+    conditions: [requireAuth],
+  }),
   // Master landing (tabbed view).
   '/master': lazy(() => import('./features/master/pages/MasterPage.svelte'), {
     conditions: [requireAuth],
@@ -79,6 +92,13 @@ export const routes = {
     conditions: [requireAuth, requireOwner],
   }),
 
+  // Phase F: visits.
+  '/kunjungan': lazy(() => import('./features/visits/pages/VisitListPage.svelte'), {
+    conditions: [requireAuth],
+  }),
+  '/kunjungan/:outletId': lazy(() => import('./features/visits/pages/VisitFormPage.svelte'), {
+    conditions: [requireAuth],
+  }),
   // Phase E: owner hub & reports.
   '/owner': lazy(() => import('./features/reports/pages/OwnerHubPage.svelte'), {
     conditions: [requireAuth, requireOwner],
