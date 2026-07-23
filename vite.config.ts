@@ -10,6 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@shared': resolve(__dirname, 'src/shared'),
+      $lib: resolve(__dirname, 'src/web/lib'),
     },
   },
   build: {

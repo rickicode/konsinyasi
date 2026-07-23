@@ -1,7 +1,10 @@
 @import 'tailwindcss';
 
 @theme {
+  /* brand palette */
   --color-milk: #f7f3eb;
+  --color-cream: #fff8e7;
+  --color-caramel: #c69c6d;
   --color-coffee-50: #efebe9;
   --color-coffee-100: #d7ccc8;
   --color-coffee-200: #bcaaa4;
@@ -14,15 +17,48 @@
   --color-coffee-900: #3e2723;
   --color-coffee-950: #2b1810;
 
-  --color-cream: #fff8e7;
-  --color-caramel: #c69c6d;
+  /* semantic status */
+  --color-danger: #dc2626; /* red-600 */
+  --color-danger-bg: #fef2f2;
+  --color-warning: #d97706; /* amber-600 */
+  --color-warning-bg: #fffbeb;
+  --color-success: #16a34a; /* green-600 */
+  --color-success-bg: #f0fdf4;
+  --color-info: #2563eb; /* blue-600 */
+  --color-info-bg: #eff6ff;
 
+  /* section surfaces */
   --color-section-dashboard: #fff7ed;
   --color-section-visit: #fff0f5;
   --color-section-outlet: #f0fdf4;
   --color-section-master: #faf5ff;
   --color-section-product: #fffbeb;
   --color-section-raw: #f5f0e8;
+
+  /* typography */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --text-base: 1rem; /* 16px - prevents iOS zoom */
+  --text-sm: 0.875rem; /* 14px */
+  --text-xs: 0.75rem; /* 12px - captions only */
+
+  /* spacing - 4pt grid */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+
+  /* radii */
+  --radius-sm: 0.375rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* shadows */
+  --shadow-card: 0 1px 3px 0 rgb(62 39 35 / 0.08), 0 1px 2px -1px rgb(62 39 35 / 0.08);
+  --shadow-float: 0 10px 15px -3px rgb(62 39 35 / 0.1), 0 4px 6px -4px rgb(62 39 35 / 0.1);
 }
 
 :root {
@@ -30,34 +66,57 @@
   --cream: #fff8e7;
   --caramel: #c69c6d;
   --accent: #8d6e63;
+
+  color-scheme: light;
 }
 
 html,
 body {
   margin: 0;
   min-height: 100%;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-sans);
   background: var(--milk);
-  color: var(--coffee-900);
+  color: var(--color-coffee-900);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 #app {
-  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Optional dark theme class; app defaults to light */
+.dark {
+  color-scheme: dark;
+  background: var(--color-coffee-950);
+  color: var(--color-cream);
 }
 
 /* Safe area support for mobile */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.min-h-dvh {
+  min-height: 100dvh;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: var(--coffee-200);
+  background: var(--color-coffee-200);
   border-radius: 4px;
 }
 
@@ -68,7 +127,8 @@ input[type='button'] {
   cursor: pointer;
 }
 
-@utility btn {
+/* Button primitives */
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -76,101 +136,114 @@ input[type='button'] {
   padding-inline: calc(var(--spacing) * 4);
   padding-block: calc(var(--spacing) * 2);
   font-size: var(--text-sm);
-  line-height: var(--tw-leading, var(--text-sm--line-height));
   font-weight: var(--font-weight-semibold);
   box-shadow: var(--shadow-sm);
-  transition-property: color, background-color, border-color, box-shadow, transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  transition:
+    color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+
   &:active {
     transform: scale(0.98);
   }
 }
 
-@utility btn-primary {
-  composes: btn;
+.btn-primary {
   background-color: var(--color-coffee-700);
   color: white;
+
   &:hover {
     background-color: var(--color-coffee-800);
   }
 }
 
-@utility btn-secondary {
-  composes: btn;
-  border-width: 1px;
-  border-color: var(--color-coffee-200);
+.btn-secondary {
+  border: 1px solid var(--color-coffee-200);
   background-color: var(--color-coffee-100);
   color: var(--color-coffee-800);
+
   &:hover {
     background-color: var(--color-coffee-200);
   }
 }
 
-@utility btn-danger {
-  composes: btn;
+.btn-danger {
   background-color: var(--color-red-600);
   color: white;
+
   &:hover {
     background-color: var(--color-red-700);
   }
 }
 
-@utility btn-success {
-  composes: btn;
+.btn-success {
   background-color: var(--color-green-600);
   color: white;
+
   &:hover {
     background-color: var(--color-green-700);
   }
 }
 
-@utility card {
+/* Card primitives */
+.card {
   border-radius: var(--radius-2xl);
-  border-width: 1px;
-  border-color: color-mix(in srgb, var(--color-coffee-200) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-coffee-200) 60%, transparent);
   padding: calc(var(--spacing) * 4);
   box-shadow: var(--shadow-md);
 }
 
-@utility card-dashboard {
-  composes: card;
+.card-dashboard {
   background-color: var(--color-section-dashboard);
   border-color: var(--color-orange-200);
 }
 
-@utility card-visit {
-  composes: card;
+.card-visit {
   background-color: var(--color-section-visit);
   border-color: var(--color-rose-200);
 }
 
-@utility card-outlet {
-  composes: card;
+.card-outlet {
   background-color: var(--color-section-outlet);
   border-color: var(--color-green-200);
 }
 
-@utility card-master {
-  composes: card;
+.card-master {
   background-color: var(--color-section-master);
   border-color: var(--color-purple-200);
 }
 
-@utility card-product {
-  composes: card;
+.card-product {
   background-color: var(--color-section-product);
   border-color: var(--color-amber-200);
 }
 
-@utility card-raw {
-  composes: card;
+.card-raw {
   background-color: var(--color-section-raw);
   border-color: var(--color-coffee-200);
 }
 
-@utility card-cream {
-  composes: card;
+.card-cream {
   background-color: var(--color-cream);
   border-color: var(--color-coffee-200);
+}
+
+/* Safe-area utilities for notched devices */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.min-h-safe {
+  min-height: 100vh;
+  min-height: calc(100dvh - env(safe-area-inset-top, 0px));
 }
