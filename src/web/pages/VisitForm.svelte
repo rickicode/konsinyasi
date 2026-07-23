@@ -64,8 +64,8 @@
 
   const geoCardClass = $derived(
     distanceM !== null && distanceM <= radiusM
-      ? 'rounded-xl border border-green-200 bg-green-50 p-4'
-      : 'rounded-xl border border-red-200 bg-red-50 p-4',
+      ? 'card-outlet'
+      : 'card-visit border-red-200 bg-red-50 p-4',
   );
 
   const geoStatusText = $derived(
@@ -208,8 +208,8 @@
 
   const submitClass = $derived(
     canSubmit
-      ? 'fixed bottom-4 left-4 right-4 rounded-xl bg-coffee-700 py-3 text-center text-sm font-semibold text-white shadow-lg'
-      : 'fixed bottom-4 left-4 right-4 rounded-xl bg-coffee-300 py-3 text-center text-sm font-semibold text-white shadow-lg',
+      ? 'btn-success fixed bottom-5 left-4 right-4 z-30 py-3 shadow-xl'
+      : 'btn fixed bottom-5 left-4 right-4 z-30 bg-coffee-300 py-3 text-white shadow-xl cursor-not-allowed',
   );
 
   async function submit() {
@@ -312,8 +312,8 @@
   });
 </script>
 
-<div class='pb-24'>
-  <button onclick={onBack} class='text-sm font-medium text-coffee-700'>← Kembali</button>
+<div class='pb-28'>
+  <button onclick={onBack} class='mb-3 text-sm font-bold text-coffee-700 hover:underline'>← Kembali</button>
 
   {#if loading}
     <p class='py-8 text-center text-coffee-500'>Memuat data kunjungan...</p>
@@ -322,40 +322,40 @@
   {/if}
 
   {#if success}
-    <div class='mb-3 rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700'>{success}</div>
+    <div class='mb-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm font-medium text-green-700'>{success}</div>
   {/if}
 
-  <div class='mb-4 rounded-xl border border-coffee-200 bg-cream p-4 shadow-sm'>
-    <h1 class='text-lg font-semibold text-coffee-900'>{outlet.name}</h1>
-    <p class='text-sm text-coffee-500'>{outlet.address || 'Tidak ada alamat'}</p>
+  <div class='card-cream mb-4'>
+    <h1 class='text-lg font-bold text-coffee-900'>{outlet.name}</h1>
+    <p class='text-sm text-coffee-600'>{outlet.address || 'Tidak ada alamat'}</p>
   </div>
 
   {#if !isOnline}
-    <div class='mb-4 rounded border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800'>
+    <div class='mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800'>
       Tidak ada jaringan. Draft tersimpan di HP — kirim ulang saat online & dalam radius.
     </div>
   {/if}
 
   <div class={geoCardClass}>
-    <p class='text-sm font-medium text-coffee-900'>Lokasi & Geofence</p>
+    <p class='text-sm font-bold text-coffee-900'>Lokasi & Geofence</p>
     {#if gps}
       <p class='text-sm text-coffee-700'>Jarak: {distanceM ?? '-'} m (batas {radiusM} m)</p>
       <p class='text-xs text-coffee-500'>Akurasi GPS: {Math.round(gps.accuracy)} m</p>
-      <p class='mt-1 text-sm font-semibold {geoStatusColor}'>{geoStatusText}</p>
+      <p class='mt-1 text-sm font-bold {geoStatusColor}'>{geoStatusText}</p>
       {#if distanceM !== null && distanceM > radiusM && user.role === 'owner'}
-        <label class='mt-2 flex items-center gap-2 text-sm'>
-          <input type='checkbox' bind:checked={override} />
+        <label class='mt-2 flex items-center gap-2 text-sm font-medium'>
+          <input type='checkbox' bind:checked={override} class='rounded border-coffee-300 text-coffee-700' />
           Gunakan override
         </label>
         {#if override}
           <label class='mt-2 block'>
-            <span class='text-xs text-coffee-700'>Alasan override</span>
-            <input type='text' bind:value={overrideReason} class='mt-1 w-full rounded border border-coffee-200 px-2 py-1.5 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' placeholder='Wajib diisi' />
+            <span class='text-xs font-bold text-coffee-700'>Alasan override</span>
+            <input type='text' bind:value={overrideReason} class='mt-1 w-full rounded-xl border border-coffee-200 bg-white px-3 py-2 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' placeholder='Wajib diisi' />
           </label>
         {/if}
       {/if}
     {:else if gpsError}
-      <p class='text-sm text-red-700'>GPS: {gpsError}</p>
+      <p class='text-sm font-medium text-red-700'>GPS: {gpsError}</p>
     {:else}
       <p class='text-sm text-coffee-500'>Menunggu GPS...</p>
     {/if}
@@ -363,39 +363,39 @@
 
   {#if cycles.length > 0}
     <div class='mb-6 mt-6'>
-      <h2 class='mb-2 text-sm font-medium text-coffee-900'>Tarik Stok</h2>
+      <h2 class='mb-3 text-sm font-bold text-coffee-900'>Tarik Stok</h2>
       <div class='space-y-3'>
         {#each cycles as cycle (cycle.id)}
           {@const sold = computedSold(cycle)}
           {@const input = pickups[cycle.id] ?? { good: 0, damaged: 0 }}
           {@const valid = pickupValid(cycle)}
-          {@const cardClass = valid ? 'rounded-xl border border-coffee-200 bg-cream p-4 shadow-sm' : 'rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm'}
+          {@const cardClass = valid ? 'card-product' : 'card-visit border-red-200 bg-red-50 p-4'}
           <div class={cardClass}>
             <div class='mb-2 flex items-center gap-2'>
-              <span class='rounded px-2 py-0.5 text-xs font-medium {colorBadge(cycle.color)}'>{colorLabel(cycle.color)}</span>
-              <p class='font-medium text-coffee-900'>{cycle.product_name}</p>
+              <span class='rounded-lg px-2 py-0.5 text-xs font-bold {colorBadge(cycle.color)}'>{colorLabel(cycle.color)}</span>
+              <p class='font-bold text-coffee-900'>{cycle.product_name}</p>
             </div>
-            <p class='text-xs text-coffee-500 mb-2'>Titip: {cycle.qty_dropped} · Terjual: {sold}</p>
+            <p class='mb-3 text-xs font-medium text-coffee-600'>Titip: {cycle.qty_dropped} · Terjual: {sold}</p>
             <div class='grid grid-cols-2 gap-3'>
               <label class='block'>
-                <span class='text-xs text-coffee-700'>Sisa layak</span>
+                <span class='text-xs font-bold text-coffee-700'>Sisa layak</span>
                 <div class='mt-1 flex items-center gap-1'>
-                  <button onclick={() => stepPickup(cycle.id, 'good', -1)} class='rounded border border-coffee-200 px-2 py-1 text-sm'>−</button>
-                  <input type='number' min='0' value={formatQty(input.good)} oninput={(e) => updatePickup(cycle.id, 'good', ensureNumber(e.currentTarget.value))} class='w-full rounded border border-coffee-200 px-2 py-1 text-center text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' />
-                  <button onclick={() => stepPickup(cycle.id, 'good', 1)} class='rounded border border-coffee-200 px-2 py-1 text-sm'>+</button>
+                  <button onclick={() => stepPickup(cycle.id, 'good', -1)} class='btn-secondary px-2 py-1 text-sm'>−</button>
+                  <input type='number' min='0' value={formatQty(input.good)} oninput={(e) => updatePickup(cycle.id, 'good', ensureNumber(e.currentTarget.value))} class='w-full rounded-xl border border-coffee-200 bg-white px-2 py-1 text-center text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' />
+                  <button onclick={() => stepPickup(cycle.id, 'good', 1)} class='btn-secondary px-2 py-1 text-sm'>+</button>
                 </div>
               </label>
               <label class='block'>
-                <span class='text-xs text-coffee-700'>Sisa rusak</span>
+                <span class='text-xs font-bold text-coffee-700'>Sisa rusak</span>
                 <div class='mt-1 flex items-center gap-1'>
-                  <button onclick={() => stepPickup(cycle.id, 'damaged', -1)} class='rounded border border-coffee-200 px-2 py-1 text-sm'>−</button>
-                  <input type='number' min='0' value={formatQty(input.damaged)} oninput={(e) => updatePickup(cycle.id, 'damaged', ensureNumber(e.currentTarget.value))} class='w-full rounded border border-coffee-200 px-2 py-1 text-center text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' />
-                  <button onclick={() => stepPickup(cycle.id, 'damaged', 1)} class='rounded border border-coffee-200 px-2 py-1 text-sm'>+</button>
+                  <button onclick={() => stepPickup(cycle.id, 'damaged', -1)} class='btn-secondary px-2 py-1 text-sm'>−</button>
+                  <input type='number' min='0' value={formatQty(input.damaged)} oninput={(e) => updatePickup(cycle.id, 'damaged', ensureNumber(e.currentTarget.value))} class='w-full rounded-xl border border-coffee-200 bg-white px-2 py-1 text-center text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' />
+                  <button onclick={() => stepPickup(cycle.id, 'damaged', 1)} class='btn-secondary px-2 py-1 text-sm'>+</button>
                 </div>
               </label>
             </div>
             {#if !valid}
-              <p class='mt-2 text-xs text-red-600'>Sisa layak + rusak + terjual harus {cycle.qty_dropped}</p>
+              <p class='mt-2 text-xs font-bold text-red-600'>Sisa layak + rusak + terjual harus {cycle.qty_dropped}</p>
             {/if}
           </div>
         {/each}
@@ -404,19 +404,19 @@
   {/if}
 
   <div class='mb-6'>
-    <div class='mb-2 flex items-center justify-between'>
-      <h2 class='text-sm font-medium text-coffee-900'>Titip Stok Baru</h2>
-      <button onclick={addDrop} class='rounded bg-coffee-700 px-2 py-1 text-xs font-medium text-white'>+ Tambah</button>
+    <div class='mb-3 flex items-center justify-between'>
+      <h2 class='text-sm font-bold text-coffee-900'>Titip Stok Baru</h2>
+      <button onclick={addDrop} class='btn-primary px-2 py-1 text-xs'>+ Tambah</button>
     </div>
     {#if drops.length === 0}
-      <p class='text-sm text-coffee-500'>Tidak ada penitipan baru.</p>
+      <p class='rounded-xl bg-coffee-50 py-4 text-center text-sm font-medium text-coffee-600'>Tidak ada penitipan baru.</p>
     {:else}
       <div class='space-y-3'>
         {#each drops as drop, index (index)}
-          <div class='rounded-xl border border-coffee-200 bg-cream p-4 shadow-sm'>
+          <div class='card-product'>
             <label class='mb-2 block'>
-              <span class='text-xs text-coffee-700'>Produk</span>
-              <select bind:value={drop.product_id} class='mt-1 w-full rounded border border-coffee-200 px-2 py-1.5 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none'>
+              <span class='text-xs font-bold text-coffee-700'>Produk</span>
+              <select bind:value={drop.product_id} class='mt-1 w-full rounded-xl border border-coffee-200 bg-white px-3 py-2 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none'>
                 <option value=''>Pilih produk</option>
                 {#each products as p (p.id)}
                   <option value={p.id}>{p.name}</option>
@@ -424,27 +424,27 @@
               </select>
             </label>
             <label class='mb-2 block'>
-              <span class='text-xs text-coffee-700'>Qty titip</span>
+              <span class='text-xs font-bold text-coffee-700'>Qty titip</span>
               <div class='mt-1 flex items-center gap-1'>
-                <button onclick={() => { drop.qty_dropped = Math.max(1, drop.qty_dropped - 1); drops = [...drops]; }} class='rounded border border-coffee-200 px-2 py-1 text-sm'>−</button>
-                <input type='number' min='1' bind:value={drop.qty_dropped} class='w-full rounded border border-coffee-200 px-2 py-1 text-center text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' />
-                <button onclick={() => { drop.qty_dropped = drop.qty_dropped + 1; drops = [...drops]; }} class='rounded border border-coffee-200 px-2 py-1 text-sm'>+</button>
+                <button onclick={() => { drop.qty_dropped = Math.max(1, drop.qty_dropped - 1); drops = [...drops]; }} class='btn-secondary px-2 py-1 text-sm'>−</button>
+                <input type='number' min='1' bind:value={drop.qty_dropped} class='w-full rounded-xl border border-coffee-200 bg-white px-2 py-1 text-center text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' />
+                <button onclick={() => { drop.qty_dropped = drop.qty_dropped + 1; drops = [...drops]; }} class='btn-secondary px-2 py-1 text-sm'>+</button>
               </div>
             </label>
             <label class='mb-2 block'>
-              <span class='text-xs text-coffee-700'>Catatan</span>
-              <input type='text' bind:value={drop.notes} class='mt-1 w-full rounded border border-coffee-200 px-2 py-1.5 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' placeholder='Opsional' />
+              <span class='text-xs font-bold text-coffee-700'>Catatan</span>
+              <input type='text' bind:value={drop.notes} class='mt-1 w-full rounded-xl border border-coffee-200 bg-white px-3 py-2 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' placeholder='Opsional' />
             </label>
-            <button onclick={() => removeDrop(index)} class='text-xs text-red-600'>Hapus</button>
+            <button onclick={() => removeDrop(index)} class='btn-danger px-2 py-1 text-xs'>Hapus</button>
           </div>
         {/each}
       </div>
     {/if}
   </div>
 
-  <label class='mb-20 block'>
-    <span class='text-xs text-coffee-700'>Catatan kunjungan</span>
-    <input type='text' bind:value={visitNotes} class='mt-1 w-full rounded border border-coffee-200 px-2 py-1.5 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' placeholder='Opsional' />
+  <label class='mb-24 block'>
+    <span class='text-xs font-bold text-coffee-700'>Catatan kunjungan</span>
+    <input type='text' bind:value={visitNotes} class='mt-1 w-full rounded-xl border border-coffee-200 bg-white px-3 py-2 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none' placeholder='Opsional' />
   </label>
 
   <button onclick={submit} disabled={!canSubmit} class={submitClass}>

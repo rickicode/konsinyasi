@@ -14,10 +14,125 @@
   --color-coffee-950: #2b1810;
 
   --color-cream: #fbf6ef;
+  --color-caramel: #e6cfa3;
+
+  --color-section-dashboard: #fff7ed;
+  --color-section-visit: #fff0f5;
+  --color-section-outlet: #f0fdf4;
+  --color-section-master: #faf5ff;
+  --color-section-product: #fffbeb;
+  --color-section-raw: #f5f0e8;
 }
 
 html,
 body {
   margin: 0;
   min-height: 100%;
+}
+
+@utility btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  padding-inline: calc(var(--spacing) * 4);
+  padding-block: calc(var(--spacing) * 2);
+  font-size: var(--text-sm);
+  line-height: var(--tw-leading, var(--text-sm--line-height));
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-sm);
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+@utility btn-primary {
+  composes: btn;
+  background-color: var(--color-coffee-700);
+  color: white;
+  &:hover {
+    background-color: var(--color-coffee-800);
+  }
+}
+
+@utility btn-secondary {
+  composes: btn;
+  border-width: 1px;
+  border-color: var(--color-coffee-200);
+  background-color: var(--color-coffee-100);
+  color: var(--color-coffee-800);
+  &:hover {
+    background-color: var(--color-coffee-200);
+  }
+}
+
+@utility btn-danger {
+  composes: btn;
+  background-color: var(--color-red-600);
+  color: white;
+  &:hover {
+    background-color: var(--color-red-700);
+  }
+}
+
+@utility btn-success {
+  composes: btn;
+  background-color: var(--color-green-600);
+  color: white;
+  &:hover {
+    background-color: var(--color-green-700);
+  }
+}
+
+@utility card {
+  border-radius: var(--radius-2xl);
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--color-coffee-200) 60%, transparent);
+  padding: calc(var(--spacing) * 4);
+  box-shadow: var(--shadow-md);
+}
+
+@utility card-dashboard {
+  composes: card;
+  background-color: var(--color-section-dashboard);
+  border-color: var(--color-orange-200);
+}
+
+@utility card-visit {
+  composes: card;
+  background-color: var(--color-section-visit);
+  border-color: var(--color-rose-200);
+}
+
+@utility card-outlet {
+  composes: card;
+  background-color: var(--color-section-outlet);
+  border-color: var(--color-green-200);
+}
+
+@utility card-master {
+  composes: card;
+  background-color: var(--color-section-master);
+  border-color: var(--color-purple-200);
+}
+
+@utility card-product {
+  composes: card;
+  background-color: var(--color-section-product);
+  border-color: var(--color-amber-200);
+}
+
+@utility card-raw {
+  composes: card;
+  background-color: var(--color-section-raw);
+  border-color: var(--color-coffee-200);
+}
+
+@utility card-cream {
+  composes: card;
+  background-color: var(--color-cream);
+  border-color: var(--color-coffee-200);
 }

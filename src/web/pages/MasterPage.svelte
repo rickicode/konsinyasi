@@ -38,16 +38,18 @@
 </script>
 
 <div class="pb-4">
-  <div class="mb-4 overflow-hidden rounded-xl border border-coffee-200 bg-cream p-1 shadow-sm">
+  <h1 class="mb-4 text-xl font-bold text-coffee-900">Master Data</h1>
+
+  <div class="card-master mb-5 p-1">
     <div class="flex">
       {#each sections as { key, label }}
         <button
           onclick={() => (section = key)}
-          class="flex-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors"
+          class="flex-1 rounded-xl px-2 py-2.5 text-xs font-bold transition-colors"
           class:bg-coffee-700={section === key}
           class:text-white={section === key}
           class:text-coffee-600={section !== key}
-          class:hover:bg-coffee-100={section !== key}
+          class:hover:bg-purple-100={section !== key}
         >
           {label}
         </button>
@@ -62,8 +64,8 @@
   {:else if section === 'warung'}
     <OutletList {onVisit} />
   {:else}
-    <div class="rounded-xl border border-coffee-200 bg-cream p-6 text-center">
-      <p class="text-sm font-medium text-coffee-900">Akses ditolak</p>
+    <div class="card-cream p-6 text-center">
+      <p class="text-sm font-bold text-coffee-900">Akses ditolak</p>
       <p class="mt-1 text-sm text-coffee-500">Anda tidak memiliki akses ke bagian ini.</p>
     </div>
   {/if}

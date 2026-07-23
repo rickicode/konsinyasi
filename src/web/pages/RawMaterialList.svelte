@@ -156,17 +156,17 @@
 
 <div class="pb-20">
   <div class="mb-4 flex items-center justify-between">
-    <h1 class="text-lg font-semibold text-coffee-900">Bahan Baku</h1>
+    <h1 class="text-xl font-bold text-coffee-900">Bahan Baku</h1>
     <button
       onclick={openCreate}
-      class="rounded bg-coffee-700 px-3 py-2 text-sm font-medium text-white hover:bg-coffee-800"
+      class="btn-primary px-3 py-2"
     >
       + Tambah
     </button>
   </div>
 
   {#if error && mode === 'list'}
-    <div class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+    <div class="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
       {error}
     </div>
   {/if}
@@ -174,11 +174,11 @@
   {#if loading}
     <p class="py-8 text-center text-coffee-500">Memuat...</p>
   {:else if items.length === 0}
-    <div class="rounded-lg border border-dashed border-coffee-200 bg-cream py-12 text-center">
-      <p class="text-coffee-600">Belum ada bahan baku</p>
+    <div class="rounded-2xl border-2 border-dashed border-coffee-200 bg-coffee-50 py-12 text-center">
+      <p class="font-medium text-coffee-700">Belum ada bahan baku</p>
       <button
         onclick={openCreate}
-        class="mt-2 text-sm font-medium text-coffee-700 hover:underline"
+        class="mt-2 text-sm font-bold text-coffee-700 hover:underline"
       >
         Tambah bahan baku pertama
       </button>
@@ -186,24 +186,24 @@
   {:else}
     <div class="space-y-3">
       {#each items as item (item.id)}
-        <div class="rounded-lg border border-coffee-200 bg-cream p-4 shadow-sm">
-          <div class="flex items-start justify-between">
-            <div>
-              <p class="font-medium text-coffee-900">{item.name}</p>
-              <p class="text-sm text-coffee-500">
+        <div class="card-raw">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+              <p class="font-bold text-coffee-900">{item.name}</p>
+              <p class="text-sm font-medium text-coffee-600">
                 {item.base_unit}{#if isOwner} · {formatRupiah(item.price_per_base_unit)}{/if}
               </p>
             </div>
             <div class="flex gap-2">
               <button
                 onclick={() => openEdit(item)}
-                class="rounded border border-coffee-200 bg-cream px-2.5 py-1.5 text-xs font-medium text-coffee-700 hover:bg-coffee-100"
+                class="btn-secondary px-2.5 py-1.5 text-xs"
               >
                 Edit
               </button>
               <button
                 onclick={() => openDelete(item)}
-                class="rounded border border-red-200 bg-cream px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                class="btn-danger px-2.5 py-1.5 text-xs"
               >
                 Hapus
               </button>
@@ -216,33 +216,33 @@
 </div>
 
 {#if mode === 'form'}
-  <div class="fixed inset-0 z-20 flex items-end sm:items-center justify-center bg-black/40 p-4">
-    <div class="w-full max-w-md rounded-t-2xl bg-cream p-5 shadow-xl sm:rounded-2xl">
-      <h2 class="mb-4 text-lg font-semibold text-coffee-900">
+  <div class="fixed inset-0 z-20 flex items-end sm:items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-md rounded-t-2xl bg-cream p-5 shadow-2xl sm:rounded-2xl">
+      <h2 class="mb-4 text-lg font-bold text-coffee-900">
         {editingId ? 'Edit Bahan Baku' : 'Tambah Bahan Baku'}
       </h2>
 
       {#if error}
-        <div class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div class="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       {/if}
 
       <label class="mb-3 block">
-        <span class="mb-1 block text-sm font-medium text-coffee-700">Nama</span>
+        <span class="mb-1 block text-sm font-bold text-coffee-700">Nama</span>
         <input
           type="text"
           bind:value={formName}
           placeholder="Contoh: Gula pasir"
-          class="w-full rounded-lg border border-coffee-200 px-3 py-2 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none"
+          class="w-full rounded-xl border border-coffee-200 bg-white px-3 py-2 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none"
         />
       </label>
 
       <label class="mb-3 block">
-        <span class="mb-1 block text-sm font-medium text-coffee-700">Satuan Dasar</span>
+        <span class="mb-1 block text-sm font-bold text-coffee-700">Satuan Dasar</span>
         <select
           bind:value={formUnit}
-          class="w-full rounded-lg border border-coffee-200 px-3 py-2 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none"
+          class="w-full rounded-xl border border-coffee-200 bg-white px-3 py-2 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none"
         >
           {#each UNITS as unit}
             <option value={unit.value}>{unit.label}</option>
@@ -252,14 +252,14 @@
 
       {#if isOwner}
         <label class="mb-5 block">
-          <span class="mb-1 block text-sm font-medium text-coffee-700">Harga per Satuan (Rp)</span>
+          <span class="mb-1 block text-sm font-bold text-coffee-700">Harga per Satuan (Rp)</span>
           <input
             type="number"
             min="0"
             step="1"
             bind:value={formPrice}
             placeholder="0"
-            class="w-full rounded-lg border border-coffee-200 px-3 py-2 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none"
+            class="w-full rounded-xl border border-coffee-200 bg-white px-3 py-2 text-sm focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200 focus:outline-none"
           />
         </label>
       {/if}
@@ -267,14 +267,14 @@
       <div class="flex gap-2">
         <button
           onclick={closeOverlay}
-          class="flex-1 rounded-lg border border-coffee-200 bg-cream py-2.5 text-sm font-medium text-coffee-700 hover:bg-coffee-100"
+          class="btn-secondary flex-1 py-2.5"
         >
           Batal
         </button>
         <button
           onclick={save}
           disabled={isSaving}
-          class="flex-1 rounded-lg bg-coffee-700 py-2.5 text-sm font-medium text-white hover:bg-coffee-800 disabled:opacity-60"
+          class="btn-primary flex-1 py-2.5 disabled:opacity-60"
         >
           {isSaving ? 'Menyimpan...' : 'Simpan'}
         </button>
@@ -284,20 +284,20 @@
 {/if}
 
 {#if mode === 'delete' && deletingItem}
-  <div class="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
-    <div class="w-full max-w-sm rounded-2xl bg-cream p-5 text-center shadow-xl">
-      <p class="mb-1 text-base font-semibold text-coffee-900">Hapus bahan baku?</p>
-      <p class="mb-5 text-sm text-coffee-500">{deletingItem.name} akan dihapus.</p>
+  <div class="fixed inset-0 z-20 flex items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-sm rounded-2xl bg-cream p-5 text-center shadow-2xl">
+      <p class="mb-1 text-base font-bold text-coffee-900">Hapus bahan baku?</p>
+      <p class="mb-5 text-sm text-coffee-600">{deletingItem.name} akan dihapus.</p>
       <div class="flex gap-2">
         <button
           onclick={closeOverlay}
-          class="flex-1 rounded-lg border border-coffee-200 bg-cream py-2.5 text-sm font-medium text-coffee-700 hover:bg-coffee-100"
+          class="btn-secondary flex-1 py-2.5"
         >
           Batal
         </button>
         <button
           onclick={confirmDelete}
-          class="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-medium text-white hover:bg-red-700"
+          class="btn-danger flex-1 py-2.5"
         >
           Hapus
         </button>

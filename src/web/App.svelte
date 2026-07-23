@@ -104,24 +104,23 @@
 </script>
 
 {#if !isReady}
-  <div class="flex min-h-screen items-center justify-center text-coffee-600">
-    Memuat...
+  <div class="flex min-h-screen items-center justify-center bg-cream text-coffee-600">
+    <div class="rounded-2xl bg-white px-6 py-4 shadow-lg">
+      <p class="text-sm font-medium">Memuat...</p>
+    </div>
   </div>
 {:else if user === null}
   <Login onsubmit={handleLogin} />
 {:else}
-  <div class="flex min-h-screen flex-col bg-cream pb-16">
+  <div class="mx-auto flex min-h-screen max-w-md flex-col bg-cream pb-20">
     <!-- Top bar -->
-    <header class="sticky top-0 z-10 border-b border-coffee-200 bg-cream px-4 py-3 shadow-sm">
+    <header class="sticky top-0 z-10 rounded-b-2xl bg-gradient-to-r from-coffee-800 to-coffee-700 px-4 py-4 shadow-lg">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-semibold text-coffee-900">{user.name}</p>
-          <p class="text-xs capitalize text-coffee-500">{user.role}</p>
+          <p class="text-base font-bold text-white">{user.name}</p>
+          <p class="text-xs font-medium text-coffee-100 capitalize">{user.role}</p>
         </div>
-        <button
-          onclick={logout}
-          class="rounded border border-coffee-200 bg-cream px-3 py-1.5 text-sm font-medium text-coffee-700 hover:bg-coffee-100"
-        >
+        <button onclick={logout} class="rounded-lg bg-coffee-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-coffee-500">
           Keluar
         </button>
       </div>
@@ -130,8 +129,8 @@
     <!-- Main content -->
     <main class="flex-1 p-4">
       {#if !tabAllowed}
-        <div class="rounded-xl border border-coffee-200 bg-cream p-6 text-center">
-          <p class="text-sm font-medium text-coffee-900">Akses ditolak</p>
+        <div class="card-cream mt-4 p-6 text-center">
+          <p class="text-sm font-semibold text-coffee-900">Akses ditolak</p>
           <p class="mt-1 text-sm text-coffee-500">Anda tidak memiliki akses ke halaman ini.</p>
         </div>
       {:else if tab === 'beranda'}
@@ -152,16 +151,15 @@
     </main>
 
     <!-- Bottom navigation -->
-    <nav
-      class="fixed bottom-0 left-0 right-0 border-t border-coffee-200 bg-cream px-2 pb-safe"
-    >
-      <div class="mx-auto flex max-w-md justify-around">
+    <nav class="fixed bottom-0 left-0 right-0 z-20 bg-white px-2 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+      <div class="mx-auto flex max-w-md justify-around rounded-t-2xl pb-safe">
         {#each tabs as { key, label }}
           <button
             onclick={() => (tab = key)}
-            class="flex flex-1 flex-col items-center py-3 text-xs font-medium transition-colors"
-            class:text-coffee-700={tab === key}
-            class:text-coffee-500={tab !== key}
+            class="flex flex-1 flex-col items-center rounded-t-xl py-3 text-xs font-bold transition-colors"
+            class:bg-coffee-50={tab === key}
+            class:text-coffee-800={tab === key}
+            class:text-coffee-400={tab !== key}
           >
             {label}
           </button>
