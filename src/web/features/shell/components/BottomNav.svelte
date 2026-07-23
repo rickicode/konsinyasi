@@ -1,13 +1,7 @@
 <script lang="ts">
   import { link, router } from 'svelte-spa-router';
+  import { getAuth } from '$lib/stores/auth.svelte';
   import { Home, ClipboardList, Store, LayoutGrid, User, Users, Settings } from 'lucide-svelte';
-
-  type Props = {
-    /** When true, owner-only links are also shown. */
-    isOwner?: boolean;
-  };
-
-  let { isOwner = false }: Props = $props();
 
   type NavItem = {
     path: string;
@@ -28,13 +22,14 @@
     { path: '/pengaturan', label: 'Pengaturan', icon: Settings },
   ];
 
-  const items = $derived(isOwner ? [...mainItems, ...ownerItems] : mainItems);
+  const auth = getAuth();
+  const items = $derived(auth.isOwner ? [...mainItems, ...ownerItems] : mainItems);
   const current = $derived(router.location ?? '/');
 </script>
 
 <nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-coffee-100/60 bg-cream pb-safe">
   <div class="mx-auto flex max-w-3xl items-center gap-1 overflow-x-auto px-2 py-2 scrollbar-hide">
-    {#each items as item (item.key)}
+    {#each items as item (item.path)}
       {@const Icon = item.icon}
       {@const active =
         current === item.path || (item.path !== '/' && current.startsWith(item.path))}
