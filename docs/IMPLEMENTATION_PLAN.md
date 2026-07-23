@@ -18,16 +18,16 @@
 
 ## Timeline Overview
 
-| Phase | Focus | Rough Duration | Gate |
-|-------|-------|---------------|------|
-| **A** | Bootstrap & tooling | 0.5–1 wk | CI green, build emits shell |
-| **B** | Design system & layout primitives | 1 wk | All primitives render, shell navigates |
-| **C** | API client, auth, permissions | 1 wk | Login/logout/guards work |
-| **D** | Public/customer screens | 1.5 wk | Dashboard, product, profile, reserved routes |
-| **E** | Owner/admin screens | 2 wk | Master, users, settings, reports (backend-dependent) |
-| **F** | Visit/submission flows | 2 wk | End-to-end visit on a real phone |
-| **G** | Polish: PWA, animations, tests | 1 wk | Lighthouse ≥90, E2E green |
-| **H** | Cutover & final review | 0.5 wk | Old code removed, production build signed off |
+| Phase | Focus                             | Rough Duration | Gate                                                 |
+| ----- | --------------------------------- | -------------- | ---------------------------------------------------- |
+| **A** | Bootstrap & tooling               | 0.5–1 wk       | CI green, build emits shell                          |
+| **B** | Design system & layout primitives | 1 wk           | All primitives render, shell navigates               |
+| **C** | API client, auth, permissions     | 1 wk           | Login/logout/guards work                             |
+| **D** | Public/customer screens           | 1.5 wk         | Dashboard, product, profile, reserved routes         |
+| **E** | Owner/admin screens               | 2 wk           | Master, users, settings, reports (backend-dependent) |
+| **F** | Visit/submission flows            | 2 wk           | End-to-end visit on a real phone                     |
+| **G** | Polish: PWA, animations, tests    | 1 wk           | Lighthouse ≥90, E2E green                            |
+| **H** | Cutover & final review            | 0.5 wk         | Old code removed, production build signed off        |
 
 **Critical path after A:** B and C can run in parallel. After C, **D**, **E**, and **F** can be developed by separate owners. G starts once D/E/F core pages are merged.
 
@@ -36,6 +36,7 @@
 ## Phase A — Bootstrap & Tooling
 
 ### Goal
+
 A new feature-based directory skeleton exists, the toolchain is installed, lint/CI wired, and the app still builds.
 
 ### Files / directories to create
@@ -92,22 +93,24 @@ Optional but recommended: `@eslint/js`, `@typescript-eslint/*`, `globals`, `@typ
 
 ### Risks
 
-| Risk | Mitigation |
-|------|------------|
-| `bits-ui` or `svelte-spa-router` conflicts with Svelte 5 / Tailwind v4 | Pin exact versions tested in A; isolate every primitive in Phase B |
-| Linting old pages produces thousands of errors | ESLint ignores old `src/web/{pages,lib,components}` and ignores are removed in Phase H |
-| CI runs out of time | Use `pnpm` action with caching; keep E2E out of the PR gate until Phase G |
+| Risk                                                                   | Mitigation                                                                             |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `bits-ui` or `svelte-spa-router` conflicts with Svelte 5 / Tailwind v4 | Pin exact versions tested in A; isolate every primitive in Phase B                     |
+| Linting old pages produces thousands of errors                         | ESLint ignores old `src/web/{pages,lib,components}` and ignores are removed in Phase H |
+| CI runs out of time                                                    | Use `pnpm` action with caching; keep E2E out of the PR gate until Phase G              |
 
 ---
 
 ## Phase B — Design System & Layout Primitives
 
 ### Goal
+
 The visual language, shell, and generic components exist before any feature logic is written.
 
 ### Files / directories to create
 
 Design tokens & global helpers:
+
 - `src/web/app.css` — rewrite with architecture tokens (semantic status, shadows, typography, safe-area utilities).
 - `src/web/index.html` — update viewport to `viewport-fit=cover`, add `theme-color`, `mobile-web-app-capable`, Apple status-bar meta.
 - `src/web/lib/utils/cn.ts`
@@ -117,6 +120,7 @@ Design tokens & global helpers:
 - `src/web/routes.ts` — initial route map with lazy wrappers
 
 Shared UI primitives (`src/web/shared/ui/`):
+
 - `Button.svelte`
 - `Input.svelte`
 - `TextArea.svelte`
@@ -135,15 +139,18 @@ Shared UI primitives (`src/web/shared/ui/`):
 - `icons/Icon.svelte`
 
 Composables:
+
 - `src/web/shared/composables/PullToRefresh.svelte`
 - `src/web/shared/composables/BottomSheet.svelte`
 - `src/web/shared/composables/ConfirmDialog.svelte`
 
 Providers:
+
 - `src/web/shared/providers/QueryProvider.svelte`
 - `src/web/shared/providers/ToastProvider.svelte`
 
 Shell feature (`src/web/features/shell/`):
+
 - `pages/RootLayout.svelte`
 - `components/AppShell.svelte`
 - `components/TopBar.svelte`
@@ -153,6 +160,7 @@ Shell feature (`src/web/features/shell/`):
 - `pages/NotFoundPage.svelte`
 
 Lazy-loading helper:
+
 - `src/web/lib/router/lazy.ts`
 
 ### Files to modify
@@ -185,21 +193,23 @@ No new dependencies. `bits-ui`, `lucide-svelte`, `clsx`, `tailwind-merge` from P
 
 ### Risks
 
-| Risk | Mitigation |
-|------|------------|
+| Risk                                            | Mitigation                                                                            |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `bits-ui` theming requires unexpected overrides | Keep every primitive unstyled first, then layer Tailwind classes; document deviations |
-| Safe-area CSS causes layout jumps on iOS | Test on real device; use `100dvh` and `env()` constants |
+| Safe-area CSS causes layout jumps on iOS        | Test on real device; use `100dvh` and `env()` constants                               |
 
 ---
 
 ## Phase C — API Client, Auth, Permissions
 
 ### Goal
+
 Server communication, authentication, role-based routing, and global Svelte 5 contexts are solid.
 
 ### Files / directories to create
 
 Shared contracts:
+
 - `src/shared/schemas/auth.schema.ts`
 - `src/shared/schemas/user.schema.ts`
 - `src/shared/schemas/outlet.schema.ts`
@@ -215,12 +225,14 @@ Shared contracts:
 - `src/shared/lib/id.ts`
 
 API layer (`src/web/lib/api/`):
+
 - `client.ts` — typed `ApiClient` with Zod parse and error mapping
 - `errors.ts` — `ApiError` + `errorMessages` map
 - `query-client.ts` — `QueryClient` with retry rules from architecture
 - `query-keys.ts`
 
 Domain API modules:
+
 - `src/web/features/auth/api/auth.api.ts`
 - `src/web/features/auth/stores/auth.svelte.ts`
 - `src/web/features/users/api/users.api.ts`
@@ -233,15 +245,18 @@ Domain API modules:
 - `src/web/features/reports/api/reports.api.ts`
 
 Global rune contexts (`src/web/lib/stores/`):
+
 - `network.svelte.ts`
 - `geolocation.svelte.ts`
 - `toast.svelte.ts`
 
 Router helpers:
+
 - `src/web/lib/router/guards.svelte.ts` — `requireAuth`, `requireOwner`
 - `src/web/lib/router/links.ts` — active link helpers
 
 Auth feature pages:
+
 - `src/web/features/auth/pages/LoginPage.svelte`
 - `src/web/features/auth/components/LoginForm.svelte`
 - `src/web/features/auth/pages/ProfilePage.svelte`
@@ -276,37 +291,42 @@ No new runtime dependencies. `zod` is already used by the worker.
 
 ### Risks
 
-| Risk | Mitigation |
-|------|------------|
-| Shared schemas drift from the worker during refactor | Add a small smoke test that imports every schema in both web + worker typecheck paths |
-| `fetch('/api/...')` behaves differently under `wrangler dev` vs Vite dev | Verify on the actual dev command (`pnpm dev`) and adjust `base`/proxy if needed |
-| Geolocation watch drains battery | Keep watch only inside visit form (Phase F), not globally |
+| Risk                                                                     | Mitigation                                                                            |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| Shared schemas drift from the worker during refactor                     | Add a small smoke test that imports every schema in both web + worker typecheck paths |
+| `fetch('/api/...')` behaves differently under `wrangler dev` vs Vite dev | Verify on the actual dev command (`pnpm dev`) and adjust `base`/proxy if needed       |
+| Geolocation watch drains battery                                         | Keep watch only inside visit form (Phase F), not globally                             |
 
 ---
 
 ## Phase D — Public / Customer Screens
 
 ### Goal
+
 Field users see the dashboard, product information, profile, and the reserved storefront routes are exposed as placeholders.
 
 ### Files / directories to create
 
 Dashboard feature:
+
 - `src/web/features/dashboard/pages/DashboardPage.svelte`
 - `src/web/features/dashboard/components/UrgencyCard.svelte`
 - `src/web/features/dashboard/components/SummaryCards.svelte`
 
 Products feature (read-only/list):
+
 - `src/web/features/products/pages/ProductListPage.svelte`
 - `src/web/features/products/pages/ProductDetailPage.svelte`
 - `src/web/features/products/components/ProductCard.svelte`
 
 Public/reserved storefront placeholders:
+
 - `src/web/features/public/pages/CategoryPage.svelte`
 - `src/web/features/public/pages/CartPage.svelte`
 - `src/web/features/public/pages/CheckoutPage.svelte`
 
 Profile feature (finalized):
+
 - `src/web/features/auth/pages/ProfilePage.svelte`
 
 ### Files to modify
@@ -338,43 +358,50 @@ No new dependencies.
 
 ### Risks
 
-| Risk | Mitigation |
-|------|------------|
+| Risk                                                            | Mitigation                                                                              |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | Staff sees financial fields because the UI forgets to gate them | Drive fields from the server response and add a role guard helper; add a component test |
-| Dashboard data is stale after a visit | Phase F will wire visit invalidation; verify again in Phase F |
-| Placeholder routes confuse QA | Add a clear banner and link back to `/beranda` |
+| Dashboard data is stale after a visit                           | Phase F will wire visit invalidation; verify again in Phase F                           |
+| Placeholder routes confuse QA                                   | Add a clear banner and link back to `/beranda`                                          |
 
 ---
 
 ## Phase E — Owner / Admin Screens
 
 ### Goal
+
 Owner/admin flows are desktop-ready, fully responsive, and reports work once the backend endpoint lands.
 
 ### Files / directories to create
 
 Master feature:
+
 - `src/web/features/master/pages/MasterPage.svelte`
 - `src/web/features/master/components/MasterTabs.svelte`
 
 Product management:
+
 - `src/web/features/products/pages/ProductFormPage.svelte`
 - `src/web/features/products/components/RecipeEditor.svelte`
 - `src/web/features/products/components/HppDisplay.svelte`
 
 Raw-material management:
+
 - `src/web/features/raw-materials/pages/RawMaterialListPage.svelte`
 - `src/web/features/raw-materials/pages/RawMaterialFormPage.svelte`
 
 Users management:
+
 - `src/web/features/users/pages/UsersPage.svelte`
 - `src/web/features/users/components/UserForm.svelte`
 
 Settings:
+
 - `src/web/features/settings/pages/SettingsPage.svelte`
 - `src/web/features/settings/components/RadiusForm.svelte`
 
 Reports / owner hub:
+
 - `src/web/features/reports/pages/OwnerHubPage.svelte`
 - `src/web/features/reports/pages/ReportsPage.svelte`
 - `src/web/features/reports/components/ReportFilters.svelte`
@@ -412,22 +439,24 @@ No new dependencies. Reports PDF is downloaded from `/api/reports/export.pdf` (b
 
 ### Risks
 
-| Risk | Mitigation |
-|------|------------|
-| Reports endpoint not ready by this phase | Gate the reports route with a clear “belum tersedia” state; owner hub still lands first reports card from dashboard |
-| Recipe editor UX becomes unwieldy on phone | Build mobile-first forms; use bottom sheets for ingredient picker |
-| Soft-delete errors are not surfaced to user | Map `CONFLICT` backend code to inline toast with the message from `errors.ts` |
+| Risk                                        | Mitigation                                                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Reports endpoint not ready by this phase    | Gate the reports route with a clear “belum tersedia” state; owner hub still lands first reports card from dashboard |
+| Recipe editor UX becomes unwieldy on phone  | Build mobile-first forms; use bottom sheets for ingredient picker                                                   |
+| Soft-delete errors are not surfaced to user | Map `CONFLICT` backend code to inline toast with the message from `errors.ts`                                       |
 
 ---
 
 ## Phase F — Visit / Submission Flows
 
 ### Goal
+
 The most critical user journey is fluid on mobile: locate outlet, start visit, geofence, close cycles, drop bottles, submit idempotently.
 
 ### Files / directories to create
 
 Outlets feature:
+
 - `src/web/features/outlets/pages/OutletListPage.svelte`
 - `src/web/features/outlets/pages/OutletDetailPage.svelte`
 - `src/web/features/outlets/pages/OutletFormPage.svelte`
@@ -438,6 +467,7 @@ Outlets feature:
 - `src/web/features/outlets/stores/outlet-filter.svelte.ts`
 
 Visits feature:
+
 - `src/web/features/visits/pages/VisitListPage.svelte`
 - `src/web/features/visits/pages/VisitFormPage.svelte`
 - `src/web/features/visits/components/GeofenceStatus.svelte`
@@ -486,28 +516,31 @@ Leaflet must be imported dynamically inside `MapPicker.svelte` to avoid SSR/bund
 
 ### Risks
 
-| Risk | Mitigation |
-|------|------------|
-| `GET /api/visits` endpoint missing, blocking void UI | Build the visit submit flow first; ship void list behind the same endpoint blocker |
-| Mobile camera/file input behaves inconsistently | `<input accept="image/*" capture="environment">` + compression canvas; test on iOS and Android |
-| GPS accuracy swings cause false geofence failures | Show accuracy value; allow refresh; owner override documented in UX |
-| Map tiles fail to load offline | Map picker requires network; visit form geofence works without map tiles |
-| Equation validation mismatch with server | Run the same math in `visit-draft.svelte.ts` that the backend enforces; unit test it |
+| Risk                                                 | Mitigation                                                                                     |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `GET /api/visits` endpoint missing, blocking void UI | Build the visit submit flow first; ship void list behind the same endpoint blocker             |
+| Mobile camera/file input behaves inconsistently      | `<input accept="image/*" capture="environment">` + compression canvas; test on iOS and Android |
+| GPS accuracy swings cause false geofence failures    | Show accuracy value; allow refresh; owner override documented in UX                            |
+| Map tiles fail to load offline                       | Map picker requires network; visit form geofence works without map tiles                       |
+| Equation validation mismatch with server             | Run the same math in `visit-draft.svelte.ts` that the backend enforces; unit test it           |
 
 ---
 
 ## Phase G — Polish: PWA, Animations, Gestures, Tests
 
 ### Goal
+
 The app feels native, passes a quality bar, and has automated coverage for critical paths.
 
 ### Files / directories to create
 
 PWA assets:
+
 - `src/web/public/icons/` — maskable + transparent PNGs, generated from `favicon.svg`.
 - PWA configuration lives in `vite.config.ts` (manifest generated by plugin).
 
 Tests:
+
 - Update/add to existing `src/web/lib/__tests__/`:
   - `draft.test.ts` for `visit-draft.svelte.ts`
   - `role.test.ts` or `rbac.test.ts`
@@ -522,6 +555,7 @@ Tests:
   - `playwright.config.ts`
 
 Polish:
+
 - `src/web/lib/utils/animations.ts` — route transition helpers with `prefers-reduced-motion` guard.
 - Offline banner component in shell.
 - Pull-to-refresh integration on list pages.
@@ -562,17 +596,18 @@ Also run `pnpm exec playwright install --with-deps` in CI/dev.
 
 ### Risks
 
-| Risk | Mitigation |
-|------|------------|
+| Risk                                        | Mitigation                                                                            |
+| ------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Service worker caches stale JS after deploy | Use `autoUpdate` + `workbox` precache revision manifest; verify with a staging deploy |
-| Playwright mobile E2E flaky on CI | Use desktop Chromium with mobile viewport first; add real-device smoke in Phase H |
-| Reduced-motion not respected | Guard every `transition`/`fly`/`fade` with `prefers-reduced-motion: reduce` |
+| Playwright mobile E2E flaky on CI           | Use desktop Chromium with mobile viewport first; add real-device smoke in Phase H     |
+| Reduced-motion not respected                | Guard every `transition`/`fly`/`fade` with `prefers-reduced-motion: reduce`           |
 
 ---
 
 ## Phase H — Cutover & Final Review
 
 ### Goal
+
 Old code is removed, documentation is accurate, and the rewrite is merged.
 
 ### Files / directories to delete
@@ -622,11 +657,11 @@ No new dependencies. Remove any deps only used by the old code (check `Icon.svel
 
 ### Risks
 
-| Risk | Mitigation |
-|------|------------|
+| Risk                                                | Mitigation                                                                   |
+| --------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Deleting old files removes something still imported | Do a project-wide search for `from './lib/` and `from '../components/` first |
-| Final build size jumps after removing old pages | Run `pnpm build` with `vite-plugin-visualizer` if bundle budget is a concern |
-| Last-minute regression in production | Stage on a non-prod Cloudflare environment and run the E2E suite there |
+| Final build size jumps after removing old pages     | Run `pnpm build` with `vite-plugin-visualizer` if bundle budget is a concern |
+| Last-minute regression in production                | Stage on a non-prod Cloudflare environment and run the E2E suite there       |
 
 ---
 
@@ -646,11 +681,10 @@ No new dependencies. Remove any deps only used by the old code (check `Icon.svel
 
 ## Appendix: Backend Blockers & Owner Decisions
 
-| Backend Need | Required By | Action Owner |
-|--------------|-------------|--------------|
-| Refactor worker routes to use `src/shared/schemas/*` | Phase C | Backend lead |
-| `GET /api/visits` (owner visit history) | Phase F | Backend lead |
-| `GET /api/reports` and `/api/reports/export.pdf` | Phase E | Backend lead |
-| Confirm retention / TTL for visit draft localStorage | Phase F | Product owner |
-| PWA icon asset set (maskable, 192, 512) | Phase G | Design / frontend |
-
+| Backend Need                                         | Required By | Action Owner      |
+| ---------------------------------------------------- | ----------- | ----------------- |
+| Refactor worker routes to use `src/shared/schemas/*` | Phase C     | Backend lead      |
+| `GET /api/visits` (owner visit history)              | Phase F     | Backend lead      |
+| `GET /api/reports` and `/api/reports/export.pdf`     | Phase E     | Backend lead      |
+| Confirm retention / TTL for visit draft localStorage | Phase F     | Product owner     |
+| PWA icon asset set (maskable, 192, 512)              | Phase G     | Design / frontend |

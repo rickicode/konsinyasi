@@ -1,27 +1,27 @@
-import { z } from "zod";
-import { Hono } from "hono";
-import { eq } from "drizzle-orm";
-import type { Env } from "../types.js";
-import { createClient } from "../db/client.js";
-import { sessions, users } from "../db/schema.js";
-import { AppError, ValidationError } from "../lib/errors.js";
-import { hashPassword } from "../lib/password.js";
+import { z } from 'zod';
+import { Hono } from 'hono';
+import { eq } from 'drizzle-orm';
+import type { Env } from '../types.js';
+import { createClient } from '../db/client.js';
+import { sessions, users } from '../db/schema.js';
+import { AppError, ValidationError } from '../lib/errors.js';
+import { hashPassword } from '../lib/password.js';
 
 const createUserSchema = z.object({
-  name: z.string().min(1, "Nama wajib diisi"),
-  email: z.string().email("Format email tidak valid"),
-  password: z.string().min(6, "Password minimal 6 karakter"),
-  role: z.enum(["staff", "owner"]).optional().default("staff"),
+  name: z.string().min(1, 'Nama wajib diisi'),
+  email: z.string().email('Format email tidak valid'),
+  password: z.string().min(6, 'Password minimal 6 karakter'),
+  role: z.enum(['staff', 'owner']).optional().default('staff'),
 });
 
 const updateUserSchema = z.object({
-  name: z.string().min(1, "Nama wajib diisi").optional(),
-  role: z.enum(["staff", "owner"]).optional(),
-  status: z.enum(["active", "inactive"]).optional(),
+  name: z.string().min(1, 'Nama wajib diisi').optional(),
+  role: z.enum(['staff', 'owner']).optional(),
+  status: z.enum(['active', 'inactive']).optional(),
 });
 
 const resetPasswordSchema = z.object({
-  new_password: z.string().min(6, "Password minimal 6 karakter"),
+  new_password: z.string().min(6, 'Password minimal 6 karakter'),
 });
 
 const usersRoute = new Hono<Env>();
@@ -38,17 +38,17 @@ function pickUser(user: typeof users.$inferSelect) {
   };
 }
 
-usersRoute.get("/", async (c) => {
+usersRoute.get('/', async (c) => {
   const db = createClient(c.env);
   const rows = await db.select().from(users);
   return c.json(rows.map(pickUser));
 });
 
-usersRoute.post("/", async (c) => {
+usersRoute.post('/', async (c) => {
   const body = await c.req.json();
   const parsed = createUserSchema.safeParse(body);
   if (!parsed.success) {
-    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(", "));
+    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
 
   const db = createClient(c.env);
@@ -63,8 +63,8 @@ usersRoute.post("/", async (c) => {
       role: parsed.data.role,
     });
   } catch (err) {
-    if (err instanceof Error && err.message.toLowerCase().includes("unique")) {
-      throw new ValidationError("Email sudah terdaftar");
+    if (err instanceof Error && err.message.toLowerCase().includes('unique')) {
+      throw new ValidationError('Email sudah terdaftar');
     }
     throw err;
   }
@@ -73,18 +73,18 @@ usersRoute.post("/", async (c) => {
   return c.json(pickUser(rows[0]), 201);
 });
 
-usersRoute.patch("/:id", async (c) => {
-  const id = c.req.param("id");
+usersRoute.patch('/:id', async (c) => {
+  const id = c.req.param('id');
   const body = await c.req.json();
   const parsed = updateUserSchema.safeParse(body);
   if (!parsed.success) {
-    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(", "));
+    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
 
   const db = createClient(c.env);
   const existing = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (!existing[0]) {
-    throw new AppError(404, "NOT_FOUND", "Pengguna tidak ditemukan");
+    throw new AppError(404, 'NOT_FOUND', 'Pengguna tidak ditemukan');
   }
 
   const setValues: Partial<typeof users.$inferInsert> = {};
@@ -93,12 +93,12 @@ usersRoute.patch("/:id", async (c) => {
   if (parsed.data.status !== undefined) setValues.status = parsed.data.status;
 
   if (Object.keys(setValues).length === 0) {
-    throw new ValidationError("Tidak ada field yang diperbarui");
+    throw new ValidationError('Tidak ada field yang diperbarui');
   }
 
   await db.update(users).set(setValues).where(eq(users.id, id));
 
-  if (parsed.data.status === "inactive" && existing[0].status !== "inactive") {
+  if (parsed.data.status === 'inactive' && existing[0].status !== 'inactive') {
     await db.delete(sessions).where(eq(sessions.user_id, id));
   }
 
@@ -106,18 +106,18 @@ usersRoute.patch("/:id", async (c) => {
   return c.json(pickUser(rows[0]));
 });
 
-usersRoute.post("/:id/reset-password", async (c) => {
-  const id = c.req.param("id");
+usersRoute.post('/:id/reset-password', async (c) => {
+  const id = c.req.param('id');
   const body = await c.req.json();
   const parsed = resetPasswordSchema.safeParse(body);
   if (!parsed.success) {
-    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(", "));
+    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
 
   const db = createClient(c.env);
   const existing = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (!existing[0]) {
-    throw new AppError(404, "NOT_FOUND", "Pengguna tidak ditemukan");
+    throw new AppError(404, 'NOT_FOUND', 'Pengguna tidak ditemukan');
   }
 
   const passwordHash = await hashPassword(parsed.data.new_password);

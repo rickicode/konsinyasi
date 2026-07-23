@@ -1,4 +1,4 @@
-export type TabKey = 'beranda' | 'kunjungan' | 'warung' | 'master' | 'pengguna';
+export type TabKey = 'beranda' | 'kunjungan' | 'warung' | 'master' | 'pengguna' | 'pengaturan';
 
 export type Tab = { key: TabKey; label: string; roles: string[] };
 
@@ -6,7 +6,8 @@ export const allTabs: Tab[] = [
   { key: 'beranda', label: 'Beranda', roles: ['owner', 'staff'] },
   { key: 'kunjungan', label: 'Kunjungan', roles: ['owner', 'staff'] },
   { key: 'warung', label: 'Warung', roles: ['owner', 'staff'] },
-  { key: 'master', label: 'Master', roles: ['owner'] },
+  { key: 'master', label: 'Master', roles: ['owner', 'staff'] },
+  { key: 'pengaturan', label: 'Pengaturan', roles: ['owner'] },
   { key: 'pengguna', label: 'Pengguna', roles: ['owner'] },
 ];
 
@@ -21,7 +22,7 @@ export type MasterSectionDef = { key: MasterSection; label: string; roles: strin
 export const allMasterSections: MasterSectionDef[] = [
   { key: 'bahan', label: 'Bahan Baku', roles: ['owner'] },
   { key: 'produk', label: 'Produk', roles: ['owner', 'staff'] },
-  { key: 'warung', label: 'Warung', roles: ['owner'] },
+  { key: 'warung', label: 'Warung', roles: ['owner', 'staff'] },
 ];
 
 export function allowedMasterSections(role: string): MasterSectionDef[] {

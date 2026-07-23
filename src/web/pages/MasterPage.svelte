@@ -6,12 +6,9 @@
   import OutletList from './OutletList.svelte';
 
   type User = { id: string | number; email: string; name: string; role: string; status?: string };
-  type Outlet = { id: string; name: string; address: string | null; latitude: number; longitude: number };
-
-  type Props = { onVisit: (outlet: Outlet) => void };
-
-  let { onVisit }: Props = $props();
-
+  
+  
+  
   let user = $state<User | null>(null);
   let section = $state<MasterSection>('produk');
 
@@ -32,13 +29,22 @@
   }
 
   $effect(() => {
-    section = pickDefault(sections);
     loadUser();
+  });
+
+  $effect(() => {
+    // Hanya reset ke default jika section saat ini tidak ada di daftar yang diizinkan.
+    if (sections.length > 0 && !sections.some((s) => s.key === section)) {
+      section = pickDefault(sections);
+    }
   });
 </script>
 
 <div class="pb-4">
-  <h1 class="mb-4 text-xl font-bold text-coffee-900">Master Data</h1>
+  <div class="mb-5">
+    <h1 class="text-xl font-bold text-coffee-900">Master Data</h1>
+    <p class="text-xs font-medium text-coffee-500">Kelola bahan baku, produk, dan data warung</p>
+  </div>
 
   <div class="card-master mb-5 p-1">
     <div class="flex">
@@ -49,7 +55,7 @@
           class:bg-coffee-700={section === key}
           class:text-white={section === key}
           class:text-coffee-600={section !== key}
-          class:hover:bg-purple-100={section !== key}
+          class:hover:bg-coffee-100={section !== key}
         >
           {label}
         </button>
@@ -62,7 +68,7 @@
   {:else if section === 'produk'}
     <ProductList />
   {:else if section === 'warung'}
-    <OutletList {onVisit} />
+    <OutletList />
   {:else}
     <div class="card-cream p-6 text-center">
       <p class="text-sm font-bold text-coffee-900">Akses ditolak</p>

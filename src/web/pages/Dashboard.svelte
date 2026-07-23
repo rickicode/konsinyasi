@@ -101,7 +101,7 @@
   <h1 class="mb-4 text-xl font-bold text-coffee-900">Beranda</h1>
 
   {#if loading}
-    <div class="flex flex-col items-center justify-center gap-3 py-16" style="color: var(--coffee-500);">
+    <div class="flex flex-col items-center justify-center gap-3 py-16 text-coffee-500">
       <div class="h-8 w-8 animate-spin rounded-full border-4 border-[var(--coffee-200)] border-t-[var(--coffee-600)]"></div>
       <p class="text-sm font-medium">Memuat data...</p>
     </div>
@@ -161,8 +161,7 @@
               </div>
               <button
                 onclick={() => openMaps(item.latitude, item.longitude)}
-                class="flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-transform active:scale-95"
-                style="background: var(--coffee-600);"
+                class="flex shrink-0 items-center gap-1 rounded-full bg-coffee-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-transform active:scale-95"
               >
                 Arahkan
               </button>

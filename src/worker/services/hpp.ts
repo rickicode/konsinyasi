@@ -1,10 +1,7 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
-import * as schema from "../db/schema.js";
-import { ValidationError } from "../lib/errors.js";
-
-type ProductRecipe = typeof schema.product_recipes.$inferSelect;
-type RawMaterial = typeof schema.raw_materials.$inferSelect;
+import { and, eq, inArray, isNull } from 'drizzle-orm';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import * as schema from '../db/schema.js';
+import { ValidationError } from '../lib/errors.js';
 
 type RecipeLineInput = {
   raw_material_id: string;
@@ -12,10 +9,8 @@ type RecipeLineInput = {
   unit: Unit;
 };
 
-export type Unit = "ml" | "cl" | "l" | "gr" | "kg" | "pcs";
-
-export const BASE_UNIT_ENUM = ["ml", "l", "cl", "gr", "kg", "pcs"] as const;
-
+export type Unit = 'ml' | 'cl' | 'l' | 'gr' | 'kg' | 'pcs';
+export const BASE_UNIT_ENUM = ['ml', 'l', 'cl', 'gr', 'kg', 'pcs'] as const;
 export const UNIT_TO_BASE: Record<Unit, number> = {
   ml: 1,
   cl: 10,
@@ -24,14 +19,13 @@ export const UNIT_TO_BASE: Record<Unit, number> = {
   kg: 1000,
   pcs: 1,
 };
-
-export const DIMENSION: Record<Unit, "vol" | "mass" | "count"> = {
-  ml: "vol",
-  cl: "vol",
-  l: "vol",
-  gr: "mass",
-  kg: "mass",
-  pcs: "count",
+export const DIMENSION: Record<Unit, 'vol' | 'mass' | 'count'> = {
+  ml: 'vol',
+  cl: 'vol',
+  l: 'vol',
+  gr: 'mass',
+  kg: 'mass',
+  pcs: 'count',
 };
 
 export type HPPRecipeLine = {
@@ -51,11 +45,10 @@ export function computeHPP(lines: HPPRecipeLine[]): number {
   for (const line of lines) {
     if (DIMENSION[line.unit] !== DIMENSION[line.baseUnit]) {
       throw new ValidationError(
-        `Satuan ${line.unit} tidak cocok dengan satuan dasar ${line.baseUnit}`,
+        `Satuan ${line.unit} tidak cocok dengan satuan dasar ${line.baseUnit}`
       );
     }
-    const baseQuantity =
-      (line.quantity * UNIT_TO_BASE[line.unit]) / UNIT_TO_BASE[line.baseUnit];
+    const baseQuantity = (line.quantity * UNIT_TO_BASE[line.unit]) / UNIT_TO_BASE[line.baseUnit];
     total += baseQuantity * line.pricePerBaseUnit;
   }
   return Math.round(total);
@@ -76,7 +69,7 @@ export type EnrichedRecipeLine = {
 
 export async function fetchRecipeLines(
   db: DrizzleD1Database<typeof schema>,
-  productId: string,
+  productId: string
 ): Promise<EnrichedRecipeLine[]> {
   const rows = await db
     .select({
@@ -90,16 +83,14 @@ export async function fetchRecipeLines(
     .from(schema.product_recipes)
     .innerJoin(
       schema.raw_materials,
-      eq(schema.product_recipes.raw_material_id, schema.raw_materials.id),
+      eq(schema.product_recipes.raw_material_id, schema.raw_materials.id)
     )
     .where(eq(schema.product_recipes.product_id, productId));
-
   for (const row of rows) {
     if (!isUnit(row.base_unit) || !isUnit(row.unit)) {
-      throw new ValidationError("Satuan resep tidak valid");
+      throw new ValidationError('Satuan resep tidak valid');
     }
   }
-
   return rows.map((row) => ({
     id: row.id,
     raw_material_id: row.raw_material_id,
@@ -118,53 +109,52 @@ export async function fetchRecipeLines(
 export async function replaceRecipeLines(
   db: DrizzleD1Database<typeof schema>,
   productId: string,
-  lines: RecipeLineInput[],
+  lines: RecipeLineInput[]
 ): Promise<{
   recipeLines: EnrichedRecipeLine[];
   hpp: number;
 }> {
   if (lines.length === 0) {
-    await db
-      .delete(schema.product_recipes)
-      .where(eq(schema.product_recipes.product_id, productId));
+    await db.delete(schema.product_recipes).where(eq(schema.product_recipes.product_id, productId));
+    const productRows = await db
+      .select()
+      .from(schema.products)
+      .where(eq(schema.products.id, productId))
+      .limit(1);
+    const product = productRows[0];
+    const hpp = product?.hpp_override ?? 0;
     await db
       .update(schema.products)
-      .set({ hpp: 0, updated_at: new Date().toISOString() })
+      .set({ hpp, updated_at: new Date().toISOString() })
       .where(eq(schema.products.id, productId));
-    return { recipeLines: [], hpp: 0 };
+    return { recipeLines: [], hpp };
   }
-
   const rawMaterialIds = [...new Set(lines.map((l) => l.raw_material_id))];
   const rawMaterials = await db
     .select()
     .from(schema.raw_materials)
-    .where(and(inArray(schema.raw_materials.id, rawMaterialIds), isNull(schema.raw_materials.deleted_at)));
-
+    .where(
+      and(inArray(schema.raw_materials.id, rawMaterialIds), isNull(schema.raw_materials.deleted_at))
+    );
   if (rawMaterials.length !== rawMaterialIds.length) {
-    throw new ValidationError("Bahan baku tidak ditemukan");
+    throw new ValidationError('Bahan baku tidak ditemukan');
   }
-
   const materialMap = new Map(rawMaterials.map((m) => [m.id, m]));
-
   for (const line of lines) {
     const material = materialMap.get(line.raw_material_id);
     if (!material) {
-      throw new ValidationError("Bahan baku tidak ditemukan");
+      throw new ValidationError('Bahan baku tidak ditemukan');
     }
     if (!isUnit(line.unit) || !isUnit(material.base_unit)) {
-      throw new ValidationError("Satuan tidak valid");
+      throw new ValidationError('Satuan tidak valid');
     }
     if (DIMENSION[line.unit] !== DIMENSION[material.base_unit]) {
       throw new ValidationError(
-        `Satuan ${line.unit} tidak cocok dengan bahan baku ${material.name}`,
+        `Satuan ${line.unit} tidak cocok dengan bahan baku ${material.name}`
       );
     }
   }
-
-  await db
-    .delete(schema.product_recipes)
-    .where(eq(schema.product_recipes.product_id, productId));
-
+  await db.delete(schema.product_recipes).where(eq(schema.product_recipes.product_id, productId));
   const now = new Date().toISOString();
   await db.insert(schema.product_recipes).values(
     lines.map((line) => ({
@@ -175,39 +165,59 @@ export async function replaceRecipeLines(
       unit: line.unit,
       created_at: now,
       updated_at: now,
-    })),
+    }))
   );
-
   const enriched = await fetchRecipeLines(db, productId);
-  const hpp = computeHPP(
+  const recipeHPP = computeHPP(
     enriched.map((l) => ({
       rawMaterialId: l.raw_material_id,
       baseUnit: l.base_unit,
       pricePerBaseUnit: materialMap.get(l.raw_material_id)!.price_per_base_unit,
       quantity: l.quantity,
       unit: l.unit,
-    })),
+    }))
   );
-
+  const productRows = await db
+    .select()
+    .from(schema.products)
+    .where(eq(schema.products.id, productId))
+    .limit(1);
+  const product = productRows[0];
+  // A product should exist; fallback null override if somehow missing.
+  const hpp = product ? effectiveHPP(product, recipeHPP) : Math.round(recipeHPP);
   await db
     .update(schema.products)
-    .set({ hpp, updated_at: new Date().toISOString() })
+    .set({ hpp, hpp_override: null, updated_at: new Date().toISOString() })
     .where(eq(schema.products.id, productId));
-
   return { recipeLines: enriched, hpp };
+}
+
+function effectiveHPP(product: { hpp_override: number | null }, recipeHPP: number): number {
+  const hasRecipe = recipeHPP > 0;
+  if (hasRecipe) return Math.round(recipeHPP);
+  return product.hpp_override ?? 0;
 }
 
 export async function recalculateHPP(
   db: DrizzleD1Database<typeof schema>,
-  productId: string,
+  productId: string
 ): Promise<number> {
+  const productRows = await db
+    .select()
+    .from(schema.products)
+    .where(eq(schema.products.id, productId))
+    .limit(1);
+  const product = productRows[0];
+  if (!product) throw new ValidationError('Produk tidak ditemukan');
+
   const enriched = await fetchRecipeLines(db, productId);
   if (enriched.length === 0) {
+    const hpp = product.hpp_override ?? 0;
     await db
       .update(schema.products)
-      .set({ hpp: 0, updated_at: new Date().toISOString() })
+      .set({ hpp, updated_at: new Date().toISOString() })
       .where(eq(schema.products.id, productId));
-    return 0;
+    return hpp;
   }
 
   const rawMaterialIds = [...new Set(enriched.map((l) => l.raw_material_id))];
@@ -216,22 +226,20 @@ export async function recalculateHPP(
     .from(schema.raw_materials)
     .where(inArray(schema.raw_materials.id, rawMaterialIds));
   const materialMap = new Map(rawMaterials.map((m) => [m.id, m]));
-
-  const hpp = computeHPP(
+  const recipeHPP = computeHPP(
     enriched.map((l) => ({
       rawMaterialId: l.raw_material_id,
       baseUnit: l.base_unit,
       pricePerBaseUnit: materialMap.get(l.raw_material_id)!.price_per_base_unit,
       quantity: l.quantity,
       unit: l.unit,
-    })),
+    }))
   );
-
+  const hpp = effectiveHPP(product, recipeHPP);
   await db
     .update(schema.products)
-    .set({ hpp, updated_at: new Date().toISOString() })
+    .set({ hpp, hpp_override: null, updated_at: new Date().toISOString() })
     .where(eq(schema.products.id, productId));
-
   return hpp;
 }
 
@@ -241,14 +249,13 @@ export async function recalculateHPP(
  */
 export async function recalculateAllProductsUsingMaterial(
   db: DrizzleD1Database<typeof schema>,
-  rawMaterialId: string,
+  rawMaterialId: string
 ): Promise<void> {
   const rows = await db
     .select({ product_id: schema.product_recipes.product_id })
     .from(schema.product_recipes)
     .where(eq(schema.product_recipes.raw_material_id, rawMaterialId))
     .groupBy(schema.product_recipes.product_id);
-
   for (const row of rows) {
     await recalculateHPP(db, row.product_id);
   }

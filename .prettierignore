@@ -1,0 +1,7 @@
+dist/
+node_modules/
+.wrangler/
+pnpm-lock.yaml
+src/web/pages/
+src/web/lib/
+src/web/components/

@@ -1,17 +1,17 @@
-import { execSync } from "node:child_process";
-import { hashPassword } from "../src/worker/lib/password.js";
+import { execSync } from 'node:child_process';
+import { hashPassword } from '../src/worker/lib/password.js';
 
 async function main() {
   const email = process.env.SEED_OWNER_EMAIL;
   const password = process.env.SEED_OWNER_PASSWORD;
 
   if (!email || !password) {
-    console.error("Missing SEED_OWNER_EMAIL or SEED_OWNER_PASSWORD environment variables");
+    console.error('Missing SEED_OWNER_EMAIL or SEED_OWNER_PASSWORD environment variables');
     process.exit(1);
   }
 
   if (password.length < 6) {
-    console.error("Password must be at least 6 characters");
+    console.error('Password must be at least 6 characters');
     process.exit(1);
   }
 
@@ -27,15 +27,15 @@ SELECT lower(hex(randomblob(16))), '${safeEmail}', 'Owner', '${safeHash}', 'owne
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE role = 'owner');
 `;
 
-  const fs = await import("node:fs");
-  const path = "scripts/seed-owner.generated.sql";
+  const fs = await import('node:fs');
+  const path = 'scripts/seed-owner.generated.sql';
   fs.writeFileSync(path, sql);
 
   try {
-    execSync(`npx wrangler d1 execute konsi --local --file ${path}`, { stdio: "inherit" });
-    console.log("\nSeed finished.");
+    execSync(`npx wrangler d1 execute konsi --local --file ${path}`, { stdio: 'inherit' });
+    console.log('\nSeed finished.');
   } catch (e) {
-    console.error("\nSeed failed:", (e as Error).message);
+    console.error('\nSeed failed:', (e as Error).message);
     process.exit(1);
   }
 }

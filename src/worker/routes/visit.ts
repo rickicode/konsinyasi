@@ -1,25 +1,25 @@
-import { z } from "zod";
-import { Hono } from "hono";
-import { and, eq, inArray, isNull } from "drizzle-orm";
-import type { Env } from "../types.js";
-import { createClient } from "../db/client.js";
-import { app_settings, consignment_cycles, outlets, products } from "../db/schema.js";
-import { AppError, ValidationError } from "../lib/errors.js";
-import { requirePermission } from "../lib/rbac.js";
-import { loadOpenCycles, processVisit, type VisitResult } from "../services/visit.js";
-import { voidVisit } from "../services/voidVisit.js";
+import { z } from 'zod';
+import { Hono } from 'hono';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
+import type { Env } from '../types.js';
+import { createClient } from '../db/client.js';
+import { app_settings, outlets, products } from '../db/schema.js';
+import { AppError, ValidationError } from '../lib/errors.js';
+import { requirePermission } from '../lib/rbac.js';
+import { loadOpenCycles, processVisit, type VisitResult } from '../services/visit.js';
+import { voidVisit } from '../services/voidVisit.js';
 
 const geofenceCoord = z
-  .number({ invalid_type_error: "Koordinat harus angka" })
-  .finite({ message: "Koordinat tidak valid" });
+  .number({ invalid_type_error: 'Koordinat harus angka' })
+  .finite({ message: 'Koordinat tidak valid' });
 
 const accuracySchema = z
-  .number({ invalid_type_error: "Akurasi harus angka" })
-  .nonnegative("Akurasi tidak boleh negatif")
+  .number({ invalid_type_error: 'Akurasi harus angka' })
+  .nonnegative('Akurasi tidak boleh negatif')
   .optional();
 
 const visitSchema = z.object({
-  idempotency_key: z.string().min(1, "Idempotency key wajib diisi"),
+  idempotency_key: z.string().min(1, 'Idempotency key wajib diisi'),
   client_lat: geofenceCoord,
   client_lng: geofenceCoord,
   client_accuracy_m: accuracySchema,
@@ -30,7 +30,7 @@ const visitSchema = z.object({
         qty_sold: z.number().int().nonnegative(),
         qty_return_good: z.number().int().nonnegative(),
         qty_return_damaged: z.number().int().nonnegative(),
-      }),
+      })
     )
     .default([]),
   drops: z
@@ -39,7 +39,7 @@ const visitSchema = z.object({
         product_id: z.string().min(1),
         qty_dropped: z.number().int().positive(),
         notes: z.string().optional(),
-      }),
+      })
     )
     .default([]),
   geofence_override: z.boolean().optional(),
@@ -48,28 +48,20 @@ const visitSchema = z.object({
 });
 
 const voidSchema = z.object({
-  reason: z.string().min(1, "Alasan pembatalan wajib diisi"),
+  reason: z.string().min(1, 'Alasan pembatalan wajib diisi'),
 });
 
 const visitRoute = new Hono<Env>();
-
-function formatRupiah(n: number): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
 
 export function pickVisitResult(result: VisitResult, includeFinancial: boolean): VisitResult {
   if (includeFinancial) return result;
   return result;
 }
 
-visitRoute.get("/outlets/:id/visit", requirePermission("visit:read"), async (c) => {
-  const outletId = c.req.param("id");
-  const user = c.get("user");
-  const includeFinancial = user.role === "owner";
+visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) => {
+  const outletId = c.req.param('id');
+  const user = c.get('user');
+  const includeFinancial = user.role === 'owner';
   const db = createClient(c.env);
 
   const outletRows = await db
@@ -78,7 +70,7 @@ visitRoute.get("/outlets/:id/visit", requirePermission("visit:read"), async (c) 
     .where(and(eq(outlets.id, outletId), isNull(outlets.deleted_at)))
     .limit(1);
   const outlet = outletRows[0];
-  if (!outlet) throw new AppError(404, "NOT_FOUND", "Warung tidak ditemukan");
+  if (!outlet) throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
 
   const openCycles = await loadOpenCycles(db, outletId);
   const productIds = [...new Set(openCycles.map((cycle) => cycle.product_id))];
@@ -93,13 +85,13 @@ visitRoute.get("/outlets/:id/visit", requirePermission("visit:read"), async (c) 
 
   const cycles = openCycles.map((cycle) => {
     const ageH = (Date.now() - Date.parse(cycle.dropped_at)) / 3_600_000;
-    let color: "red" | "yellow" | "green" = "green";
-    if (ageH >= 96) color = "red";
-    else if (ageH >= 72) color = "yellow";
+    let color: 'red' | 'yellow' | 'green' = 'green';
+    if (ageH >= 96) color = 'red';
+    else if (ageH >= 72) color = 'yellow';
     return {
       id: cycle.id,
       product_id: cycle.product_id,
-      product_name: productNames.get(cycle.product_id) ?? "Produk",
+      product_name: productNames.get(cycle.product_id) ?? 'Produk',
       qty_dropped: cycle.qty_dropped,
       dropped_at: cycle.dropped_at,
       age_hours: ageH,
@@ -112,7 +104,7 @@ visitRoute.get("/outlets/:id/visit", requirePermission("visit:read"), async (c) 
   const settingsRows = await db
     .select()
     .from(app_settings)
-    .where(eq(app_settings.key, "geofence_radius_m"))
+    .where(eq(app_settings.key, 'geofence_radius_m'))
     .limit(1);
   const radiusM = Number(settingsRows[0]?.value ?? 100);
 
@@ -123,13 +115,13 @@ visitRoute.get("/outlets/:id/visit", requirePermission("visit:read"), async (c) 
   });
 });
 
-visitRoute.post("/outlets/:id/visit", requirePermission("visit:write"), async (c) => {
-  const outletId = c.req.param("id");
-  const user = c.get("user");
+visitRoute.post('/outlets/:id/visit', requirePermission('visit:write'), async (c) => {
+  const outletId = c.req.param('id');
+  const user = c.get('user');
   const body = await c.req.json();
   const parsed = visitSchema.safeParse(body);
   if (!parsed.success) {
-    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(", "));
+    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
 
   const db = createClient(c.env);
@@ -140,7 +132,7 @@ visitRoute.post("/outlets/:id/visit", requirePermission("visit:write"), async (c
     .where(and(eq(outlets.id, outletId), isNull(outlets.deleted_at)))
     .limit(1);
   const outlet = outletRows[0];
-  if (!outlet) throw new AppError(404, "NOT_FOUND", "Warung tidak ditemukan");
+  if (!outlet) throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
 
   const data = parsed.data;
   const result = await processVisit({
@@ -158,16 +150,16 @@ visitRoute.post("/outlets/:id/visit", requirePermission("visit:write"), async (c
     notes: data.notes,
   });
 
-  return c.json(pickVisitResult(result, user.role === "owner"), 201);
+  return c.json(pickVisitResult(result, user.role === 'owner'), 201);
 });
 
-visitRoute.post("/visits/:idempotencyKey/void", requirePermission("visit:void"), async (c) => {
-  const idempotencyKey = c.req.param("idempotencyKey");
-  const user = c.get("user");
+visitRoute.post('/visits/:idempotencyKey/void', requirePermission('visit:void'), async (c) => {
+  const idempotencyKey = c.req.param('idempotencyKey');
+  const user = c.get('user');
   const body = await c.req.json();
   const parsed = voidSchema.safeParse(body);
   if (!parsed.success) {
-    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(", "));
+    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
 
   const db = createClient(c.env);

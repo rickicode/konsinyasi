@@ -1,4 +1,4 @@
-import { ValidationError } from "./errors.js";
+import { ValidationError } from './errors.js';
 
 const ITERATIONS = 100_000;
 const SALT_LEN = 16;
@@ -6,7 +6,7 @@ const KEY_LEN_BITS = 256;
 const MIN_PASSWORD_LEN = 6;
 
 function base64Encode(bytes: Uint8Array): string {
-  const bin = Array.from(bytes, (b) => String.fromCharCode(b)).join("");
+  const bin = Array.from(bytes, (b) => String.fromCharCode(b)).join('');
   return btoa(bin);
 }
 
@@ -37,14 +37,19 @@ export async function hashPassword(password: string): Promise<string> {
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   assertMinLength(password);
 
-  const parts = hash.split("$");
+  const parts = hash.split('$');
   if (parts.length !== 3) return false;
 
   const iterations = Number(parts[0]);
   const salt = base64Decode(parts[1]);
   const expected = base64Decode(parts[2]);
 
-  if (!Number.isFinite(iterations) || iterations < 1 || salt.length === 0 || expected.length === 0) {
+  if (
+    !Number.isFinite(iterations) ||
+    iterations < 1 ||
+    salt.length === 0 ||
+    expected.length === 0
+  ) {
     return false;
   }
 
@@ -52,15 +57,23 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return timingSafeEqual(actual, expected);
 }
 
-async function deriveKey(password: string, salt: Uint8Array, iterations: number): Promise<ArrayBuffer> {
+async function deriveKey(
+  password: string,
+  salt: Uint8Array,
+  iterations: number
+): Promise<ArrayBuffer> {
   const encoder = new TextEncoder();
-  const material = await crypto.subtle.importKey("raw", encoder.encode(password), { name: "PBKDF2" }, false, [
-    "deriveBits",
-  ]);
+  const material = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
   return crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
     material,
-    KEY_LEN_BITS,
+    KEY_LEN_BITS
   );
 }
 

@@ -1,7 +1,7 @@
-import { and, eq, sql } from "drizzle-orm";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
-import * as schema from "../db/schema.js";
-import { ConflictError, ForbiddenError, ValidationError } from "../lib/errors.js";
+import { and, eq, sql } from 'drizzle-orm';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import * as schema from '../db/schema.js';
+import { ConflictError, ForbiddenError, ValidationError } from '../lib/errors.js';
 
 function nowUtcIso(): string {
   return new Date().toISOString();
@@ -10,7 +10,7 @@ function nowUtcIso(): string {
 async function hasNewerCommittedSubmission(
   db: DrizzleD1Database<typeof schema>,
   outletId: string,
-  createdAt: string,
+  createdAt: string
 ): Promise<boolean> {
   const rows = await db
     .select({ count: sql<number>`count(*)` })
@@ -18,9 +18,9 @@ async function hasNewerCommittedSubmission(
     .where(
       and(
         eq(schema.visit_submissions.outlet_id, outletId),
-        eq(schema.visit_submissions.status, "committed"),
-        sql`${schema.visit_submissions.created_at} > ${createdAt}`,
-      ),
+        eq(schema.visit_submissions.status, 'committed'),
+        sql`${schema.visit_submissions.created_at} > ${createdAt}`
+      )
     );
   return (rows[0]?.count ?? 0) > 0;
 }
@@ -29,14 +29,14 @@ export async function voidVisit(
   db: DrizzleD1Database<typeof schema>,
   actor: typeof schema.users.$inferSelect,
   idempotencyKey: string,
-  reason: string,
+  reason: string
 ): Promise<void> {
-  if (actor.role !== "owner") {
-    throw new ForbiddenError("Hanya owner yang dapat membatalkan kunjungan");
+  if (actor.role !== 'owner') {
+    throw new ForbiddenError('Hanya owner yang dapat membatalkan kunjungan');
   }
 
   const trimmedReason = reason.trim();
-  if (!trimmedReason) throw new ValidationError("Alasan pembatalan wajib diisi");
+  if (!trimmedReason) throw new ValidationError('Alasan pembatalan wajib diisi');
 
   const submissionRows = await db
     .select()
@@ -44,14 +44,14 @@ export async function voidVisit(
     .where(eq(schema.visit_submissions.idempotency_key, idempotencyKey))
     .limit(1);
   const submission = submissionRows[0];
-  if (!submission || submission.status === "voided") {
-    throw new ConflictError("Kunjungan tidak ditemukan atau sudah dibatalkan");
+  if (!submission || submission.status === 'voided') {
+    throw new ConflictError('Kunjungan tidak ditemukan atau sudah dibatalkan');
   }
 
   const newer = await hasNewerCommittedSubmission(db, submission.outlet_id, submission.created_at);
   if (newer) {
     throw new ConflictError(
-      "Tidak dapat membatalkan kunjungan karena sudah ada kunjungan lebih baru di warung ini",
+      'Tidak dapat membatalkan kunjungan karena sudah ada kunjungan lebih baru di warung ini'
     );
   }
 
@@ -59,7 +59,7 @@ export async function voidVisit(
   const lockResult = await db
     .update(schema.visit_submissions)
     .set({
-      status: "voided",
+      status: 'voided',
       voided_at: now,
       voided_by: actor.id,
       void_reason: trimmedReason,
@@ -67,13 +67,13 @@ export async function voidVisit(
     .where(
       and(
         eq(schema.visit_submissions.idempotency_key, idempotencyKey),
-        eq(schema.visit_submissions.status, "committed"),
-      ),
+        eq(schema.visit_submissions.status, 'committed')
+      )
     )
     .run();
 
   if ((lockResult.meta?.changes ?? 0) === 0) {
-    throw new ConflictError("Kunjungan sudah dibatalkan");
+    throw new ConflictError('Kunjungan sudah dibatalkan');
   }
 
   const closedCycles = await db
@@ -82,8 +82,8 @@ export async function voidVisit(
     .where(
       and(
         eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
-        eq(schema.consignment_cycles.status, "closed"),
-      ),
+        eq(schema.consignment_cycles.status, 'closed')
+      )
     );
   const droppedCycles = await db
     .select()
@@ -91,8 +91,8 @@ export async function voidVisit(
     .where(
       and(
         eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
-        eq(schema.consignment_cycles.status, "open"),
-      ),
+        eq(schema.consignment_cycles.status, 'open')
+      )
     );
 
   const statements: unknown[] = [];
@@ -106,28 +106,28 @@ export async function voidVisit(
           qty_return_damaged: 0,
           amount_collected: 0,
           picked_up_at: null,
-          status: "open",
+          status: 'open',
           updated_at: now,
         })
         .where(
           and(
             eq(schema.consignment_cycles.id, cycle.id),
-            eq(schema.consignment_cycles.status, "closed"),
-          ),
-        ),
+            eq(schema.consignment_cycles.status, 'closed')
+          )
+        )
     );
   }
   for (const cycle of droppedCycles) {
     statements.push(
       db
         .update(schema.consignment_cycles)
-        .set({ status: "voided", updated_at: now })
+        .set({ status: 'voided', updated_at: now })
         .where(
           and(
             eq(schema.consignment_cycles.id, cycle.id),
-            eq(schema.consignment_cycles.status, "open"),
-          ),
-        ),
+            eq(schema.consignment_cycles.status, 'open')
+          )
+        )
     );
   }
 

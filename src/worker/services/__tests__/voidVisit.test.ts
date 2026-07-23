@@ -1,12 +1,8 @@
-import { describe, expect, it } from "vitest";
-import * as schema from "../../db/schema.js";
-import {
-  ConflictError,
-  ForbiddenError,
-  ValidationError,
-} from "../../lib/errors.js";
-import { voidVisit } from "../voidVisit.js";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
+import { describe, expect, it } from 'vitest';
+import * as schema from '../../db/schema.js';
+import { ConflictError, ForbiddenError, ValidationError } from '../../lib/errors.js';
+import { voidVisit } from '../voidVisit.js';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
 class StubDb {
   calls: { op: string; args?: unknown; result?: unknown }[] = [];
@@ -15,7 +11,7 @@ class StubDb {
 
   private pull() {
     if (this.queue.length === 0) {
-      throw new Error("Unexpected db call: queue empty");
+      throw new Error('Unexpected db call: queue empty');
     }
     return this.queue.shift();
   }
@@ -24,13 +20,13 @@ class StubDb {
     {},
     {
       get: (_target, prop) => {
-        if (prop === "then") {
+        if (prop === 'then') {
           return (resolve: (v: unknown) => void) => resolve(this.pull());
         }
-        if (prop === "run") {
+        if (prop === 'run') {
           return async () => {
             const v = this.pull();
-            this.calls.push({ op: "run", result: v });
+            this.calls.push({ op: 'run', result: v });
             return v;
           };
         }
@@ -39,40 +35,40 @@ class StubDb {
           return this.chain;
         };
       },
-    },
+    }
   );
 
   select = (fields?: unknown) => {
-    this.calls.push({ op: "select", args: fields });
+    this.calls.push({ op: 'select', args: fields });
     return this.chain;
   };
 
   update = (table: unknown) => {
-    this.calls.push({ op: "update", args: table });
+    this.calls.push({ op: 'update', args: table });
     return this.chain;
   };
 
   async batch(statements: unknown[]) {
-    this.calls.push({ op: "batch", args: statements.length });
+    this.calls.push({ op: 'batch', args: statements.length });
     return this.pull();
   }
 }
 
 const owner = {
-  id: "owner-1",
-  role: "owner",
+  id: 'owner-1',
+  role: 'owner',
 } as unknown as typeof schema.users.$inferSelect;
 
 const staff = {
-  id: "staff-1",
-  role: "staff",
+  id: 'staff-1',
+  role: 'staff',
 } as unknown as typeof schema.users.$inferSelect;
 
 const committedSubmission = {
-  idempotency_key: "key-1",
-  outlet_id: "outlet-1",
-  status: "committed",
-  created_at: "2024-01-01T00:00:00.000Z",
+  idempotency_key: 'key-1',
+  outlet_id: 'outlet-1',
+  status: 'committed',
+  created_at: '2024-01-01T00:00:00.000Z',
 };
 
 function changes(n: number): D1Response {
@@ -90,47 +86,47 @@ function changes(n: number): D1Response {
   };
 }
 
-describe("voidVisit", () => {
-  it("rejects staff with ForbiddenError", async () => {
+describe('voidVisit', () => {
+  it('rejects staff with ForbiddenError', async () => {
     const db = new StubDb([]);
     await expect(
-      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, staff, "key-1", "salah input"),
+      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, staff, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ForbiddenError);
     expect(db.calls).toHaveLength(0);
   });
 
-  it("rejects empty reason", async () => {
+  it('rejects empty reason', async () => {
     const db = new StubDb([]);
     await expect(
-      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, "key-1", "   "),
+      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', '   ')
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
-  it("returns ConflictError when submission is missing", async () => {
+  it('returns ConflictError when submission is missing', async () => {
     const db = new StubDb([[]]);
     await expect(
-      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, "key-1", "salah input"),
+      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
-    expect(db.calls[0]?.op).toBe("select");
+    expect(db.calls[0]?.op).toBe('select');
   });
 
-  it("returns ConflictError when submission is already voided", async () => {
-    const db = new StubDb([[{ ...committedSubmission, status: "voided" }]]);
+  it('returns ConflictError when submission is already voided', async () => {
+    const db = new StubDb([[{ ...committedSubmission, status: 'voided' }]]);
     await expect(
-      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, "key-1", "salah input"),
+      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
-  it("returns ConflictError when a newer committed visit exists", async () => {
+  it('returns ConflictError when a newer committed visit exists', async () => {
     const db = new StubDb([[committedSubmission], [{ count: 1 }]]);
     await expect(
-      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, "key-1", "salah input"),
+      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
-  it("voids a committed visit and re-opens/voids related cycles", async () => {
-    const closedCycle = { id: "cycle-closed", status: "closed" };
-    const openCycle = { id: "cycle-open", status: "open" };
+  it('voids a committed visit and re-opens/voids related cycles', async () => {
+    const closedCycle = { id: 'cycle-closed', status: 'closed' };
+    const openCycle = { id: 'cycle-open', status: 'open' };
     const db = new StubDb([
       [committedSubmission],
       [{ count: 0 }],
@@ -141,22 +137,22 @@ describe("voidVisit", () => {
     ]);
 
     await expect(
-      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, "key-1", "salah input"),
+      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).resolves.toBeUndefined();
 
-    const batchCalls = db.calls.filter((c) => c.op === "batch");
+    const batchCalls = db.calls.filter((c) => c.op === 'batch');
     expect(batchCalls).toHaveLength(1);
     expect(batchCalls[0]?.args).toBe(2);
-    expect(db.calls.find((c) => c.op === "run")?.result).toEqual(changes(1));
+    expect(db.calls.find((c) => c.op === 'run')?.result).toEqual(changes(1));
   });
 
-  it("rejects a second void even when select still sees committed", async () => {
+  it('rejects a second void even when select still sees committed', async () => {
     const db = new StubDb([[committedSubmission], [{ count: 0 }], changes(0)]);
     await expect(
-      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, "key-1", "salah input"),
+      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
 
-    expect(db.calls.find((c) => c.op === "run")?.result).toEqual(changes(0));
-    expect(db.calls.some((c) => c.op === "batch")).toBe(false);
+    expect(db.calls.find((c) => c.op === 'run')?.result).toEqual(changes(0));
+    expect(db.calls.some((c) => c.op === 'batch')).toBe(false);
   });
 });

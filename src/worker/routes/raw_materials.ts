@@ -1,36 +1,36 @@
-import { z } from "zod";
-import { Hono } from "hono";
-import { eq, isNull } from "drizzle-orm";
-import type { Env } from "../types.js";
-import { createClient } from "../db/client.js";
-import { raw_materials as rawMaterials } from "../db/schema.js";
-import { AppError, ValidationError } from "../lib/errors.js";
-import { recalculateAllProductsUsingMaterial } from "../services/hpp.js";
+import { z } from 'zod';
+import { Hono } from 'hono';
+import { eq, isNull } from 'drizzle-orm';
+import type { Env } from '../types.js';
+import { createClient } from '../db/client.js';
+import { product_recipes, raw_materials as rawMaterials } from '../db/schema.js';
+import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
+import { recalculateAllProductsUsingMaterial } from '../services/hpp.js';
 
-const baseUnitEnum = ["ml", "l", "cl", "gr", "kg", "pcs"] as const;
+const baseUnitEnum = ['ml', 'l', 'cl', 'gr', 'kg', 'pcs'] as const;
 
 const createSchema = z.object({
-  name: z.string().min(1, "Nama bahan baku wajib diisi"),
+  name: z.string().min(1, 'Nama bahan baku wajib diisi'),
   base_unit: z.enum(baseUnitEnum, {
-    message: "Satuan dasar harus ml, l, cl, gr, kg, atau pcs",
+    message: 'Satuan dasar harus ml, l, cl, gr, kg, atau pcs',
   }),
   price_per_base_unit: z
-    .number({ invalid_type_error: "Harga satuan harus angka" })
-    .int("Harga satuan harus bilangan bulat")
-    .nonnegative("Harga satuan tidak boleh negatif"),
+    .number({ invalid_type_error: 'Harga satuan harus angka' })
+    .int('Harga satuan harus bilangan bulat')
+    .nonnegative('Harga satuan tidak boleh negatif'),
 });
 
 const updateSchema = z.object({
-  name: z.string().min(1, "Nama bahan baku wajib diisi").optional(),
+  name: z.string().min(1, 'Nama bahan baku wajib diisi').optional(),
   base_unit: z
     .enum(baseUnitEnum, {
-      message: "Satuan dasar harus ml, l, cl, gr, kg, atau pcs",
+      message: 'Satuan dasar harus ml, l, cl, gr, kg, atau pcs',
     })
     .optional(),
   price_per_base_unit: z
-    .number({ invalid_type_error: "Harga satuan harus angka" })
-    .int("Harga satuan harus bilangan bulat")
-    .nonnegative("Harga satuan tidak boleh negatif")
+    .number({ invalid_type_error: 'Harga satuan harus angka' })
+    .int('Harga satuan harus bilangan bulat')
+    .nonnegative('Harga satuan tidak boleh negatif')
     .optional(),
 });
 
@@ -47,7 +47,7 @@ function pickRawMaterial(row: typeof rawMaterials.$inferSelect) {
   };
 }
 
-rawMaterialsRoute.get("/", async (c) => {
+rawMaterialsRoute.get('/', async (c) => {
   const db = createClient(c.env);
   const rows = await db
     .select()
@@ -57,97 +57,76 @@ rawMaterialsRoute.get("/", async (c) => {
   return c.json(rows.map(pickRawMaterial));
 });
 
-rawMaterialsRoute.post("/", async (c) => {
+rawMaterialsRoute.post('/', async (c) => {
   const body = await c.req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(", "));
+    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
-
   const db = createClient(c.env);
   const id = crypto.randomUUID();
-
   await db.insert(rawMaterials).values({
     id,
     name: parsed.data.name,
     base_unit: parsed.data.base_unit,
     price_per_base_unit: parsed.data.price_per_base_unit,
   });
-
-  const rows = await db
-    .select()
-    .from(rawMaterials)
-    .where(eq(rawMaterials.id, id))
-    .limit(1);
+  const rows = await db.select().from(rawMaterials).where(eq(rawMaterials.id, id)).limit(1);
   return c.json(pickRawMaterial(rows[0]), 201);
 });
 
-rawMaterialsRoute.patch("/:id", async (c) => {
-  const id = c.req.param("id");
+rawMaterialsRoute.patch('/:id', async (c) => {
+  const id = c.req.param('id');
   const body = await c.req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(", "));
+    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
-
   const db = createClient(c.env);
-  const existing = await db
-    .select()
-    .from(rawMaterials)
-    .where(eq(rawMaterials.id, id))
-    .limit(1);
+  const existing = await db.select().from(rawMaterials).where(eq(rawMaterials.id, id)).limit(1);
   if (!existing[0]) {
-    throw new AppError(404, "NOT_FOUND", "Bahan baku tidak ditemukan");
+    throw new AppError(404, 'NOT_FOUND', 'Bahan baku tidak ditemukan');
   }
-
   const setValues: Partial<typeof rawMaterials.$inferInsert> = {};
   if (parsed.data.name !== undefined) setValues.name = parsed.data.name;
   if (parsed.data.base_unit !== undefined) setValues.base_unit = parsed.data.base_unit;
   if (parsed.data.price_per_base_unit !== undefined) {
     setValues.price_per_base_unit = parsed.data.price_per_base_unit;
   }
-
   if (Object.keys(setValues).length === 0) {
-    throw new ValidationError("Tidak ada field yang diperbarui");
+    throw new ValidationError('Tidak ada field yang diperbarui');
   }
-
-  await db
-    .update(rawMaterials)
-    .set(setValues)
-    .where(eq(rawMaterials.id, id));
-
+  await db.update(rawMaterials).set(setValues).where(eq(rawMaterials.id, id));
   const shouldRecalcHPP =
     setValues.price_per_base_unit !== undefined || setValues.base_unit !== undefined;
   if (shouldRecalcHPP) {
     await recalculateAllProductsUsingMaterial(db, id);
   }
-
-  const rows = await db
-    .select()
-    .from(rawMaterials)
-    .where(eq(rawMaterials.id, id))
-    .limit(1);
+  const rows = await db.select().from(rawMaterials).where(eq(rawMaterials.id, id)).limit(1);
   return c.json(pickRawMaterial(rows[0]));
 });
 
-rawMaterialsRoute.delete("/:id", async (c) => {
-  const id = c.req.param("id");
+rawMaterialsRoute.delete('/:id', async (c) => {
+  const id = c.req.param('id');
   const db = createClient(c.env);
-
-  const existing = await db
-    .select()
-    .from(rawMaterials)
-    .where(eq(rawMaterials.id, id))
-    .limit(1);
+  const existing = await db.select().from(rawMaterials).where(eq(rawMaterials.id, id)).limit(1);
   if (!existing[0]) {
-    throw new AppError(404, "NOT_FOUND", "Bahan baku tidak ditemukan");
+    throw new AppError(404, 'NOT_FOUND', 'Bahan baku tidak ditemukan');
   }
-
+  const recipes = await db
+    .select({ id: product_recipes.id })
+    .from(product_recipes)
+    .where(eq(product_recipes.raw_material_id, id))
+    .limit(1);
+  if (recipes.length > 0) {
+    throw new ConflictError(
+      'Bahan baku masih digunakan di resep; hapus dari resep terlebih dahulu'
+    );
+  }
   await db
     .update(rawMaterials)
     .set({ deleted_at: new Date().toISOString() })
     .where(eq(rawMaterials.id, id));
-
   return c.json({ ok: true });
 });
 

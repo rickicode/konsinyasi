@@ -1,7 +1,7 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
-import * as schema from "../db/schema.js";
-import { AppError, ConflictError, ValidationError } from "../lib/errors.js";
+import { and, eq, inArray, isNull } from 'drizzle-orm';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import * as schema from '../db/schema.js';
+import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
 
 const EARTH_RADIUS_M = 6_371_000;
 
@@ -9,11 +9,11 @@ export function ageHours(droppedAt: string): number {
   return (Date.now() - Date.parse(droppedAt)) / 3_600_000;
 }
 
-export function ageColor(droppedAt: string): "red" | "yellow" | "green" {
+export function ageColor(droppedAt: string): 'red' | 'yellow' | 'green' {
   const h = ageHours(droppedAt);
-  if (h >= 96) return "red";
-  if (h >= 72) return "yellow";
-  return "green";
+  if (h >= 96) return 'red';
+  if (h >= 72) return 'yellow';
+  return 'green';
 }
 
 export function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -87,7 +87,7 @@ function nowUtcIso(): string {
 
 export async function loadOpenCycles(
   db: DrizzleD1Database<typeof schema>,
-  outletId: string,
+  outletId: string
 ): Promise<(typeof schema.consignment_cycles.$inferSelect)[]> {
   return db
     .select()
@@ -95,20 +95,20 @@ export async function loadOpenCycles(
     .where(
       and(
         eq(schema.consignment_cycles.outlet_id, outletId),
-        eq(schema.consignment_cycles.status, "open"),
-      ),
+        eq(schema.consignment_cycles.status, 'open')
+      )
     )
     .orderBy(schema.consignment_cycles.dropped_at);
 }
 
 async function loadGeofenceRadiusM(
   db: DrizzleD1Database<typeof schema>,
-  fallback = 100,
+  fallback = 100
 ): Promise<number> {
   const rows = await db
     .select({ value: schema.app_settings.value })
     .from(schema.app_settings)
-    .where(eq(schema.app_settings.key, "geofence_radius_m"))
+    .where(eq(schema.app_settings.key, 'geofence_radius_m'))
     .limit(1);
   const parsed = Number(rows[0]?.value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -139,8 +139,8 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
     return JSON.parse(existing[0].response_json) as VisitResult;
   }
 
-  if (outlet.status !== "active" || outlet.deleted_at) {
-    throw new ValidationError("Warung tidak aktif");
+  if (outlet.status !== 'active' || outlet.deleted_at) {
+    throw new ValidationError('Warung tidak aktif');
   }
 
   const radiusM = await loadGeofenceRadiusM(db);
@@ -148,18 +148,18 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
 
   if (distanceM > radiusM) {
     const ownerOk =
-      actor.role === "owner" && geofenceOverride && Boolean(geofenceOverrideReason?.trim());
+      actor.role === 'owner' && geofenceOverride && Boolean(geofenceOverrideReason?.trim());
     if (!ownerOk) {
       throw new AppError(
         400,
-        "GEOFENCE_ERROR",
-        `Anda ${distanceM} m dari warung (batas ${radiusM} m)`,
+        'GEOFENCE_ERROR',
+        `Anda ${distanceM} m dari warung (batas ${radiusM} m)`
       );
     }
   }
 
   if (pickups.length === 0 && drops.length === 0) {
-    throw new ValidationError("Kunjungan harus memiliki penarikan atau penitipan");
+    throw new ValidationError('Kunjungan harus memiliki penarikan atau penitipan');
   }
 
   const openCycles = await loadOpenCycles(db, outlet.id);
@@ -169,21 +169,21 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
     const pickupIds = new Set(pickups.map((p) => p.cycle_id));
     const missing = [...openCycleIds].filter((id) => !pickupIds.has(id));
     if (missing.length > 0) {
-      throw new ValidationError("Semua siklus terbuka wajib ditutup dalam kunjungan ini");
+      throw new ValidationError('Semua siklus terbuka wajib ditutup dalam kunjungan ini');
     }
   }
 
   const closedSummaries: ClosedCycleSummary[] = [];
-  const statements: ReturnType<DrizzleD1Database<typeof schema>["batch"]> extends infer R
+  const statements: ReturnType<DrizzleD1Database<typeof schema>['batch']> extends infer R
     ? R
     : never[] = [];
   const pickedUpAt = nowUtcIso();
 
   for (const pickup of pickups) {
     const cycle = openCycles.find((c) => c.id === pickup.cycle_id);
-    if (!cycle) throw new ValidationError("Siklus tidak ditemukan");
+    if (!cycle) throw new ValidationError('Siklus tidak ditemukan');
     if (pickup.qty_sold < 0 || pickup.qty_return_good < 0 || pickup.qty_return_damaged < 0) {
-      throw new ValidationError("Qty tidak boleh negatif");
+      throw new ValidationError('Qty tidak boleh negatif');
     }
     const total = pickup.qty_sold + pickup.qty_return_good + pickup.qty_return_damaged;
     if (total !== cycle.qty_dropped) {
@@ -192,7 +192,7 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
     const amount = pickup.qty_sold * cycle.price_snapshot;
     closedSummaries.push({
       cycle_id: cycle.id,
-      product_name: "",
+      product_name: '',
       qty_sold: pickup.qty_sold,
       qty_return_good: pickup.qty_return_good,
       qty_return_damaged: pickup.qty_return_damaged,
@@ -208,16 +208,16 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
           qty_return_damaged: pickup.qty_return_damaged,
           amount_collected: amount,
           picked_up_at: pickedUpAt,
-          status: "closed",
+          status: 'closed',
           visit_submission_id: idempotencyKey,
           updated_at: pickedUpAt,
         })
         .where(
           and(
             eq(schema.consignment_cycles.id, cycle.id),
-            eq(schema.consignment_cycles.status, "open"),
-          ),
-        ),
+            eq(schema.consignment_cycles.status, 'open')
+          )
+        )
     );
   }
 
@@ -230,9 +230,9 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
           .where(
             and(
               inArray(schema.products.id, droppedProductIds),
-              eq(schema.products.status, "active"),
-              isNull(schema.products.deleted_at),
-            ),
+              eq(schema.products.status, 'active'),
+              isNull(schema.products.deleted_at)
+            )
           )
       : [];
   const productMap = new Map(activeProducts.map((p) => [p.id, p]));
@@ -240,9 +240,9 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
   const droppedSummaries: DroppedCycleSummary[] = [];
 
   for (const drop of drops) {
-    if (drop.qty_dropped <= 0) throw new ValidationError("Qty titip harus lebih dari 0");
+    if (drop.qty_dropped <= 0) throw new ValidationError('Qty titip harus lebih dari 0');
     const product = productMap.get(drop.product_id);
-    if (!product) throw new ValidationError("Produk tidak aktif atau tidak ditemukan");
+    if (!product) throw new ValidationError('Produk tidak aktif atau tidak ditemukan');
     const cycleId = crypto.randomUUID();
     droppedSummaries.push({
       cycle_id: cycleId,
@@ -263,12 +263,12 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
         qty_return_good: 0,
         qty_return_damaged: 0,
         amount_collected: 0,
-        status: "open",
+        status: 'open',
         visit_submission_id: idempotencyKey,
         notes: drop.notes ?? null,
         created_at: pickedUpAt,
         updated_at: pickedUpAt,
-      }),
+      })
     );
   }
 
@@ -297,9 +297,9 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
       geofence_override: !!geofenceOverride,
       geofence_override_reason: geofenceOverrideReason?.trim() ?? null,
       notes: notes?.trim() ?? null,
-      status: "committed",
+      status: 'committed',
       created_at: pickedUpAt,
-    }),
+    })
   );
 
   await db.batch(statements as never);
@@ -312,12 +312,12 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
       .where(
         and(
           inArray(schema.consignment_cycles.id, pickupCycleIds),
-          eq(schema.consignment_cycles.status, "closed"),
-          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
-        ),
+          eq(schema.consignment_cycles.status, 'closed'),
+          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey)
+        )
       );
     if (closedRows.length !== pickupCycleIds.length) {
-      throw new ConflictError("Siklus sudah ditutup oleh kunjungan lain");
+      throw new ConflictError('Siklus sudah ditutup oleh kunjungan lain');
     }
   }
 
@@ -334,7 +334,7 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
     for (const summary of result.closed_cycles) {
       const cycle = openCycles.find((c) => c.id === summary.cycle_id);
       if (cycle) {
-        summary.product_name = productNames.get(cycle.product_id) ?? "Produk";
+        summary.product_name = productNames.get(cycle.product_id) ?? 'Produk';
       }
     }
   }

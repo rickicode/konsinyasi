@@ -1,6 +1,7 @@
 <script lang='ts'>
   import { onMount, onDestroy } from 'svelte';
   import { api } from '../lib/api.js';
+  import { navigate } from '../lib/router.js';
   import {
     clearGpsWatch,
     clearVisitDraft,
@@ -26,9 +27,11 @@
   };
   type ProductOption = { id: string; name: string };
 
-  type Props = { outlet: Outlet; user: User; onBack: () => void };
+  type Props = { outletId: string; user: User };
 
-  let { outlet, user, onBack }: Props = $props();
+  let { outletId, user }: Props = $props();
+
+  let outlet = $state<Outlet>({ id: '', name: 'Memuat...', address: '', latitude: 0, longitude: 0 });
 
   let loading = $state(true);
   let saving = $state(false);
@@ -57,7 +60,7 @@
   let dataLoaded = $state(false);
 
   $effect(() => {
-    if (gps) {
+    if (gps && outlet.latitude !== 0 && outlet.longitude !== 0) {
       distanceM = haversineM(gps.lat, gps.lng, outlet.latitude, outlet.longitude);
     }
   });
@@ -94,7 +97,7 @@
     error = null;
     try {
       const [visitRes, pickerRes] = await Promise.all([
-        api(`/api/outlets/${outlet.id}/visit`),
+        api(`/api/outlets/${outletId}/visit`),
         api('/api/products/picker'),
       ]);
       if (!visitRes.ok) throw new Error(await visitRes.text());
@@ -105,6 +108,7 @@
         outlet: Outlet;
       };
       const pickerData = (await pickerRes.json()) as ProductOption[];
+      outlet = visitData.outlet;
       cycles = visitData.cycles;
       radiusM = visitData.geofence_radius_m;
       products = pickerData;
@@ -244,7 +248,7 @@
     error = null;
     submitFailed = false;
     try {
-      const res = await api(`/api/outlets/${outlet.id}/visit`, {
+      const res = await api(`/api/outlets/${outletId}/visit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -265,7 +269,7 @@
       }
       clearVisitDraft(outlet.id);
       success = 'Kunjungan berhasil disimpan.';
-      setTimeout(onBack, 1500);
+      setTimeout(() => navigate('/kunjungan'), 1500);
     } catch (err) {
       const isNetworkError = err instanceof TypeError || err instanceof Error && !navigator.onLine;
       if (isNetworkError) {
@@ -313,7 +317,7 @@
 </script>
 
 <div class='pb-28'>
-  <button onclick={onBack} class='mb-3 text-sm font-bold text-coffee-700 hover:underline'>← Kembali</button>
+  <button onclick={() => navigate('/kunjungan')} class='mb-3 text-sm font-bold text-coffee-700 hover:underline'>← Kembali</button>
 
   {#if loading}
     <p class='py-8 text-center text-coffee-500'>Memuat data kunjungan...</p>

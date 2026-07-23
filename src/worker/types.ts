@@ -1,7 +1,7 @@
-import type { D1Database, Fetcher } from "@cloudflare/workers-types";
-import type { users } from "./db/schema.js";
+import type { D1Database, Fetcher } from '@cloudflare/workers-types';
+import type { users } from './db/schema.js';
 
-declare module "hono" {
+declare module 'hono' {
   interface ContextVariableMap {
     user: typeof users.$inferSelect;
     sessionId: string;

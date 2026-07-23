@@ -4,7 +4,7 @@
 **Pemilik Produk:** Ricki  
 **Status:** Final untuk Development  
 **Stack:** Cloudflare Workers (full-stack 1 deploy) · Hono · Svelte 5 · D1 · R2  
-**Pengguna:** Multi-user (owner + karyawan), role expandable  
+**Pengguna:** Multi-user (owner + karyawan), role expandable
 
 ---
 
@@ -36,70 +36,70 @@ Bisnis kopi susu botolan beroperasi dengan sistem konsinyasi ke warung-warung ke
 
 ### 3.1 Operasional
 
-| Aturan | Detail |
-|--------|--------|
-| **Non-Scheduled Visits** | Urgensi dari umur stok aktual, bukan jadwal tetap. |
-| **4-Day Max Limit** | Umur = `now_utc − dropped_at`. ≥ **96 jam** = Merah (wajib tarik). Timezone simpan **UTC**, tampil **WIB (Asia/Jakarta)**. |
-| **Single Visit Flow** | 1 kunjungan = tutup semua cycle `open` di outlet + (opsional) buka cycle drop baru. **Atomic** via D1 `batch()`. |
-| **Close Equation** | Saat close: `qty_sold + qty_return_good + qty_return_damaged = qty_dropped`. Melanggar → reject. |
-| **Multi Open Cycles** | Boleh >1 cycle `open` per outlet (beda batch/produk). Visit menutup **semua** open cycle outlet tersebut dalam 1 submit. |
-| **Retur Layak Jual** | `qty_return_good` kembali ke stok gudang (jika modul inventory aktif) atau dicatat sebagai retur saja (Fase 1: dicatat, belum stok gudang). |
-| **Retur Rusak** | Masuk biaya terbuang (waste), **bukan** omzet. |
-| **Drop tanpa pickup** | Diizinkan hanya jika outlet **tidak punya** cycle open (first drop / warung baru). |
-| **Pickup tanpa drop** | Diizinkan (tarik total / nonaktif sementara). |
+| Aturan                   | Detail                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Non-Scheduled Visits** | Urgensi dari umur stok aktual, bukan jadwal tetap.                                                                                          |
+| **4-Day Max Limit**      | Umur = `now_utc − dropped_at`. ≥ **96 jam** = Merah (wajib tarik). Timezone simpan **UTC**, tampil **WIB (Asia/Jakarta)**.                  |
+| **Single Visit Flow**    | 1 kunjungan = tutup semua cycle `open` di outlet + (opsional) buka cycle drop baru. **Atomic** via D1 `batch()`.                            |
+| **Close Equation**       | Saat close: `qty_sold + qty_return_good + qty_return_damaged = qty_dropped`. Melanggar → reject.                                            |
+| **Multi Open Cycles**    | Boleh >1 cycle `open` per outlet (beda batch/produk). Visit menutup **semua** open cycle outlet tersebut dalam 1 submit.                    |
+| **Retur Layak Jual**     | `qty_return_good` kembali ke stok gudang (jika modul inventory aktif) atau dicatat sebagai retur saja (Fase 1: dicatat, belum stok gudang). |
+| **Retur Rusak**          | Masuk biaya terbuang (waste), **bukan** omzet.                                                                                              |
+| **Drop tanpa pickup**    | Diizinkan hanya jika outlet **tidak punya** cycle open (first drop / warung baru).                                                          |
+| **Pickup tanpa drop**    | Diizinkan (tarik total / nonaktif sementara).                                                                                               |
 
 ### 3.2 Keuangan
 
-| Aturan | Detail |
-|--------|--------|
-| **Financial Integrity** | `hpp_snapshot` + `price_snapshot` di-set saat INSERT cycle. Laporan historis **tidak** ikut harga baru. |
-| **Money as Integer** | Semua uang dalam **rupiah bulat** (`INTEGER`), bukan float. |
-| **amount_collected** | `qty_sold × price_snapshot` (dihitung server, bukan trust client). = **tagihan teoritis** (uang yang seharusnya diterima di warung). |
+| Aturan                  | Detail                                                                                                                                                                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Financial Integrity** | `hpp_snapshot` + `price_snapshot` di-set saat INSERT cycle. Laporan historis **tidak** ikut harga baru.                                                                                                                                                                        |
+| **Money as Integer**    | Semua uang dalam **rupiah bulat** (`INTEGER`), bukan float.                                                                                                                                                                                                                    |
+| **amount_collected**    | `qty_sold × price_snapshot` (dihitung server, bukan trust client). = **tagihan teoritis** (uang yang seharusnya diterima di warung).                                                                                                                                           |
 | **Kas fisik (Model A)** | Sistem **tidak** mengelola setoran, selisih kas, atau rekonsiliasi uang fisik. Setor ke owner dilakukan **di luar app**. `amount_collected` + `visit_submissions.user_id` cukup untuk audit “siapa menagih berapa”. Fitur end-of-day setoran = out of scope sampai dibutuhkan. |
-| **Automated HPP (BOM)** | `HPP = Σ (price_per_base_unit × qty_in_base_unit)`. Konversi hanya dalam dimensi sama (volume↔volume, massa↔massa). Cross-dimension → error. |
-| **HPP Recalc** | Saat harga bahan berubah → recalc semua produk yang memakai bahan itu; **cycle lama tidak berubah**. |
+| **Automated HPP (BOM)** | `HPP = Σ (price_per_base_unit × qty_in_base_unit)`. Konversi hanya dalam dimensi sama (volume↔volume, massa↔massa). Cross-dimension → error.                                                                                                                                   |
+| **HPP Recalc**          | Saat harga bahan berubah → recalc semua produk yang memakai bahan itu; **cycle lama tidak berubah**.                                                                                                                                                                           |
 
 ### 3.3 Data
 
-| Aturan | Detail |
-|--------|--------|
-| **Soft Delete** | Master data (`outlets`, `products`, `raw_materials`) pakai `deleted_at`; tidak hard-delete jika pernah direferensi transaksi. |
-| **Idempotency** | Setiap submit visit wajib `idempotency_key` (UUID client). Retry offline tidak double-close. |
-| **Optimistic Lock** | Close cycle: `UPDATE … WHERE id = ? AND status = 'open'`. `changes ≠ 1` → conflict. |
-| **RBAC server-side** | Setiap mutation dicek role di Worker. UI hanya menyembunyikan menu; **bukan** sumber kebenaran. |
-| **Audit minimal** | Visit & perubahan master sensitif mencatat `actor_user_id` (siapa yang submit). |
-| **Koreksi visit (void)** | Salah input di lapangan sering terjadi. Hanya **owner** yang boleh **void** visit (batalkan dampak: buka kembali cycle yang tertutup salah / tandai submission void). Staff **tidak** boleh edit history. Void atomic + audit. |
-| **Koordinat warung wajib** | Setiap outlet penitipan **harus** punya `latitude` + `longitude` valid. Diisi lewat geolocation perangkat saat form warung dan/atau saat ambil foto etalase. Pin peta bisa digeser untuk koreksi. Simpan tidak lolos tanpa koordinat. |
-| **Geofence visit** | Submit kunjungan **wajib** menyertakan GPS perangkat. Jarak haversine ke pin warung harus **≤ radius geofence** (default **100 m**, dikonfigurasi owner di halaman Pengaturan). Di luar radius → **tolak** submit (400), kecuali **override owner** (lihat bawah). Data GPS + jarak disimpan di visit untuk audit. |
-| **Offline ≠ submit selesai** | Draft form visit boleh di-`localStorage` saat sinyal buruk. **Submit final hanya saat online** + GPS valid + (dalam radius **atau** override owner). Tidak ada “antrian offline = kunjungan tersimpan”. Retry = kirim ulang request yang sama (`idempotency_key`) setelah online. |
-| **Override geofence (owner only)** | Jika GPS meleset/darurat: owner boleh submit di luar radius dengan **alasan wajib** + flag audit. Staff **tidak** punya tombol override. |
-| **Navigasi ke warung** | Dari dashboard/detail warung: aksi “Buka peta / navigasi” ke koordinat outlet (`https://www.google.com/maps?q=lat,lng` dan/atau `geo:lat,lng`). |
-| **Sesi** | Session sliding **14 hari**. User `inactive` → session ditolak / dihapus; tidak bisa pakai cookie lama. |
-| **Kompres foto client** | Sebelum upload R2: resize max sisi **1600px**, kompres JPEG/WebP di browser; batasi ukuran akhir (target ≤ ~500 KB). |
+| Aturan                             | Detail                                                                                                                                                                                                                                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Soft Delete**                    | Master data (`outlets`, `products`, `raw_materials`) pakai `deleted_at`; tidak hard-delete jika pernah direferensi transaksi.                                                                                                                                                                                      |
+| **Idempotency**                    | Setiap submit visit wajib `idempotency_key` (UUID client). Retry offline tidak double-close.                                                                                                                                                                                                                       |
+| **Optimistic Lock**                | Close cycle: `UPDATE … WHERE id = ? AND status = 'open'`. `changes ≠ 1` → conflict.                                                                                                                                                                                                                                |
+| **RBAC server-side**               | Setiap mutation dicek role di Worker. UI hanya menyembunyikan menu; **bukan** sumber kebenaran.                                                                                                                                                                                                                    |
+| **Audit minimal**                  | Visit & perubahan master sensitif mencatat `actor_user_id` (siapa yang submit).                                                                                                                                                                                                                                    |
+| **Koreksi visit (void)**           | Salah input di lapangan sering terjadi. Hanya **owner** yang boleh **void** visit (batalkan dampak: buka kembali cycle yang tertutup salah / tandai submission void). Staff **tidak** boleh edit history. Void atomic + audit.                                                                                     |
+| **Koordinat warung wajib**         | Setiap outlet penitipan **harus** punya `latitude` + `longitude` valid. Diisi lewat geolocation perangkat saat form warung dan/atau saat ambil foto etalase. Pin peta bisa digeser untuk koreksi. Simpan tidak lolos tanpa koordinat.                                                                              |
+| **Geofence visit**                 | Submit kunjungan **wajib** menyertakan GPS perangkat. Jarak haversine ke pin warung harus **≤ radius geofence** (default **100 m**, dikonfigurasi owner di halaman Pengaturan). Di luar radius → **tolak** submit (400), kecuali **override owner** (lihat bawah). Data GPS + jarak disimpan di visit untuk audit. |
+| **Offline ≠ submit selesai**       | Draft form visit boleh di-`localStorage` saat sinyal buruk. **Submit final hanya saat online** + GPS valid + (dalam radius **atau** override owner). Tidak ada “antrian offline = kunjungan tersimpan”. Retry = kirim ulang request yang sama (`idempotency_key`) setelah online.                                  |
+| **Override geofence (owner only)** | Jika GPS meleset/darurat: owner boleh submit di luar radius dengan **alasan wajib** + flag audit. Staff **tidak** punya tombol override.                                                                                                                                                                           |
+| **Navigasi ke warung**             | Dari dashboard/detail warung: aksi “Buka peta / navigasi” ke koordinat outlet (`https://www.google.com/maps?q=lat,lng` dan/atau `geo:lat,lng`).                                                                                                                                                                    |
+| **Sesi**                           | Session sliding **14 hari**. User `inactive` → session ditolak / dihapus; tidak bisa pakai cookie lama.                                                                                                                                                                                                            |
+| **Kompres foto client**            | Sebelum upload R2: resize max sisi **1600px**, kompres JPEG/WebP di browser; batasi ukuran akhir (target ≤ ~500 KB).                                                                                                                                                                                               |
 
 ### 3.4 Peran & akses (multi-user)
 
 Role disimpan di `users.role`. Fase awal **2 role**; struktur CHECK/enum mudah ditambah role baru tanpa redesign.
 
-| Capability | `owner` | `staff` |
-|------------|:-------:|:-------:|
-| Login / session | ✓ | ✓ |
-| Dashboard urgensi (umur stok, list warung) | ✓ | ✓ |
-| Visit (pickup + drop) | ✓ | ✓ |
-| Void / koreksi visit | ✓ | ✗ |
-| Lihat ringkasan kas visit (`amount_collected`) | ✓ | ✓ (hasil hitung server; bukan edit harga) |
-| CRUD warung + foto (+ GPS wajib) | ✓ | ✓ |
-| Lihat info geofence di form visit | ✓ | ✓ |
-| Ubah radius geofence (Pengaturan) | ✓ | ✗ |
-| Override geofence saat submit | ✓ | ✗ |
-| Buka navigasi Maps ke warung | ✓ | ✓ |
-| Filter laporan per petugas | ✓ | ✗ |
-| CRUD produk (nama, status, aktif/nonaktif) | ✓ | ✓ |
-| Lihat / edit `price_to_outlet` | ✓ | ✗ |
-| Lihat / edit HPP, bahan baku, resep | ✓ | ✗ |
-| Laporan keuangan + export PDF | ✓ | ✗ |
-| Manajemen user (invite/reset/nonaktif) | ✓ | ✗ |
-| Soft-delete master sensitif | ✓ | ✗ (staff: nonaktif outlet/produk milik alur ops saja, tanpa hard financial) |
+| Capability                                     | `owner` |                                   `staff`                                   |
+| ---------------------------------------------- | :-----: | :-------------------------------------------------------------------------: |
+| Login / session                                |    ✓    |                                      ✓                                      |
+| Dashboard urgensi (umur stok, list warung)     |    ✓    |                                      ✓                                      |
+| Visit (pickup + drop)                          |    ✓    |                                      ✓                                      |
+| Void / koreksi visit                           |    ✓    |                                      ✗                                      |
+| Lihat ringkasan kas visit (`amount_collected`) |    ✓    |                  ✓ (hasil hitung server; bukan edit harga)                  |
+| CRUD warung + foto (+ GPS wajib)               |    ✓    |                                      ✓                                      |
+| Lihat info geofence di form visit              |    ✓    |                                      ✓                                      |
+| Ubah radius geofence (Pengaturan)              |    ✓    |                                      ✗                                      |
+| Override geofence saat submit                  |    ✓    |                                      ✗                                      |
+| Buka navigasi Maps ke warung                   |    ✓    |                                      ✓                                      |
+| Filter laporan per petugas                     |    ✓    |                                      ✗                                      |
+| CRUD produk (nama, status, aktif/nonaktif)     |    ✓    |                                      ✓                                      |
+| Lihat / edit `price_to_outlet`                 |    ✓    |                                      ✗                                      |
+| Lihat / edit HPP, bahan baku, resep            |    ✓    |                                      ✗                                      |
+| Laporan keuangan + export PDF                  |    ✓    |                                      ✗                                      |
+| Manajemen user (invite/reset/nonaktif)         |    ✓    |                                      ✗                                      |
+| Soft-delete master sensitif                    |    ✓    | ✗ (staff: nonaktif outlet/produk milik alur ops saja, tanpa hard financial) |
 
 **Catatan kas lapangan:** Staff **tidak** melihat/mengedit harga jual atau HPP di master. Saat visit, server mengisi snapshot dari master; UI staff menampilkan **qty + total uang yang harus diterima** (server-computed) agar bisa tagih di warung, tanpa mengekspos margin/HPP.
 
@@ -170,13 +170,13 @@ Role disimpan di `users.role`. Fase awal **2 role**; struktur CHECK/enum mudah d
 
 Dieksekusi di lokasi warung.
 
-| Bagian | Perilaku |
-|--------|----------|
+| Bagian            | Perilaku                                                                                                                                                                                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Header lokasi** | Blok **info geofence** (wajib ada di form): nama warung, pin target, **radius aktif (m)**, posisi GPS saat ini, **jarak ke warung (m)**, akurasi GPS (m), badge 🟢 Dalam radius / 🔴 Di luar radius / ⚪ GPS belum siap. Refresh lokasi manual. |
-| **Atas — Tarik** | List cycle `open`. Input **sisa fisik**. Sistem: `terjual = qty_dropped − sisa`. Split sisa → retur layak / retur rusak. |
-| **Tengah — Kas** | `Σ (qty_sold × price_snapshot)` — display only (tagihan teoritis). |
-| **Bawah — Titip** | Picker produk (nama saja untuk staff) + qty. Snapshot HPP & harga dari master **saat submit server**. |
-| **Submit** | 1 tombol “Selesaikan Kunjungan”. **Hanya jika online.** Client kirim `client_lat`, `client_lng`, `client_accuracy_m`; owner boleh kirim `geofence_override: true` + `geofence_override_reason`. Server hitung jarak & enforce geofence. |
+| **Atas — Tarik**  | List cycle `open`. Input **sisa fisik**. Sistem: `terjual = qty_dropped − sisa`. Split sisa → retur layak / retur rusak.                                                                                                                        |
+| **Tengah — Kas**  | `Σ (qty_sold × price_snapshot)` — display only (tagihan teoritis).                                                                                                                                                                              |
+| **Bawah — Titip** | Picker produk (nama saja untuk staff) + qty. Snapshot HPP & harga dari master **saat submit server**.                                                                                                                                           |
+| **Submit**        | 1 tombol “Selesaikan Kunjungan”. **Hanya jika online.** Client kirim `client_lat`, `client_lng`, `client_accuracy_m`; owner boleh kirim `geofence_override: true` + `geofence_override_reason`. Server hitung jarak & enforce geofence.         |
 
 **Info geofence di form (selalu terlihat):**
 
@@ -190,9 +190,9 @@ Dieksekusi di lokasi warung.
 1. Auth session valid & user active; role `owner` atau `staff` (permission `visit:write`).
 2. Outlet active & not deleted; outlet punya lat/lng.
 3. Payload memuat `client_lat`, `client_lng` valid; opsional `client_accuracy_m`.
-4. `distance_m = haversine(client, outlet)`. Jika `distance_m > radius`:  
-   - staff → **400**;  
-   - owner + `geofence_override=true` + reason non-kosong → **izinkan** & audit;  
+4. `distance_m = haversine(client, outlet)`. Jika `distance_m > radius`:
+   - staff → **400**;
+   - owner + `geofence_override=true` + reason non-kosong → **izinkan** & audit;
    - selain itu → **400** (sertakan jarak & radius di body).
 5. Close equation per cycle.
 6. Semua open cycle outlet ikut di payload (tidak boleh partial skip tanpa alasan — UI wajib load semua).
@@ -301,28 +301,28 @@ pnpm build && wrangler deploy
      bindings: D1 · R2 · secrets
 ```
 
-| Mitos | Fakta |
-|-------|--------|
-| “Ada frontend + backend = 2 deploy” | **Salah.** 1 Worker, 1 `wrangler deploy`. |
-| “Harus monorepo 2 package” | **Tidak.** Default: **1 package** full-stack. |
-| “Full-stack = SvelteKit only” | Full-stack = UI + API + DB di **satu unit deploy**. Hono + Svelte SPA memenuhi itu. |
+| Mitos                               | Fakta                                                                               |
+| ----------------------------------- | ----------------------------------------------------------------------------------- |
+| “Ada frontend + backend = 2 deploy” | **Salah.** 1 Worker, 1 `wrangler deploy`.                                           |
+| “Harus monorepo 2 package”          | **Tidak.** Default: **1 package** full-stack.                                       |
+| “Full-stack = SvelteKit only”       | Full-stack = UI + API + DB di **satu unit deploy**. Hono + Svelte SPA memenuhi itu. |
 
 ### 6.1 Keputusan stack
 
-| Layer | Pilihan | Alasan |
-|-------|---------|--------|
-| Runtime | **Cloudflare Workers** | Edge, murah, zero server, latency HP bagus |
-| Full-stack shape | **1 Worker** (API + static assets) | Satu deploy, satu config, gampang di-maintain |
-| HTTP / API | **Hono** | Native Workers, tipis, middleware jelas |
-| UI | **Vite + Svelte 5** (SPA) | Mobile UX, optimistic UI, offline draft; di-serve sebagai Workers Assets |
-| Database | **D1** (SQLite) | Binding native, `batch()` = transaksi, cocok 1 operator |
-| ORM | **Drizzle ORM** (`drizzle-orm/d1`) | Type-safe, migrasi, ringan |
-| Object storage | **R2** | Foto warung |
-| Validasi | **Zod** | Request/response + type share API↔UI dalam 1 repo |
-| CSS | **Tailwind CSS v4** | Utility, mobile-first |
-| Peta | **Leaflet + OSM** | Ringan, tanpa Google SDK |
-| Auth | Session cookie + `users`/`sessions` di D1 + RBAC middleware | Multi-user, role expandable |
-| Deploy | **Wrangler** | `wrangler.toml` bindings D1 + R2 + assets |
+| Layer            | Pilihan                                                     | Alasan                                                                   |
+| ---------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Runtime          | **Cloudflare Workers**                                      | Edge, murah, zero server, latency HP bagus                               |
+| Full-stack shape | **1 Worker** (API + static assets)                          | Satu deploy, satu config, gampang di-maintain                            |
+| HTTP / API       | **Hono**                                                    | Native Workers, tipis, middleware jelas                                  |
+| UI               | **Vite + Svelte 5** (SPA)                                   | Mobile UX, optimistic UI, offline draft; di-serve sebagai Workers Assets |
+| Database         | **D1** (SQLite)                                             | Binding native, `batch()` = transaksi, cocok 1 operator                  |
+| ORM              | **Drizzle ORM** (`drizzle-orm/d1`)                          | Type-safe, migrasi, ringan                                               |
+| Object storage   | **R2**                                                      | Foto warung                                                              |
+| Validasi         | **Zod**                                                     | Request/response + type share API↔UI dalam 1 repo                        |
+| CSS              | **Tailwind CSS v4**                                         | Utility, mobile-first                                                    |
+| Peta             | **Leaflet + OSM**                                           | Ringan, tanpa Google SDK                                                 |
+| Auth             | Session cookie + `users`/`sessions` di D1 + RBAC middleware | Multi-user, role expandable                                              |
+| Deploy           | **Wrangler**                                                | `wrangler.toml` bindings D1 + R2 + assets                                |
 
 > **Mengapa bukan SvelteKit full-stack?**  
 > Bisa, tapi adapter + form actions menambah coupling. **Hono + Svelte SPA** tetap full-stack (1 deploy), dengan boundary API lebih eksplisit — cocok untuk visit atomic, idempotency, dan test service layer.  
@@ -418,17 +418,17 @@ Seluruh statement di langkah 3 = **satu transaksi** (all-or-nothing).
 
 ### 6.6 Rekomendasi tambahan (kualitas sistem)
 
-| Area | Rekomendasi |
-|------|-------------|
-| **Idempotency** | Tabel `visit_submissions(idempotency_key PRIMARY KEY, outlet_id, response_json, created_at)`. |
-| **Observability** | Workers Logs + `console` structured JSON; optional Cloudflare tail. |
-| **Backup** | D1 Time Travel + export mingguan ke R2. |
-| **Secrets** | `wrangler secret` untuk session secret / salt. |
-| **Migrations** | Drizzle Kit → apply via `wrangler d1 migrations`. |
-| **CI** | `pnpm check` (tsc) + `vitest` service layer + `wrangler deploy` (production/manual). |
-| **PWA** | Fase 5: manifest + SW cache shell; API network-first. |
-| **Rate limit** | Optional: Cloudflare rate limiting / simple in-memory per IP di login. |
-| **Jangan dulu** | Durable Objects, Queues, Hyperdrive — YAGNI untuk 1 operator. |
+| Area              | Rekomendasi                                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| **Idempotency**   | Tabel `visit_submissions(idempotency_key PRIMARY KEY, outlet_id, response_json, created_at)`. |
+| **Observability** | Workers Logs + `console` structured JSON; optional Cloudflare tail.                           |
+| **Backup**        | D1 Time Travel + export mingguan ke R2.                                                       |
+| **Secrets**       | `wrangler secret` untuk session secret / salt.                                                |
+| **Migrations**    | Drizzle Kit → apply via `wrangler d1 migrations`.                                             |
+| **CI**            | `pnpm check` (tsc) + `vitest` service layer + `wrangler deploy` (production/manual).          |
+| **PWA**           | Fase 5: manifest + SW cache shell; API network-first.                                         |
+| **Rate limit**    | Optional: Cloudflare rate limiting / simple in-memory per IP di login.                        |
+| **Jangan dulu**   | Durable Objects, Queues, Hyperdrive — YAGNI untuk 1 operator.                                 |
 
 ---
 
@@ -663,27 +663,27 @@ processVisit({ outletId, idempotencyKey, pickups[], drops[], clientLat, clientLn
 
 ### 8.4 API surface (ringkas)
 
-| Method | Path | Permission | Ket |
-|--------|------|------------|-----|
-| POST | `/api/auth/login` | public | |
-| POST | `/api/auth/logout` | auth | |
-| GET | `/api/auth/me` | auth | include `role` |
-| CRUD | `/api/users` | `users:manage` (owner) | create staff, inactive, reset |
-| CRUD | `/api/raw-materials` | `bom:write` (owner) | |
-| CRUD | `/api/products` | `products:write` | staff: body tanpa price/hpp |
-| GET | `/api/products` | `products:read` | staff: response strip price/hpp |
-| PUT | `/api/products/:id/recipe` | `bom:write` (owner) | + recalc HPP |
-| CRUD | `/api/outlets` | `outlets:write` | lat/lng **wajib**; owner + staff |
-| POST | `/api/outlets/:id/photo` | `outlets:write` | R2 + optional update GPS |
-| GET | `/api/dashboard` | `dashboard:read` | staff: tanpa margin sensitif; sertakan lat/lng untuk peta |
-| GET | `/api/outlets/:id/visit` | `visit:read` | open cycles + outlet lat/lng + `geofence_radius_m` aktif; staff tanpa hpp_snapshot |
-| POST | `/api/outlets/:id/visit` | `visit:write` | processVisit + enforce geofence |
-| POST | `/api/visits/:idempotencyKey/void` | `visit:void` (owner) | void atomic |
-| GET | `/api/products/picker` | `visit:read` | list aktif: id + name saja (aman staff) |
-| GET | `/api/settings` | `settings:read` | geofence radius (owner+staff butuh baca radius di visit) |
-| PUT | `/api/settings/geofence` | `settings:write` (owner) | body `{ radius_m: number }` 20–2000 |
-| GET | `/api/reports` | `reports:read` (owner) | `?from=&to=&user_id=`; exclude voided; breakdown petugas |
-| GET | `/api/reports/export.pdf` | `reports:read` (owner) | PDF; query sama; Content-Disposition attachment |
+| Method | Path                               | Permission               | Ket                                                                                |
+| ------ | ---------------------------------- | ------------------------ | ---------------------------------------------------------------------------------- |
+| POST   | `/api/auth/login`                  | public                   |                                                                                    |
+| POST   | `/api/auth/logout`                 | auth                     |                                                                                    |
+| GET    | `/api/auth/me`                     | auth                     | include `role`                                                                     |
+| CRUD   | `/api/users`                       | `users:manage` (owner)   | create staff, inactive, reset                                                      |
+| CRUD   | `/api/raw-materials`               | `bom:write` (owner)      |                                                                                    |
+| CRUD   | `/api/products`                    | `products:write`         | staff: body tanpa price/hpp                                                        |
+| GET    | `/api/products`                    | `products:read`          | staff: response strip price/hpp                                                    |
+| PUT    | `/api/products/:id/recipe`         | `bom:write` (owner)      | + recalc HPP                                                                       |
+| CRUD   | `/api/outlets`                     | `outlets:write`          | lat/lng **wajib**; owner + staff                                                   |
+| POST   | `/api/outlets/:id/photo`           | `outlets:write`          | R2 + optional update GPS                                                           |
+| GET    | `/api/dashboard`                   | `dashboard:read`         | staff: tanpa margin sensitif; sertakan lat/lng untuk peta                          |
+| GET    | `/api/outlets/:id/visit`           | `visit:read`             | open cycles + outlet lat/lng + `geofence_radius_m` aktif; staff tanpa hpp_snapshot |
+| POST   | `/api/outlets/:id/visit`           | `visit:write`            | processVisit + enforce geofence                                                    |
+| POST   | `/api/visits/:idempotencyKey/void` | `visit:void` (owner)     | void atomic                                                                        |
+| GET    | `/api/products/picker`             | `visit:read`             | list aktif: id + name saja (aman staff)                                            |
+| GET    | `/api/settings`                    | `settings:read`          | geofence radius (owner+staff butuh baca radius di visit)                           |
+| PUT    | `/api/settings/geofence`           | `settings:write` (owner) | body `{ radius_m: number }` 20–2000                                                |
+| GET    | `/api/reports`                     | `reports:read` (owner)   | `?from=&to=&user_id=`; exclude voided; breakdown petugas                           |
+| GET    | `/api/reports/export.pdf`          | `reports:read` (owner)   | PDF; query sama; Content-Disposition attachment                                    |
 
 **Response shaping:** `serializeProduct(user, row)` strip field terlarang untuk `staff`. Picker pakai endpoint khusus agar tidak bergantung pada filter client.
 
@@ -782,12 +782,12 @@ Tahap D (PWA + harden) ──► pakai harian
 
 ### Tahap A — Core (wajib stabil dulu)
 
-| Sub | Isi | Done when |
-|-----|-----|-----------|
-| **A0** | Scaffold 1 package: Hono + Svelte + D1 + Wrangler assets | `wrangler dev` UI + `/api` + migrate OK |
-| **A1** | Auth multi-user, RBAC, seed owner, session 14 hari, CRUD user | 2 role login; inactive ditolak; UI Indonesia |
-| **A2** | Bahan, produk, resep, HPP; strip field staff; `/products/picker` | Unit test HPP hijau; staff tak lihat harga/HPP |
-| **A3** | Warung + GPS wajib + pin Leaflet + foto R2 (kompres) + dashboard urgensi + empty state + buka Maps | Warung berkoordinat; list urgensi di HP |
+| Sub    | Isi                                                                                                                                                      | Done when                                          |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **A0** | Scaffold 1 package: Hono + Svelte + D1 + Wrangler assets                                                                                                 | `wrangler dev` UI + `/api` + migrate OK            |
+| **A1** | Auth multi-user, RBAC, seed owner, session 14 hari, CRUD user                                                                                            | 2 role login; inactive ditolak; UI Indonesia       |
+| **A2** | Bahan, produk, resep, HPP; strip field staff; `/products/picker`                                                                                         | Unit test HPP hijau; staff tak lihat harga/HPP     |
+| **A3** | Warung + GPS wajib + pin Leaflet + foto R2 (kompres) + dashboard urgensi + empty state + buka Maps                                                       | Warung berkoordinat; list urgensi di HP            |
 | **A4** | **Visit atomic** + close equation + idempotency + geofence global + override owner + draft offline (bukan submit offline) + void owner + radius settings | Acceptance §10 visit/geofence/void di **HP nyata** |
 
 **Gate Core (wajib lolos sebelum Tahap B):**
@@ -804,29 +804,29 @@ Sampai Gate Core hijau: **tidak** kerjakan laporan PDF, PWA SW, polish besar.
 
 ### Tahap B — Lapangan lengkap (setelah Gate Core)
 
-| Sub | Isi | Done when |
-|-----|-----|-----------|
-| **B1** | Polish mobile visit (ibu jari, safe-area, empty/error copy, optimistic UI ringan) | Visit nyaman 360–390px |
-| **B2** | Navigasi/Maps & foto edge-case (izin GPS ditolak, kompres gagal, retry draft) | Edge case lapangan tertutup |
+| Sub    | Isi                                                                               | Done when                   |
+| ------ | --------------------------------------------------------------------------------- | --------------------------- |
+| **B1** | Polish mobile visit (ibu jari, safe-area, empty/error copy, optimistic UI ringan) | Visit nyaman 360–390px      |
+| **B2** | Navigasi/Maps & foto edge-case (izin GPS ditolak, kompres gagal, retry draft)     | Edge case lapangan tertutup |
 
 **Gate B:** 1–2 minggu pakai nyata (atau setara) tanpa regresi P0 di visit.
 
 ### Tahap C — Owner & keuangan (setelah Gate B)
 
-| Sub | Isi | Done when |
-|-----|-----|-----------|
+| Sub    | Isi                                                      | Done when                 |
+| ------ | -------------------------------------------------------- | ------------------------- |
 | **C1** | Laporan filter periode + petugas; metrik; exclude voided | Angka cocok sample manual |
-| **C2** | Export PDF | File buka di HP + desktop |
+| **C2** | Export PDF                                               | File buka di HP + desktop |
 
 **Gate C:** Owner bisa tutup buku mingguan lewat app + PDF.
 
 ### Tahap D — PWA & harden (setelah Gate C)
 
-| Sub | Isi | Done when |
-|-----|-----|-----------|
-| **D1** | Web App Manifest + “Tambah ke layar utama” | Ikon di home screen HP |
+| Sub    | Isi                                                                                         | Done when                           |
+| ------ | ------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **D1** | Web App Manifest + “Tambah ke layar utama”                                                  | Ikon di home screen HP              |
 | **D2** | Service Worker: cache **app shell** only; API network-first; **bukan** submit offline penuh | Buka cepat; submit tetap online+GPS |
-| **D3** | Backup D1 (Time Travel / export), log, small harden | Siap pakai harian penuh |
+| **D3** | Backup D1 (Time Travel / export), log, small harden                                         | Siap pakai harian penuh             |
 
 **Gate D:** Dipakai harian sebagai app HP (PWA) tanpa mengandalkan tab browser raw.
 
@@ -840,47 +840,47 @@ Sampai Gate Core hijau: **tidak** kerjakan laporan PDF, PWA SW, polish besar.
 
 ## 12. Risiko & Mitigasi
 
-| Risiko | Mitigasi |
-|--------|----------|
-| D1 single-writer bottleneck | Tim kecil OK; hindari report berat saat jam kunjungan |
-| Float money bug | INTEGER rupiah only |
-| Double visit / retry | `idempotency_key` wajib |
-| Kira-kira “offline sudah tersimpan server” | Copy UI + policy: draft lokal only |
-| Dua karyawan visit warung sama | Optimistic lock + 409 |
-| Bocor HPP/harga ke staff | RBAC server + serialize strip + `/products/picker` |
-| GPS ditolak / meleset di dalam toko | Pin digeser; foto refresh lokasi; override owner + reason |
-| GPS meleset → geofence gagal | Naikkan radius global; perbaiki pin; override owner |
-| Salah input visit | Void owner-only + audit reason |
-| Void tidak aman (sudah visit lanjut) | 409; jangan rollback paksa |
-| Ambigu “4 hari” | Fixed 96 jam UTC |
-| Foto besar / mahal R2 | Kompres client 1600px + limit server |
-| Role baru nanti | Matriks permission di kode; migrasi CHECK role |
+| Risiko                                     | Mitigasi                                                  |
+| ------------------------------------------ | --------------------------------------------------------- |
+| D1 single-writer bottleneck                | Tim kecil OK; hindari report berat saat jam kunjungan     |
+| Float money bug                            | INTEGER rupiah only                                       |
+| Double visit / retry                       | `idempotency_key` wajib                                   |
+| Kira-kira “offline sudah tersimpan server” | Copy UI + policy: draft lokal only                        |
+| Dua karyawan visit warung sama             | Optimistic lock + 409                                     |
+| Bocor HPP/harga ke staff                   | RBAC server + serialize strip + `/products/picker`        |
+| GPS ditolak / meleset di dalam toko        | Pin digeser; foto refresh lokasi; override owner + reason |
+| GPS meleset → geofence gagal               | Naikkan radius global; perbaiki pin; override owner       |
+| Salah input visit                          | Void owner-only + audit reason                            |
+| Void tidak aman (sudah visit lanjut)       | 409; jangan rollback paksa                                |
+| Ambigu “4 hari”                            | Fixed 96 jam UTC                                          |
+| Foto besar / mahal R2                      | Kompres client 1600px + limit server                      |
+| Role baru nanti                            | Matriks permission di kode; migrasi CHECK role            |
 
 ---
 
 ## 13. Ringkasan Keputusan
 
-1. **Full-stack 1 deploy:** satu Worker = Hono API + Svelte SPA (Static Assets) + D1 + R2.  
-2. **Bukan 2 service** — folder `worker/` + `web/` dalam **1 package**.  
-3. **Hono** (API) + **Svelte 5** (UI); bukan SvelteKit.  
-4. **Drizzle + Zod + service layer.**  
-5. **Atomic visit** = D1 `batch()` + close equation + idempotency.  
-6. **Uang integer rupiah; waktu UTC; tampil WIB.**  
-7. **Multi-user dari awal:** role `owner` | `staff`; RBAC server-side; expandable.  
-8. **Staff:** visit + warung + produk operasional; **tanpa** HPP/harga master/laporan/user admin.  
-9. **Kas Model A:** catat tagihan teoritis saja; setoran uang fisik di luar app.  
-10. **Void visit:** owner only; atomic; laporan exclude voided.  
-11. **UI Bahasa Indonesia**; seed owner; empty state onboarding.  
-12. **Koordinat GPS wajib** per warung (form + foto + pin peta).  
-13. **Product picker** aman untuk staff (nama saja).  
-14. **Geofence global:** default 100 m; info di form; GPS + distance di-audit.  
-15. **Export laporan utama = PDF**; filter per petugas.  
-16. **Offline = draft saja**; submit butuh online + GPS + radius/override.  
-17. **Override geofence:** owner + alasan wajib.  
-18. **Navigasi Maps** ke pin warung.  
-19. **Sesi 14 hari sliding**; user nonaktif ditolak.  
-20. **Kompres foto client** sebelum R2.  
-21. **100% operasional lapangan = mobile (HP)** — desain, QA, dan prioritas fitur berpusat pada smartphone.  
-22. **Pengembangan bertahap:** Core (A) diuji sampai stabil → Gate → B lapangan → C laporan/PDF → D PWA. Tidak loncat sebelum gate lolos.  
+1. **Full-stack 1 deploy:** satu Worker = Hono API + Svelte SPA (Static Assets) + D1 + R2.
+2. **Bukan 2 service** — folder `worker/` + `web/` dalam **1 package**.
+3. **Hono** (API) + **Svelte 5** (UI); bukan SvelteKit.
+4. **Drizzle + Zod + service layer.**
+5. **Atomic visit** = D1 `batch()` + close equation + idempotency.
+6. **Uang integer rupiah; waktu UTC; tampil WIB.**
+7. **Multi-user dari awal:** role `owner` | `staff`; RBAC server-side; expandable.
+8. **Staff:** visit + warung + produk operasional; **tanpa** HPP/harga master/laporan/user admin.
+9. **Kas Model A:** catat tagihan teoritis saja; setoran uang fisik di luar app.
+10. **Void visit:** owner only; atomic; laporan exclude voided.
+11. **UI Bahasa Indonesia**; seed owner; empty state onboarding.
+12. **Koordinat GPS wajib** per warung (form + foto + pin peta).
+13. **Product picker** aman untuk staff (nama saja).
+14. **Geofence global:** default 100 m; info di form; GPS + distance di-audit.
+15. **Export laporan utama = PDF**; filter per petugas.
+16. **Offline = draft saja**; submit butuh online + GPS + radius/override.
+17. **Override geofence:** owner + alasan wajib.
+18. **Navigasi Maps** ke pin warung.
+19. **Sesi 14 hari sliding**; user nonaktif ditolak.
+20. **Kompres foto client** sebelum R2.
+21. **100% operasional lapangan = mobile (HP)** — desain, QA, dan prioritas fitur berpusat pada smartphone.
+22. **Pengembangan bertahap:** Core (A) diuji sampai stabil → Gate → B lapangan → C laporan/PDF → D PWA. Tidak loncat sebelum gate lolos.
 
 Dokumen ini siap jadi blueprint implementasi.

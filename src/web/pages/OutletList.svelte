@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from '../lib/api.js';
+import { navigate } from '../lib/router.js';
   import { compressPhoto, formatBytes } from '../lib/photo.js';
 
   type Outlet = {
@@ -19,9 +20,10 @@
 
   type Mode = 'list' | 'form' | 'delete';
 
-  type Props = { onVisit?: (outlet: Outlet) => void };
+  function openVisit(outlet: Outlet) {
+    navigate(`/kunjungan/${outlet.id}`);
+  }
 
-  let { onVisit = () => {} }: Props = $props();
 
   let items = $state<Outlet[]>([]);
   let loading = $state(true);
@@ -317,7 +319,7 @@
             </div>
             <div class="flex flex-col gap-2">
               <button
-                onclick={() => onVisit(item)}
+                onclick={() => openVisit(item)}
                 class="btn-primary px-2.5 py-1.5 text-xs"
               >
                 Kunjungan
