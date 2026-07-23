@@ -1,33 +1,37 @@
 <script lang="ts">
   import { link, router } from 'svelte-spa-router';
-  import { Home, ClipboardList, Store, LayoutGrid, User, Users, Settings } from 'lucide-svelte';
-
+  import {
+    Home,
+    ClipboardList,
+    Store,
+    Package,
+    LayoutGrid,
+    User,
+    Users,
+    Settings,
+  } from 'lucide-svelte';
   type Props = {
     /** The rail only renders owner-only links when this is true. */
     isOwner?: boolean;
   };
-
   let { isOwner = false }: Props = $props();
-
   type RailItem = {
     path: string;
     label: string;
     icon: typeof Home;
   };
-
   const mainItems: RailItem[] = [
     { path: '/beranda', label: 'Beranda', icon: Home },
+    { path: '/produk', label: 'Produk', icon: Package },
     { path: '/kunjungan', label: 'Kunjungan', icon: ClipboardList },
     { path: '/warung', label: 'Warung', icon: Store },
     { path: '/master', label: 'Master', icon: LayoutGrid },
     { path: '/profil', label: 'Profil', icon: User },
   ];
-
   const ownerItems: RailItem[] = [
     { path: '/pengguna', label: 'Pengguna', icon: Users },
     { path: '/pengaturan', label: 'Pengaturan', icon: Settings },
   ];
-
   const items = $derived(isOwner ? [...mainItems, ...ownerItems] : mainItems);
   const current = $derived(router.location ?? '/');
 </script>
@@ -43,7 +47,6 @@
     </div>
     <span class="text-lg font-bold text-coffee-900">Konsi</span>
   </div>
-
   <nav class="flex-1 space-y-1 px-3 pt-4">
     {#each items as item (item.key)}
       {@const Icon = item.icon}

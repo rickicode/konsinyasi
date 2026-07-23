@@ -1,5 +1,5 @@
 import { lazy } from './lib/router/lazy.js';
-import { requireAuth } from './lib/router/guards.svelte';
+import { requireAuth } from './lib/router/guards.svelte.js';
 
 /**
  * Hash-based SPA route map.
@@ -11,35 +11,42 @@ import { requireAuth } from './lib/router/guards.svelte';
  */
 export const routes = {
   '/login': lazy(() => import('./features/auth/pages/LoginPage.svelte')),
+
+  // Phase D public / field screens.
   '/': lazy(() => import('./features/dashboard/pages/DashboardPage.svelte'), {
     conditions: [requireAuth],
   }),
   '/beranda': lazy(() => import('./features/dashboard/pages/DashboardPage.svelte'), {
     conditions: [requireAuth],
   }),
+  '/produk': lazy(() => import('./features/products/pages/ProductListPage.svelte'), {
+    conditions: [requireAuth],
+  }),
+  '/produk/:id': lazy(() => import('./features/products/pages/ProductDetailPage.svelte'), {
+    conditions: [requireAuth],
+  }),
   '/profil': lazy(() => import('./features/auth/pages/ProfilePage.svelte'), {
     conditions: [requireAuth],
   }),
+  '/kategori': lazy(() => import('./features/public/pages/CategoryPage.svelte'), {
+    conditions: [requireAuth],
+  }),
+  '/keranjang': lazy(() => import('./features/public/pages/CartPage.svelte'), {
+    conditions: [requireAuth],
+  }),
+  '/checkout': lazy(() => import('./features/public/pages/CheckoutPage.svelte'), {
+    conditions: [requireAuth],
+  }),
+
   '/master': lazy(() => import('./features/master/pages/MasterPage.svelte'), {
     conditions: [requireAuth],
   }),
-  // Temporary placeholders so the shell navigation stays clickable during Phase B.
-  '/kunjungan': lazy(() => import('./features/visits/pages/VisitListPage.svelte'), {
-    conditions: [requireAuth],
-  }),
-  '/warung': lazy(() => import('./features/outlets/pages/OutletListPage.svelte'), {
-    conditions: [requireAuth],
-  }),
-  '/pengguna': lazy(() => import('./features/users/pages/UsersPage.svelte'), {
-    conditions: [requireAuth],
-  }),
-  '/pengaturan': lazy(() => import('./features/settings/pages/SettingsPage.svelte'), {
-    conditions: [requireAuth],
-  }),
+
   // Design system kitchen sink for manual primitive verification.
   '/__ui': lazy(() => import('./features/shell/pages/UiKitchenSinkPage.svelte'), {
     conditions: [requireAuth],
   }),
+
   // Catch-all.
   '*': lazy(() => import('./features/shell/pages/NotFoundPage.svelte')),
 };

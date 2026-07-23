@@ -1,27 +1,33 @@
 <script lang="ts">
   import { link, router } from 'svelte-spa-router';
   import { getAuth } from '$lib/stores/auth.svelte';
-  import { Home, ClipboardList, Store, LayoutGrid, User, Users, Settings } from 'lucide-svelte';
-
+  import {
+    Home,
+    ClipboardList,
+    Store,
+    Package,
+    LayoutGrid,
+    User,
+    Users,
+    Settings,
+  } from 'lucide-svelte';
   type NavItem = {
     path: string;
     label: string;
     icon: typeof Home;
   };
-
   const mainItems: NavItem[] = [
     { path: '/beranda', label: 'Beranda', icon: Home },
+    { path: '/produk', label: 'Produk', icon: Package },
     { path: '/kunjungan', label: 'Kunjungan', icon: ClipboardList },
     { path: '/warung', label: 'Warung', icon: Store },
     { path: '/master', label: 'Master', icon: LayoutGrid },
     { path: '/profil', label: 'Profil', icon: User },
   ];
-
   const ownerItems: NavItem[] = [
     { path: '/pengguna', label: 'Pengguna', icon: Users },
     { path: '/pengaturan', label: 'Pengaturan', icon: Settings },
   ];
-
   const auth = getAuth();
   const items = $derived(auth.isOwner ? [...mainItems, ...ownerItems] : mainItems);
   const current = $derived(router.location ?? '/');
