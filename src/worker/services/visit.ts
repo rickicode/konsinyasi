@@ -177,7 +177,6 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
   const statements: ReturnType<DrizzleD1Database<typeof schema>["batch"]> extends infer R
     ? R
     : never[] = [];
-  const pickupStmtIdx: number[] = [];
   const pickedUpAt = nowUtcIso();
 
   for (const pickup of pickups) {
@@ -220,7 +219,6 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
           ),
         ),
     );
-    pickupStmtIdx.push(statements.length - 1);
   }
 
   const droppedProductIds = [...new Set(drops.map((d) => d.product_id))];
@@ -304,20 +302,40 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
     }),
   );
 
-  const batchResults = await db.batch(statements as never);
+  await db.batch(statements as never);
 
-  for (const idx of pickupStmtIdx) {
-    const r = batchResults[idx] as { meta?: { changes?: number } } | undefined;
-    if (!r || r.meta?.changes !== 1) {
+  if (pickups.length > 0) {
+    const pickupCycleIds = pickups.map((p) => p.cycle_id);
+    const closedRows = await db
+      .select({ id: schema.consignment_cycles.id })
+      .from(schema.consignment_cycles)
+      .where(
+        and(
+          inArray(schema.consignment_cycles.id, pickupCycleIds),
+          eq(schema.consignment_cycles.status, "closed"),
+          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
+        ),
+      );
+    if (closedRows.length !== pickupCycleIds.length) {
       throw new ConflictError("Siklus sudah ditutup oleh kunjungan lain");
     }
   }
 
-  const productNames = new Map(activeProducts.map((p) => [p.id, p.name] as [string, string]));
-  for (const summary of result.closed_cycles) {
-    const cycle = openCycles.find((c) => c.id === summary.cycle_id);
-    if (cycle) {
-      summary.product_name = productNames.get(cycle.product_id) ?? "Produk";
+  if (result.closed_cycles.length > 0) {
+    const cycleProductIds = [...new Set(openCycles.map((c) => c.product_id))];
+    const productRows =
+      cycleProductIds.length > 0
+        ? await db
+            .select({ id: schema.products.id, name: schema.products.name })
+            .from(schema.products)
+            .where(inArray(schema.products.id, cycleProductIds))
+        : [];
+    const productNames = new Map(productRows.map((p) => [p.id, p.name] as [string, string]));
+    for (const summary of result.closed_cycles) {
+      const cycle = openCycles.find((c) => c.id === summary.cycle_id);
+      if (cycle) {
+        summary.product_name = productNames.get(cycle.product_id) ?? "Produk";
+      }
     }
   }
 
