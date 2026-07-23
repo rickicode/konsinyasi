@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Hono } from "hono";
-import { eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { createClient } from "../db/client.js";
 import { products } from "../db/schema.js";
 import { AppError, ValidationError } from "../lib/errors.js";
@@ -60,7 +60,7 @@ type ProductResponse = {
   id: string;
   name: string;
   status: "active" | "inactive";
-  recipe_lines: EnrichedRecipeLine[];
+  recipe_lines?: EnrichedRecipeLine[];
   hpp?: number;
   price_to_outlet?: number;
   deleted_at?: string | null;
@@ -77,7 +77,6 @@ function pickProduct(
     id: row.id,
     name: row.name,
     status: row.status as "active" | "inactive",
-    recipe_lines: recipeLines,
     deleted_at: row.deleted_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -85,6 +84,7 @@ function pickProduct(
   if (includeFinancial) {
     response.hpp = row.hpp;
     response.price_to_outlet = row.price_to_outlet;
+    response.recipe_lines = recipeLines;
   }
   return response;
 }
@@ -107,6 +107,16 @@ productsRoute.get("/", async (c) => {
   }
 
   return c.json(result);
+});
+
+productsRoute.get("/picker", async (c) => {
+  const db = createClient(c.env);
+  const rows = await db
+    .select({ id: products.id, name: products.name })
+    .from(products)
+    .where(and(eq(products.status, "active"), isNull(products.deleted_at)))
+    .orderBy(products.name);
+  return c.json(rows);
 });
 
 productsRoute.get("/:id", async (c) => {
@@ -139,9 +149,11 @@ productsRoute.post("/", async (c) => {
   }
   const data = parsed.data;
 
-  // ponytail: silently drop price_to_outlet for staff per PRD role rules
   if (!isOwner) {
     data.price_to_outlet = undefined;
+    if (data.recipe_lines !== undefined) {
+      throw new ValidationError("Staff tidak boleh mengubah resep produk");
+    }
   } else if (data.price_to_outlet === undefined) {
     throw new ValidationError("Harga outlet wajib diisi");
   }
@@ -191,6 +203,10 @@ productsRoute.patch("/:id", async (c) => {
     throw new AppError(404, "NOT_FOUND", "Produk tidak ditemukan");
   }
 
+  if (!isOwner && data.recipe_lines !== undefined) {
+    throw new ValidationError("Staff tidak boleh mengubah resep produk");
+  }
+
   const setValues: Partial<typeof products.$inferInsert> = {};
   if (data.name !== undefined) setValues.name = data.name;
   if (data.status !== undefined) setValues.status = data.status;
@@ -203,7 +219,7 @@ productsRoute.patch("/:id", async (c) => {
     await db.update(products).set(setValues).where(eq(products.id, id));
   }
 
-  if (data.recipe_lines !== undefined) {
+  if (isOwner && data.recipe_lines !== undefined) {
     await replaceRecipeLines(db, id, data.recipe_lines);
   }
 

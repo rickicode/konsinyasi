@@ -153,3 +153,89 @@ export const outlets = sqliteTable(
     index("idx_outlets_active").on(t.status).where(sql`deleted_at IS NULL`),
   ],
 );
+
+export const consignment_cycles = sqliteTable(
+  "consignment_cycles",
+  {
+    id: text("id").primaryKey(),
+    outlet_id: text("outlet_id")
+      .notNull()
+      .references(() => outlets.id, { onDelete: "restrict" }),
+    product_id: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    hpp_snapshot: integer("hpp_snapshot").notNull(),
+    price_snapshot: integer("price_snapshot").notNull(),
+    qty_dropped: integer("qty_dropped").notNull(),
+    dropped_at: text("dropped_at").notNull(),
+    qty_sold: integer("qty_sold").notNull().default(0),
+    qty_return_good: integer("qty_return_good").notNull().default(0),
+    qty_return_damaged: integer("qty_return_damaged").notNull().default(0),
+    amount_collected: integer("amount_collected").notNull().default(0),
+    picked_up_at: text("picked_up_at"),
+    status: text("status", { enum: ["open", "closed", "voided"] })
+      .notNull()
+      .default("open"),
+    visit_submission_id: text("visit_submission_id"),
+    notes: text("notes"),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updated_at: text("updated_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    check("chk_cycles_hpp", sql`hpp_snapshot >= 0`),
+    check("chk_cycles_price", sql`price_snapshot >= 0`),
+    check("chk_cycles_qty_dropped", sql`qty_dropped > 0`),
+    check("chk_cycles_qty_sold", sql`qty_sold >= 0`),
+    check("chk_cycles_qty_return_good", sql`qty_return_good >= 0`),
+    check("chk_cycles_qty_return_damaged", sql`qty_return_damaged >= 0`),
+    check("chk_cycles_amount", sql`amount_collected >= 0`),
+    index("idx_cycles_outlet_open")
+      .on(t.outlet_id)
+      .where(sql`status = 'open' AND picked_up_at IS NULL`),
+    index("idx_cycles_dropped_at").on(t.dropped_at),
+    index("idx_cycles_product").on(t.product_id),
+  ],
+);
+
+export const visit_submissions = sqliteTable(
+  "visit_submissions",
+  {
+    idempotency_key: text("idempotency_key").primaryKey(),
+    outlet_id: text("outlet_id")
+      .notNull()
+      .references(() => outlets.id, { onDelete: "restrict" }),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    response_json: text("response_json").notNull(),
+    client_latitude: real("client_latitude").notNull(),
+    client_longitude: real("client_longitude").notNull(),
+    client_accuracy_m: real("client_accuracy_m"),
+    distance_m: real("distance_m").notNull(),
+    geofence_radius_m: integer("geofence_radius_m").notNull(),
+    geofence_override: integer("geofence_override", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    geofence_override_reason: text("geofence_override_reason"),
+    notes: text("notes"),
+    status: text("status", { enum: ["committed", "voided"] })
+      .notNull()
+      .default("committed"),
+    voided_at: text("voided_at"),
+    voided_by: text("voided_by").references(() => users.id),
+    void_reason: text("void_reason"),
+    created_at: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    check("chk_visit_distance", sql`distance_m >= 0`),
+    check("chk_visit_radius", sql`geofence_radius_m > 0`),
+    index("idx_visit_submissions_outlet").on(t.outlet_id),
+    index("idx_visit_submissions_user").on(t.user_id),
+  ],
+);

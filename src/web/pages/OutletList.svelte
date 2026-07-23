@@ -19,6 +19,10 @@
 
   type Mode = 'list' | 'form' | 'delete';
 
+  type Props = { onVisit?: (outlet: Outlet) => void };
+
+  let { onVisit = () => {} }: Props = $props();
+
   let items = $state<Outlet[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
@@ -312,6 +316,12 @@
               </p>
             </div>
             <div class="flex flex-col gap-2">
+              <button
+                onclick={() => onVisit(item)}
+                class="rounded bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+              >
+                Kunjungan
+              </button>
               <button
                 onclick={() => openEdit(item)}
                 class="rounded border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"

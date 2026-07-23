@@ -3,6 +3,12 @@
   import ProductList from './ProductList.svelte';
   import OutletList from './OutletList.svelte';
 
+  type Outlet = { id: string; name: string; address: string | null; latitude: number; longitude: number };
+
+  type Props = { onVisit: (outlet: Outlet) => void };
+
+  let { onVisit }: Props = $props();
+
   type Section = 'bahan' | 'produk' | 'warung';
 
   let section = $state<Section>('bahan');
@@ -37,6 +43,6 @@
   {:else if section === 'produk'}
     <ProductList />
   {:else if section === 'warung'}
-    <OutletList />
+    <OutletList {onVisit} />
   {/if}
 </div>

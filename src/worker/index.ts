@@ -10,6 +10,8 @@ import rawMaterials from "./routes/raw_materials.js";
 import products from "./routes/products.js";
 import outlets from "./routes/outlets.js";
 import media from "./routes/media.js";
+import visits from "./routes/visit.js";
+import dashboard from "./routes/dashboard.js";
 
 const app = new Hono<Env>();
 
@@ -19,12 +21,17 @@ app.use("/api/auth/logout", requireAuth);
 app.use("/api/auth/me", requireAuth);
 
 app.use("/api/users/*", requirePermission("users:manage"));
-app.use("/api/raw-materials/*", requirePermission("raw_materials:manage"));
-app.use("/api/products/*", requirePermission("products:manage"));
-app.use("/api/outlets/*", requirePermission("outlets:manage"));
+app.use("/api/raw-materials/*", requirePermission("bom:write"));
+app.use("/api/products/*", requirePermission("products:write"));
+app.use("/api/outlets/*", requirePermission("outlets:write"));
+app.use("/api/outlets/:id/visit", requirePermission("visit:read"));
+app.post("/api/outlets/:id/visit", requirePermission("visit:write"));
+app.post("/api/visits/:idempotencyKey/void", requirePermission("visit:void"));
 
 app.get("/api/settings", requireAuth);
 app.put("/api/settings/geofence", requirePermission("settings:write"));
+
+app.use("/api/dashboard", requirePermission("dashboard:read"));
 
 app.use("/api/media/*", requireAuth);
 
@@ -36,6 +43,8 @@ app.route("/api/settings", settings);
 app.route("/api/raw-materials", rawMaterials);
 app.route("/api/products", products);
 app.route("/api/outlets", outlets);
+app.route("/api", visits);
+app.route("/api/dashboard", dashboard);
 
 app.onError((err, c) => {
   if (err instanceof AppError) {

@@ -4,6 +4,7 @@
   import Login from './pages/Login.svelte';
   import Dashboard from './pages/Dashboard.svelte';
   import VisitList from './pages/VisitList.svelte';
+  import VisitForm from './pages/VisitForm.svelte';
   import OutletList from './pages/OutletList.svelte';
   import MasterPage from './pages/MasterPage.svelte';
   import Users from './pages/Users.svelte';
@@ -16,11 +17,25 @@
     status?: string;
   };
 
+  type VisitOutlet = {
+    id: string;
+    name: string;
+    address: string | null;
+    latitude: number;
+    longitude: number;
+  };
+
   type Tab = 'beranda' | 'kunjungan' | 'warung' | 'master' | 'pengguna';
 
   let user = $state<User | null>(null);
   let tab = $state<Tab>('beranda');
   let isReady = $state(false);
+  let visitTarget = $state<VisitOutlet | null>(null);
+
+  function openVisit(outlet: VisitOutlet) {
+    visitTarget = outlet;
+    tab = 'kunjungan';
+  }
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'beranda', label: 'Beranda' },
@@ -113,11 +128,15 @@
       {#if tab === 'beranda'}
         <Dashboard />
       {:else if tab === 'kunjungan'}
-        <VisitList />
+        {#if visitTarget}
+          <VisitForm outlet={visitTarget} user={user} onBack={() => { visitTarget = null; }} />
+        {:else}
+          <VisitList onVisit={openVisit} />
+        {/if}
       {:else if tab === 'warung'}
-        <OutletList />
+        <OutletList onVisit={openVisit} />
       {:else if tab === 'master'}
-        <MasterPage />
+        <MasterPage onVisit={openVisit} />
       {:else if tab === 'pengguna'}
         <Users />
       {/if}

@@ -79,6 +79,16 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
   if (!user) throw new AuthError("Session invalid or expired");
   if (user.status !== "active") throw new AuthError("User inactive");
 
+  const now = new Date();
+  const newExpiresAt = new Date(now.getTime() + SESSION_DAYS * ONE_DAY_SECONDS * 1000);
+  await db
+    .update(sessions)
+    .set({
+      expires_at: newExpiresAt.toISOString(),
+      last_seen_at: now.toISOString(),
+    })
+    .where(eq(sessions.id, sessionId));
+
   c.set("user", user);
   c.set("sessionId", sessionId);
   await next();

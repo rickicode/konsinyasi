@@ -9,6 +9,18 @@ describe("rbac", () => {
     expect(can("staff", "dashboard:read")).toBe(true);
   });
 
+  it("allows only owner to manage raw materials / BOM", () => {
+    expect(can("owner", "bom:write")).toBe(true);
+    expect(can("staff", "bom:write")).toBe(false);
+    expect(can("owner", "raw_materials:read")).toBe(true);
+    expect(can("staff", "raw_materials:read")).toBe(false);
+  });
+
+  it("allows both roles to read product list but preserves owner-only recipe access", () => {
+    expect(can("owner", "products:read")).toBe(true);
+    expect(can("staff", "products:read")).toBe(true);
+  });
+
   it("allows owner to manage users and denies staff", () => {
     expect(can("owner", "users:manage")).toBe(true);
     expect(can("staff", "users:manage")).toBe(false);
