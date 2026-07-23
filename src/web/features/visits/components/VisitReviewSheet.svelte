@@ -140,6 +140,7 @@
         onclick={onSubmit}
         loading={isPending}
         disabled={disabled || isPending}
+        haptic
       >
         {isPending ? 'Menyimpan…' : 'Simpan Kunjungan'}
       </Button>

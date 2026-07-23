@@ -333,6 +333,7 @@
           size="lg"
           onclick={openReview}
           disabled={Boolean(submitDisabledReason) || $submitMutation.isPending}
+          haptic
         >
           {submitDisabledReason ?? 'Lanjut ke Ringkasan'}
         </Button>

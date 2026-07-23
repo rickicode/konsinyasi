@@ -247,3 +247,13 @@ input[type='button'] {
   min-height: 100vh;
   min-height: calc(100dvh - env(safe-area-inset-top, 0px));
 }
+
+/* Respect reduced-motion preference inside the app shell */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}

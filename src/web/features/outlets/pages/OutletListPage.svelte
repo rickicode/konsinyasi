@@ -71,7 +71,7 @@
   }
 
   async function refresh() {
-    await queryClient.refetchQueries({ queryKey: queryKeys.outlets.all });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.outlets.all });
   }
 
   const canWrite = $derived(auth.can('outlets:write'));

@@ -318,6 +318,7 @@
           fullWidth
           loading={isSaving}
           disabled={isSaving || !canWrite}
+          haptic
         >
           {isCreate ? 'Simpan' : 'Perbarui'}
         </Button>

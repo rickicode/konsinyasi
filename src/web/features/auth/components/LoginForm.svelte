@@ -66,5 +66,5 @@
     error={validation.password}
   />
 
-  <Button type="submit" fullWidth size="lg" {loading}>Masuk</Button>
+  <Button type="submit" fullWidth size="lg" {loading} haptic>Masuk</Button>
 </form>

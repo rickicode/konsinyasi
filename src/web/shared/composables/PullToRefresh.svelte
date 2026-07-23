@@ -4,55 +4,101 @@
   import { onMount } from 'svelte';
   import type { Snippet } from 'svelte';
   import Icon from '../ui/icons/Icon.svelte';
+
   type RefreshResult = {
     offline?: boolean;
   };
+
   type Props = {
     onRefresh: () => Promise<RefreshResult | void> | RefreshResult | void;
     class?: string;
     threshold?: number;
+    disabled?: boolean;
     children?: Snippet;
   };
-  let { onRefresh, class: className = '', threshold = 96, children }: Props = $props();
+
+  let {
+    onRefresh,
+    class: className = '',
+    threshold = 96,
+    disabled = false,
+    children,
+  }: Props = $props();
+
   let container = $state<HTMLDivElement | null>(null);
   let distance = $state(0);
   let refreshing = $state(false);
   let offline = $state(false);
+
   onMount(() => {
     const el = container;
     if (!el) return;
+    if (disabled) return;
+
     let startY = 0;
     let pullStarted = false;
+    let startX = 0;
+    let touchId: number | null = null;
+
     function reset() {
       distance = 0;
       pullStarted = false;
       startY = 0;
+      startX = 0;
+      touchId = null;
     }
+
+    function isAtTop() {
+      return el.scrollTop <= 0;
+    }
+
     function onTouchStart(e: TouchEvent) {
-      if (refreshing) return;
+      if (refreshing || disabled) return;
       if (e.touches.length !== 1) return;
-      startY = e.touches[0].clientY;
-      pullStarted = el.scrollTop <= 0;
+      const touch = e.touches[0];
+      touchId = touch.identifier;
+      startY = touch.clientY;
+      startX = touch.clientX;
+      pullStarted = isAtTop();
     }
+
     function onTouchMove(e: TouchEvent) {
-      if (refreshing || e.touches.length !== 1) return;
+      if (refreshing || disabled) return;
+      const touch = Array.from(e.touches).find((t) => t.identifier === touchId);
+      if (!touch) return;
+
+      const currentY = touch.clientY;
+      const currentX = touch.clientX;
+      const yDelta = currentY - startY;
+      const xDelta = currentX - startX;
+
+      // If we haven't committed to a pull yet, only start when at the top and
+      // the vertical movement dominates the horizontal one.
       if (!pullStarted) {
-        pullStarted = el.scrollTop <= 0;
-        if (pullStarted) {
-          startY = e.touches[0].clientY;
-        }
+        if (Math.abs(yDelta) <= Math.abs(xDelta) * 1.5) return;
+        if (!isAtTop()) return;
+        pullStarted = true;
+        startY = currentY;
+        startX = currentX;
+        return;
       }
-      if (!pullStarted) return;
-      const delta = e.touches[0].clientY - startY;
-      if (delta > 0) {
+
+      if (yDelta > 0) {
+        // preventDefault is conditional: only block the pull gesture once it is
+        // clearly a refresh pull so native rubber-banding still feels normal.
         e.preventDefault();
-        distance = Math.min(delta, threshold * 1.5);
+        // Apply a resistance curve so the indicator moves slower as it nears the max.
+        const maxTravel = threshold * 2;
+        const progress = Math.min(yDelta, maxTravel) / maxTravel;
+        distance = Math.min(yDelta, threshold * 1.5) * (1 - progress * 0.35);
       } else {
         distance = 0;
       }
     }
+
     async function onTouchEnd() {
-      if (refreshing || !pullStarted) return;
+      if (refreshing || !pullStarted || disabled) return;
+
       if (distance >= threshold) {
         refreshing = true;
         distance = threshold;
@@ -72,18 +118,27 @@
         reset();
       }
     }
+
+    function onTouchCancel() {
+      if (!pullStarted) return;
+      reset();
+    }
+
     el.addEventListener('touchstart', onTouchStart, { passive: true });
     el.addEventListener('touchmove', onTouchMove, { passive: false });
     el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchCancel, { passive: true });
+
     return () => {
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchCancel);
     };
   });
 </script>
 
-<div class="relative">
+<div class="relative h-full">
   {#if offline}
     <div
       class="absolute left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-coffee-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg"
@@ -111,7 +166,10 @@
           <Icon
             name="chevron-down"
             size={20}
-            class={cn('transition-transform', distance >= threshold ? 'rotate-180' : '')}
+            class={cn(
+              'transition-transform duration-200',
+              distance >= threshold ? 'rotate-180' : ''
+            )}
           />
           <span class="text-sm font-medium">
             {distance >= threshold ? 'Lepaskan untuk memperbarui' : 'Tarik ke bawah'}

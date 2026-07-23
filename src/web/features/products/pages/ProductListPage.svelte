@@ -27,7 +27,7 @@
     push('/master/produk/baru');
   }
   async function refresh() {
-    await queryClient.refetchQueries({ queryKey: queryKeys.products.all });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
   }
 </script>
 

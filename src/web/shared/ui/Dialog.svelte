@@ -79,7 +79,7 @@
           <Button variant="secondary" fullWidth onclick={onClose}>
             {cancelLabel}
           </Button>
-          <Button variant="primary" fullWidth onclick={handleConfirm}>
+          <Button variant="primary" fullWidth onclick={handleConfirm} haptic>
             {confirmLabel}
           </Button>
         {:else}

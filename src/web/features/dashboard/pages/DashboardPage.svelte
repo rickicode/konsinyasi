@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { createQuery } from '@tanstack/svelte-query';
+  import { createQuery, useQueryClient } from '@tanstack/svelte-query';
   import { dashboardQueryOptions } from '../api/index.js';
+  import { queryKeys } from '$lib/api/query-keys.js';
   import { getAuth } from '$lib/stores/auth.svelte.js';
   import { useGeolocation } from '$lib/stores/geolocation.svelte.js';
   import { useNetwork } from '$lib/stores/network.svelte.js';
@@ -17,6 +18,7 @@
   const auth = getAuth();
   const geo = useGeolocation();
   const network = useNetwork();
+  const queryClient = useQueryClient();
   const query = createQuery(dashboardQueryOptions());
 
   const colorRank = { red: 0, yellow: 1, green: 2, none: 3 };
@@ -45,6 +47,7 @@
 
   async function handleRefresh() {
     if (!network.online) return { offline: true } as const;
+    await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     await query.refetch();
   }
 </script>

@@ -221,6 +221,7 @@
             class="flex-1"
             loading={createItemMutation.isPending || updateItemMutation.isPending}
             disabled={createItemMutation.isPending || updateItemMutation.isPending}
+            haptic
           >
             Simpan
           </Button>

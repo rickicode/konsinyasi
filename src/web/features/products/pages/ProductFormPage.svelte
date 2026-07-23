@@ -338,6 +338,7 @@
           fullWidth
           loading={isSaving}
           disabled={isSaving || isDeleting}
+          haptic
         >
           {isCreate ? 'Simpan' : 'Perbarui'}
         </Button>
@@ -361,6 +362,7 @@
             onclick={requestDelete}
             loading={isDeleting}
             disabled={isSaving || isDeleting}
+            haptic
           >
             Hapus Produk
           </Button>
