@@ -1,7 +1,15 @@
 <script lang='ts'>
   import { onMount, onDestroy } from 'svelte';
   import { api } from '../lib/api.js';
-  import { clearGpsWatch, generateIdempotencyKey, haversineM, watchGps } from '../lib/visit.js';
+  import {
+    clearGpsWatch,
+    clearVisitDraft,
+    generateIdempotencyKey,
+    haversineM,
+    loadVisitDraft,
+    saveVisitDraft,
+    watchGps,
+  } from '../lib/visit.js';
 
   type User = { id: string | number; name: string; role: string };
   type Outlet = { id: string; name: string; address?: string | null; latitude: number; longitude: number };
@@ -43,7 +51,10 @@
   let pickups = $state<Record<string, { good: number; damaged: number }>>({});
   let drops = $state<{ product_id: string; qty_dropped: number; notes: string }[]>([]);
 
-  const idempotencyKey = generateIdempotencyKey();
+  let idempotencyKey = $state(generateIdempotencyKey());
+  let isOnline = $state(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  let submitFailed = $state(false);
+  let dataLoaded = $state(false);
 
   $effect(() => {
     if (gps) {
@@ -101,13 +112,43 @@
       for (const cycle of cycles) {
         initial[cycle.id] = { good: 0, damaged: 0 };
       }
-      pickups = initial;
+
+      const latestCycleAt = cycles.reduce(
+        (max, c) => (c.dropped_at > max ? c.dropped_at : max),
+        '1970-01-01T00:00:00.000Z',
+      );
+      const draft = loadVisitDraft(outlet.id);
+      if (draft && draft.savedAt > latestCycleAt) {
+        pickups = { ...initial, ...draft.pickups };
+        drops = draft.drops;
+        override = draft.override;
+        overrideReason = draft.overrideReason;
+        visitNotes = draft.visitNotes;
+        idempotencyKey = draft.idempotency_key;
+      } else {
+        pickups = initial;
+        idempotencyKey = generateIdempotencyKey();
+      }
+      dataLoaded = true;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Gagal memuat data kunjungan.';
     } finally {
       loading = false;
     }
   }
+
+  $effect(() => {
+    if (!dataLoaded || typeof localStorage === 'undefined') return;
+    saveVisitDraft(outlet.id, {
+      idempotency_key: idempotencyKey,
+      pickups,
+      drops,
+      override,
+      overrideReason,
+      visitNotes,
+      savedAt: new Date().toISOString(),
+    });
+  });
 
   function addDrop() {
     drops = [...drops, { product_id: '', qty_dropped: 1, notes: '' }];
@@ -163,7 +204,7 @@
     return true;
   }
 
-  const canSubmit = $derived(formValid() && !saving);
+  const canSubmit = $derived(formValid() && !saving && isOnline);
 
   const submitClass = $derived(
     canSubmit
@@ -201,6 +242,7 @@
 
     saving = true;
     error = null;
+    submitFailed = false;
     try {
       const res = await api(`/api/outlets/${outlet.id}/visit`, {
         method: 'POST',
@@ -221,10 +263,18 @@
         const data = (await res.json().catch(() => ({}))) as { message?: string };
         throw new Error(data.message || 'Gagal menyimpan kunjungan.');
       }
+      clearVisitDraft(outlet.id);
       success = 'Kunjungan berhasil disimpan.';
       setTimeout(onBack, 1500);
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Gagal menyimpan kunjungan.';
+      const isNetworkError = err instanceof TypeError || err instanceof Error && !navigator.onLine;
+      if (isNetworkError) {
+        submitFailed = true;
+        error = 'Tidak ada jaringan. Draft tersimpan — kirim ulang saat online.';
+      } else {
+        submitFailed = false;
+        error = err instanceof Error ? err.message : 'Gagal menyimpan kunjungan.';
+      }
     } finally {
       saving = false;
     }
@@ -241,6 +291,20 @@
         gpsError = message;
       },
     );
+
+    const handleOnline = () => {
+      isOnline = true;
+    };
+    const handleOffline = () => {
+      isOnline = false;
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   });
 
   onDestroy(() => {
@@ -265,6 +329,12 @@
     <h1 class='text-lg font-semibold text-gray-900'>{outlet.name}</h1>
     <p class='text-sm text-gray-500'>{outlet.address || 'Tidak ada alamat'}</p>
   </div>
+
+  {#if !isOnline}
+    <div class='mb-4 rounded border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800'>
+      Tidak ada jaringan. Draft tersimpan di HP — kirim ulang saat online & dalam radius.
+    </div>
+  {/if}
 
   <div class={geoCardClass}>
     <p class='text-sm font-medium text-gray-900'>Lokasi & Geofence</p>
@@ -378,6 +448,6 @@
   </label>
 
   <button onclick={submit} disabled={!canSubmit} class={submitClass}>
-    {saving ? 'Menyimpan...' : 'Simpan Kunjungan'}
+    {saving ? 'Menyimpan...' : submitFailed ? 'Kirim Ulang' : 'Simpan Kunjungan'}
   </button>
 </div>
