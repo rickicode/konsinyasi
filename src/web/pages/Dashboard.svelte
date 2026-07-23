@@ -58,7 +58,7 @@
       case 'green':
         return 'bg-green-50 border-green-200 text-green-800';
       default:
-        return 'bg-gray-50 border-gray-200 text-gray-700';
+        return 'bg-cream border-coffee-200 text-coffee-700';
     }
   }
 
@@ -71,7 +71,7 @@
       case 'green':
         return 'bg-green-600 text-white';
       default:
-        return 'bg-gray-300 text-gray-700';
+        return 'bg-coffee-300 text-coffee-800';
     }
   }
 
@@ -94,36 +94,36 @@
 </script>
 
 <div class="pb-6">
-  <h1 class="mb-4 text-lg font-semibold text-gray-900">Beranda</h1>
+  <h1 class="mb-4 text-lg font-semibold text-coffee-900">Beranda</h1>
 
   {#if loading}
-    <p class="py-8 text-center text-gray-500">Memuat...</p>
+    <p class="py-8 text-center text-coffee-500">Memuat...</p>
   {:else if error}
     <div class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
   {:else if data}
     <div class="mb-4 grid grid-cols-2 gap-3">
-      <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-        <p class="text-xs text-gray-500">Botol di pasar</p>
-        <p class="text-xl font-semibold text-gray-900">{data.summary.total_bottles_in_market}</p>
+      <div class="rounded-xl border border-coffee-200 bg-cream p-3 shadow-sm">
+        <p class="text-xs text-coffee-500">Botol di pasar</p>
+        <p class="text-xl font-semibold text-coffee-900">{data.summary.total_bottles_in_market}</p>
       </div>
-      <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-        <p class="text-xs text-gray-500">Wajib tarik</p>
+      <div class="rounded-xl border border-coffee-200 bg-cream p-3 shadow-sm">
+        <p class="text-xs text-coffee-500">Wajib tarik</p>
         <p class="text-xl font-semibold text-red-600">{data.summary.urgent_count}</p>
       </div>
       {#if data.summary.estimated_bill !== undefined}
-        <div class="col-span-2 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-          <p class="text-xs text-gray-500">Estimasi tagihan</p>
-          <p class="text-xl font-semibold text-gray-900">{formatRupiah(data.summary.estimated_bill)}</p>
+        <div class="col-span-2 rounded-xl border border-coffee-200 bg-cream p-3 shadow-sm">
+          <p class="text-xs text-coffee-500">Estimasi tagihan</p>
+          <p class="text-xl font-semibold text-coffee-900">{formatRupiah(data.summary.estimated_bill)}</p>
         </div>
       {/if}
     </div>
 
-    <h2 class="mb-2 text-sm font-medium text-gray-700">Prioritas Warung</h2>
+    <h2 class="mb-2 text-sm font-medium text-coffee-700">Prioritas Warung</h2>
 
     {#if data.items.length === 0}
-      <div class="rounded-lg border border-dashed border-gray-300 bg-white py-12 text-center">
-        <p class="text-gray-600">Belum ada warung</p>
-        <p class="mt-1 text-xs text-gray-500">Tambah warung di tab Warung</p>
+      <div class="rounded-lg border border-dashed border-coffee-200 bg-cream py-12 text-center">
+        <p class="text-coffee-600">Belum ada warung</p>
+        <p class="mt-1 text-xs text-coffee-500">Tambah warung di tab Warung</p>
       </div>
     {:else}
       <div class="space-y-3">

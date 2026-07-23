@@ -104,23 +104,23 @@
 </script>
 
 {#if !isReady}
-  <div class="flex min-h-screen items-center justify-center text-gray-600">
+  <div class="flex min-h-screen items-center justify-center text-coffee-600">
     Memuat...
   </div>
 {:else if user === null}
   <Login onsubmit={handleLogin} />
 {:else}
-  <div class="flex min-h-screen flex-col bg-gray-50 pb-16">
+  <div class="flex min-h-screen flex-col bg-cream pb-16">
     <!-- Top bar -->
-    <header class="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
+    <header class="sticky top-0 z-10 border-b border-coffee-200 bg-cream px-4 py-3 shadow-sm">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-semibold text-gray-900">{user.name}</p>
-          <p class="text-xs capitalize text-gray-500">{user.role}</p>
+          <p class="text-sm font-semibold text-coffee-900">{user.name}</p>
+          <p class="text-xs capitalize text-coffee-500">{user.role}</p>
         </div>
         <button
           onclick={logout}
-          class="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          class="rounded border border-coffee-200 bg-cream px-3 py-1.5 text-sm font-medium text-coffee-700 hover:bg-coffee-100"
         >
           Keluar
         </button>
@@ -130,9 +130,9 @@
     <!-- Main content -->
     <main class="flex-1 p-4">
       {#if !tabAllowed}
-        <div class="rounded-xl border border-gray-200 bg-white p-6 text-center">
-          <p class="text-sm font-medium text-gray-900">Akses ditolak</p>
-          <p class="mt-1 text-sm text-gray-500">Anda tidak memiliki akses ke halaman ini.</p>
+        <div class="rounded-xl border border-coffee-200 bg-cream p-6 text-center">
+          <p class="text-sm font-medium text-coffee-900">Akses ditolak</p>
+          <p class="mt-1 text-sm text-coffee-500">Anda tidak memiliki akses ke halaman ini.</p>
         </div>
       {:else if tab === 'beranda'}
         <Dashboard />
@@ -153,15 +153,15 @@
 
     <!-- Bottom navigation -->
     <nav
-      class="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white px-2 pb-safe"
+      class="fixed bottom-0 left-0 right-0 border-t border-coffee-200 bg-cream px-2 pb-safe"
     >
       <div class="mx-auto flex max-w-md justify-around">
         {#each tabs as { key, label }}
           <button
             onclick={() => (tab = key)}
             class="flex flex-1 flex-col items-center py-3 text-xs font-medium transition-colors"
-            class:text-blue-600={tab === key}
-            class:text-gray-500={tab !== key}
+            class:text-coffee-700={tab === key}
+            class:text-coffee-500={tab !== key}
           >
             {label}
           </button>
