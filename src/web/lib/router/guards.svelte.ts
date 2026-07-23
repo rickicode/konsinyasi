@@ -3,11 +3,11 @@ import type { RoutePrecondition } from 'svelte-spa-router';
 import { getAuth } from '$lib/stores/auth.svelte';
 
 /**
-* Redirect unauthenticated users to /login before the route resolves.
-*
-* Transparently waits for the current user check to finish so routes can be
-* wrapped safely without leaking protected code chunks.
-*/
+ * Redirect unauthenticated users to /login before the route resolves.
+ *
+ * Transparently waits for the current user check to finish so routes can be
+ * wrapped safely without leaking protected code chunks.
+ */
 export const requireAuth: RoutePrecondition = async () => {
   const auth = getAuth();
   await auth.ensureLoaded();
@@ -19,9 +19,9 @@ export const requireAuth: RoutePrecondition = async () => {
 };
 
 /**
-* Block non-owners. Intended to be composed with requireAuth:
-*   conditions: [requireAuth, requireOwner]
-*/
+ * Block non-owners. Intended to be composed with requireAuth:
+ *   conditions: [requireAuth, requireOwner]
+ */
 export const requireOwner: RoutePrecondition = async () => {
   const auth = getAuth();
   await auth.ensureLoaded();

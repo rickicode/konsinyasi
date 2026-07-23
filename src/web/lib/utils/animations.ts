@@ -6,13 +6,13 @@ import { cubicOut, cubicIn, quintOut } from 'svelte/easing';
  * when `window` is unavailable so that server/HTML snapshots stay static.
  */
 export function prefersReducedMotion(): boolean {
-	if (typeof window === 'undefined') return true;
-	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof window === 'undefined') return true;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 export type RouteTransitionParams = {
-	delay?: number;
-	duration?: number;
+  delay?: number;
+  duration?: number;
 };
 
 /**
@@ -20,31 +20,31 @@ export type RouteTransitionParams = {
  * Respects `prefers-reduced-motion` and disables itself on reduced motion.
  */
 export function routeIn(
-	node: Element,
-	params: RouteTransitionParams = {}
+  node: Element,
+  params: RouteTransitionParams = {}
 ): TransitionConfig | undefined {
-	if (prefersReducedMotion()) return undefined;
-	return fly(node, {
-		x: 12,
-		opacity: 0,
-		delay: params.delay ?? 0,
-		duration: params.duration ?? 200,
-		easing: cubicOut,
-	});
+  if (prefersReducedMotion()) return undefined;
+  return fly(node, {
+    x: 12,
+    opacity: 0,
+    delay: params.delay ?? 0,
+    duration: params.duration ?? 200,
+    easing: cubicOut,
+  });
 }
 
 /**
  * Svelte `out` transition for route-level content.
  */
 export function routeOut(
-	node: Element,
-	params: { duration?: number } = {}
+  node: Element,
+  params: { duration?: number } = {}
 ): TransitionConfig | undefined {
-	if (prefersReducedMotion()) return undefined;
-	return fade(node, {
-		duration: params.duration ?? 150,
-		easing: cubicIn,
-	});
+  if (prefersReducedMotion()) return undefined;
+  return fade(node, {
+    duration: params.duration ?? 150,
+    easing: cubicIn,
+  });
 }
 
 /**
@@ -57,14 +57,14 @@ export function routeOut(
  * ```
  */
 export const routeTransition = {
-	in: routeIn,
-	out: routeOut,
+  in: routeIn,
+  out: routeOut,
 };
 
 export type CrossfadeParams = {
-	duration?: number;
-	easing?: (t: number) => number;
-	delay?: number;
+  duration?: number;
+  easing?: (t: number) => number;
+  delay?: number;
 };
 
 /**
@@ -78,75 +78,69 @@ export type CrossfadeParams = {
  * ```
  */
 export function crossfadeSlide(params: CrossfadeParams = {}) {
-	if (prefersReducedMotion()) {
-		return [
-			() => undefined as TransitionConfig | undefined,
-			() => undefined as TransitionConfig | undefined,
-		];
-	}
+  if (prefersReducedMotion()) {
+    return [
+      () => undefined as TransitionConfig | undefined,
+      () => undefined as TransitionConfig | undefined,
+    ];
+  }
 
-	const duration = params.duration ?? 250;
+  const duration = params.duration ?? 250;
 
-	function transition(
-		node: Element,
-		direction: 1 | -1
-	): TransitionConfig | undefined {
-		const style = getComputedStyle(node);
-		const transform = style.transform === 'none' ? '' : style.transform;
+  function transition(node: Element, direction: 1 | -1): TransitionConfig | undefined {
+    const style = getComputedStyle(node);
+    const transform = style.transform === 'none' ? '' : style.transform;
 
-		return {
-			duration,
-			delay: params.delay ?? 0,
-			easing: params.easing ?? quintOut,
-			css: (t: number, u: number) => {
-				const offset = u * 16 * direction;
-				return `
+    return {
+      duration,
+      delay: params.delay ?? 0,
+      easing: params.easing ?? quintOut,
+      css: (t: number, u: number) => {
+        const offset = u * 16 * direction;
+        return `
 					transform: ${transform} translate3d(${offset}px, 0, 0);
 					opacity: ${t};
 				`;
-			},
-		};
-	}
+      },
+    };
+  }
 
-	return [
-		(node: Element) => transition(node, 1),
-		(node: Element) => transition(node, -1),
-	];
+  return [(node: Element) => transition(node, 1), (node: Element) => transition(node, -1)];
 }
 
 /**
  * A gentler crossfade for items that mainly fade instead of sliding.
  */
 export function crossfadeFade(params: CrossfadeParams = {}) {
-	if (prefersReducedMotion()) {
-		return [
-			() => undefined as TransitionConfig | undefined,
-			() => undefined as TransitionConfig | undefined,
-		];
-	}
+  if (prefersReducedMotion()) {
+    return [
+      () => undefined as TransitionConfig | undefined,
+      () => undefined as TransitionConfig | undefined,
+    ];
+  }
 
-	const duration = params.duration ?? 200;
+  const duration = params.duration ?? 200;
 
-	return [
-		(node: Element) =>
-			fade(node, {
-				duration,
-				delay: params.delay ?? 0,
-				easing: params.easing ?? cubicOut,
-			}),
-		(node: Element) =>
-			fade(node, {
-				duration,
-				delay: params.delay ?? 0,
-				easing: params.easing ?? cubicIn,
-			}),
-	];
+  return [
+    (node: Element) =>
+      fade(node, {
+        duration,
+        delay: params.delay ?? 0,
+        easing: params.easing ?? cubicOut,
+      }),
+    (node: Element) =>
+      fade(node, {
+        duration,
+        delay: params.delay ?? 0,
+        easing: params.easing ?? cubicIn,
+      }),
+  ];
 }
 
 export type ListItemParams = {
-	delay?: number;
-	duration?: number;
-	direction?: 1 | -1;
+  delay?: number;
+  duration?: number;
+  direction?: 1 | -1;
 };
 
 /**
@@ -154,18 +148,18 @@ export type ListItemParams = {
  * Slides up a small distance while fading in.
  */
 export function listItemIn(
-	node: Element,
-	params: ListItemParams = {}
+  node: Element,
+  params: ListItemParams = {}
 ): TransitionConfig | undefined {
-	if (prefersReducedMotion()) return undefined;
-	const direction = params.direction ?? 1;
-	return fly(node, {
-		y: 12 * direction,
-		opacity: 0,
-		delay: params.delay ?? 0,
-		duration: params.duration ?? 200,
-		easing: cubicOut,
-	});
+  if (prefersReducedMotion()) return undefined;
+  const direction = params.direction ?? 1;
+  return fly(node, {
+    y: 12 * direction,
+    opacity: 0,
+    delay: params.delay ?? 0,
+    duration: params.duration ?? 200,
+    easing: cubicOut,
+  });
 }
 
 /**
@@ -173,33 +167,33 @@ export function listItemIn(
  * Useful for dialogs, toasts, and buttons.
  */
 export function scaleIn(
-	node: Element,
-	params: { delay?: number; duration?: number; start?: number } = {}
+  node: Element,
+  params: { delay?: number; duration?: number; start?: number } = {}
 ): TransitionConfig | undefined {
-	if (prefersReducedMotion()) return undefined;
-	return scale(node, {
-		start: params.start ?? 0.96,
-		opacity: 0,
-		delay: params.delay ?? 0,
-		duration: params.duration ?? 180,
-		easing: cubicOut,
-	});
+  if (prefersReducedMotion()) return undefined;
+  return scale(node, {
+    start: params.start ?? 0.96,
+    opacity: 0,
+    delay: params.delay ?? 0,
+    duration: params.duration ?? 180,
+    easing: cubicOut,
+  });
 }
 
 /**
  * `in`/`out` slide transition with reduced-motion awareness.
  */
 export function slideIn(
-	node: Element,
-	params: { delay?: number; duration?: number; axis?: 'x' | 'y' } = {}
+  node: Element,
+  params: { delay?: number; duration?: number; axis?: 'x' | 'y' } = {}
 ): TransitionConfig | undefined {
-	if (prefersReducedMotion()) return undefined;
-	return slide(node, {
-		delay: params.delay ?? 0,
-		duration: params.duration ?? 200,
-		axis: params.axis ?? 'y',
-		easing: cubicOut,
-	});
+  if (prefersReducedMotion()) return undefined;
+  return slide(node, {
+    delay: params.delay ?? 0,
+    duration: params.duration ?? 200,
+    axis: params.axis ?? 'y',
+    easing: cubicOut,
+  });
 }
 
 /**
@@ -207,7 +201,7 @@ export function slideIn(
  * programmatically disabled without rewriting component markup.
  */
 export function instantTransition(): TransitionConfig {
-	return { duration: 0 };
+  return { duration: 0 };
 }
 
 /**
@@ -215,5 +209,5 @@ export function instantTransition(): TransitionConfig {
  * uses this to toggle reduced-motion aware styles on a root element.
  */
 export function reducedMotionClass(): string {
-	return prefersReducedMotion() ? 'reduced-motion' : '';
+  return prefersReducedMotion() ? 'reduced-motion' : '';
 }

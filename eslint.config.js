@@ -51,13 +51,6 @@ export default [
       '.pi/',
       '.basic-memory/',
       '.openlore/',
-      'src/web/pages/*',
-      'src/web/lib/api.ts',
-      'src/web/lib/photo.ts',
-      'src/web/lib/role.ts',
-      'src/web/lib/router.ts',
-      'src/web/lib/visit.ts',
-      'src/web/components/*',
     ],
   },
 ];

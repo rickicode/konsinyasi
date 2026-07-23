@@ -32,10 +32,7 @@ export type VisitDraft = {
 
 export const DRAFT_KEY = (outletId: string) => `konsi_visit_draft_${outletId}`;
 
-export function saveVisitDraft(
-  outletId: string,
-  draft: Omit<VisitDraft, "outlet_id">,
-): void {
+export function saveVisitDraft(outletId: string, draft: Omit<VisitDraft, 'outlet_id'>): void {
   const payload: VisitDraft = {
     idempotency_key: draft.idempotency_key,
     outlet_id: outletId,
@@ -55,13 +52,13 @@ export function loadVisitDraft(outletId: string): VisitDraft | null {
   try {
     const parsed = JSON.parse(raw) as Partial<VisitDraft>;
     if (
-      typeof parsed.idempotency_key !== "string" ||
-      typeof parsed.savedAt !== "string" ||
-      typeof parsed.pickups !== "object" ||
+      typeof parsed.idempotency_key !== 'string' ||
+      typeof parsed.savedAt !== 'string' ||
+      typeof parsed.pickups !== 'object' ||
       !Array.isArray(parsed.drops) ||
-      typeof parsed.override !== "boolean" ||
-      typeof parsed.overrideReason !== "string" ||
-      typeof parsed.visitNotes !== "string"
+      typeof parsed.override !== 'boolean' ||
+      typeof parsed.overrideReason !== 'string' ||
+      typeof parsed.visitNotes !== 'string'
     ) {
       return null;
     }
@@ -77,10 +74,10 @@ export function clearVisitDraft(outletId: string): void {
 
 export function watchGps(
   onUpdate: (pos: GpsPosition) => void,
-  onError: (message: string) => void,
+  onError: (message: string) => void
 ): number | null {
   if (!navigator.geolocation) {
-    onError("Perangkat tidak mendukung GPS");
+    onError('Perangkat tidak mendukung GPS');
     return null;
   }
   const id = navigator.geolocation.watchPosition(
@@ -94,7 +91,7 @@ export function watchGps(
     (err) => {
       onError(err.message);
     },
-    { enableHighAccuracy: true, maximumAge: 10_000, timeout: 30_000 },
+    { enableHighAccuracy: true, maximumAge: 10_000, timeout: 30_000 }
   );
   return id;
 }

@@ -8,7 +8,7 @@ export function formatBytes(bytes: number): string {
 
 export async function compressPhoto(
   file: File,
-  { maxEdge = 1600, quality = 0.85, type = 'image/jpeg' } = {},
+  { maxEdge = 1600, quality = 0.85, type = 'image/jpeg' } = {}
 ): Promise<File> {
   const bitmap = await createImageBitmap(file);
   const { width, height } = bitmap;
@@ -29,9 +29,7 @@ export async function compressPhoto(
   ctx.drawImage(bitmap, 0, 0, nextWidth, nextHeight);
   bitmap.close();
 
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, type, quality),
-  );
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
   if (!blob) throw new Error('Canvas compression failed');
 
   const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo';

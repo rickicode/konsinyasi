@@ -62,7 +62,9 @@ function createNetworkState(): NetworkState {
   let online = $state(isBrowser ? navigator.onLine : true);
   let bannerDismissed = $state(false);
   let offlineAt = $state<Date | null>(null);
-  const rawConn = isBrowser ? (navigator as typeof navigator & { connection?: NetworkConnectionInfo }).connection ?? null : null;
+  const rawConn = isBrowser
+    ? ((navigator as typeof navigator & { connection?: NetworkConnectionInfo }).connection ?? null)
+    : null;
   let connInfo = $state(readConnection(rawConn));
 
   let started = false;
@@ -80,7 +82,8 @@ function createNetworkState(): NetworkState {
   }
 
   function handleConnectionChange() {
-    const conn = (navigator as typeof navigator & { connection?: NetworkConnectionInfo }).connection ?? null;
+    const conn =
+      (navigator as typeof navigator & { connection?: NetworkConnectionInfo }).connection ?? null;
     connInfo = readConnection(conn);
   }
 

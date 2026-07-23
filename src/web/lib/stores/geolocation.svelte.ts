@@ -40,21 +40,13 @@ function toRadians(degrees: number): number {
  * Compute great-circle distance (km) between two lat/lng pairs using the
  * haversine formula.
  */
-export function distanceBetween(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
+export function distanceBetween(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = toRadians(lat2 - lat1);
   const dLng = toRadians(lng2 - lng1);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -144,16 +136,12 @@ function createGeolocationState(): GeolocationState {
       queryPermission().then((state) => {
         permission = state;
       });
-      watchId = navigator.geolocation.watchPosition(
-        onSuccess,
-        onFailure,
-        {
-          enableHighAccuracy: true,
-          maximumAge: 60_000,
-          timeout: 10_000,
-          ...options,
-        },
-      );
+      watchId = navigator.geolocation.watchPosition(onSuccess, onFailure, {
+        enableHighAccuracy: true,
+        maximumAge: 60_000,
+        timeout: 10_000,
+        ...options,
+      });
     },
     stop() {
       if (watchId === null) return;
