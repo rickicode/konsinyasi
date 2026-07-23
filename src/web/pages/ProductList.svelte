@@ -237,7 +237,7 @@
               {:else}
                 <p class="text-sm text-gray-500">{item.status}</p>
               {/if}
-              {#if item.recipe_lines.length > 0}
+              {#if isOwner && item.recipe_lines.length > 0}
                 <ul class="mt-2 space-y-1">
                   {#each item.recipe_lines as line (line.id)}
                     <li class="text-xs text-gray-600">{line.quantity}{line.unit} {line.raw_material_name} (dasar: {line.base_unit})</li>
@@ -290,47 +290,49 @@
         </select>
       </label>
 
-      <div class="mb-3">
-        <div class="mb-2 flex items-center justify-between">
-          <span class="text-sm font-medium text-gray-700">Resep Bahan Baku</span>
-          <button onclick={addRecipeLine} class="text-xs font-medium text-blue-600 hover:underline" type="button">+ Tambah bahan</button>
-        </div>
+      {#if isOwner}
+        <div class="mb-3">
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-700">Resep Bahan Baku</span>
+            <button onclick={addRecipeLine} class="text-xs font-medium text-blue-600 hover:underline" type="button">+ Tambah bahan</button>
+          </div>
 
-        {#if formRecipe.length === 0}
-          <p class="text-sm text-gray-500">Belum ada bahan baku.</p>
-        {:else}
-          <div class="space-y-2">
-            {#each formRecipe as line, index (index)}
-              <div class="rounded-lg border border-gray-200 p-3">
-                <div class="mb-2">
-                  <label for="recipe-material-{index}" class="block text-xs font-medium text-gray-700">Bahan Baku</label>
-                  <select id="recipe-material-{index}" bind:value={line.raw_material_id} class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
-                    <option value="">Pilih bahan baku</option>
-                    {#each rawMaterials as rm (rm.id)}
-                      <option value={rm.id}>{rm.name} ({rm.base_unit})</option>
-                    {/each}
-                  </select>
-                </div>
-                <div class="flex gap-2">
-                  <label for="recipe-qty-{index}" class="flex-1">
-                    <span class="block text-xs font-medium text-gray-700">Kuantitas</span>
-                    <input id="recipe-qty-{index}" type="number" min="0" step="0.01" bind:value={line.quantity} placeholder="0" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm" />
-                  </label>
-                  <label for="recipe-unit-{index}" class="w-24">
-                    <span class="block text-xs font-medium text-gray-700">Satuan</span>
-                    <select id="recipe-unit-{index}" bind:value={line.unit} class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
-                      {#each UNITS as unit (unit.value)}
-                        <option value={unit.value}>{unit.label}</option>
+          {#if formRecipe.length === 0}
+            <p class="text-sm text-gray-500">Belum ada bahan baku.</p>
+          {:else}
+            <div class="space-y-2">
+              {#each formRecipe as line, index (index)}
+                <div class="rounded-lg border border-gray-200 p-3">
+                  <div class="mb-2">
+                    <label for="recipe-material-{index}" class="block text-xs font-medium text-gray-700">Bahan Baku</label>
+                    <select id="recipe-material-{index}" bind:value={line.raw_material_id} class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
+                      <option value="">Pilih bahan baku</option>
+                      {#each rawMaterials as rm (rm.id)}
+                        <option value={rm.id}>{rm.name} ({rm.base_unit})</option>
                       {/each}
                     </select>
-                  </label>
+                  </div>
+                  <div class="flex gap-2">
+                    <label for="recipe-qty-{index}" class="flex-1">
+                      <span class="block text-xs font-medium text-gray-700">Kuantitas</span>
+                      <input id="recipe-qty-{index}" type="number" min="0" step="0.01" bind:value={line.quantity} placeholder="0" class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm" />
+                    </label>
+                    <label for="recipe-unit-{index}" class="w-24">
+                      <span class="block text-xs font-medium text-gray-700">Satuan</span>
+                      <select id="recipe-unit-{index}" bind:value={line.unit} class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm">
+                        {#each UNITS as unit (unit.value)}
+                          <option value={unit.value}>{unit.label}</option>
+                        {/each}
+                      </select>
+                    </label>
+                  </div>
+                  <button onclick={() => removeRecipeLine(index)} type="button" class="mt-2 text-xs font-medium text-red-600 hover:underline">Hapus bahan</button>
                 </div>
-                <button onclick={() => removeRecipeLine(index)} type="button" class="mt-2 text-xs font-medium text-red-600 hover:underline">Hapus bahan</button>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
 
       <div class="flex gap-2 pt-2">
         <button onclick={closeOverlay} class="flex-1 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Batal</button>
