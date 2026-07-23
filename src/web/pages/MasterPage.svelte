@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api } from '../lib/api.js';
+  import { api, getCurrentUser } from '../lib/api.js';
   import { allowedMasterSections, isOwner, type MasterSection } from '../lib/role.js';
   import RawMaterialList from './RawMaterialList.svelte';
   import ProductList from './ProductList.svelte';
@@ -20,8 +20,8 @@
 
   async function loadUser() {
     try {
-      const res = await api('/api/auth/me');
-      if (res.ok) user = (await res.json()) as User;
+      const me = await getCurrentUser();
+      if (me) user = me as User;
     } catch {
       // ignore
     }

@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-coffee-50: #faf7f2;
-  --color-coffee-100: #f2e9db;
-  --color-coffee-200: #e6d2bc;
-  --color-coffee-300: #d4b392;
-  --color-coffee-400: #bf8f63;
-  --color-coffee-500: #a87344;
-  --color-coffee-600: #8f5b35;
-  --color-coffee-700: #75482a;
-  --color-coffee-800: #603924;
-  --color-coffee-900: #4a2c1d;
+  --color-coffee-50: #efebe9;
+  --color-coffee-100: #d7ccc8;
+  --color-coffee-200: #bcaaa4;
+  --color-coffee-300: #a1887f;
+  --color-coffee-400: #8d6e63;
+  --color-coffee-500: #795548;
+  --color-coffee-600: #6d4c41;
+  --color-coffee-700: #5d4037;
+  --color-coffee-800: #4e342e;
+  --color-coffee-900: #3e2723;
   --color-coffee-950: #2b1810;
 
-  --color-cream: #fbf6ef;
-  --color-caramel: #e6cfa3;
+  --color-cream: #fff8e7;
+  --color-caramel: #c69c6d;
 
   --color-section-dashboard: #fff7ed;
   --color-section-visit: #fff0f5;
@@ -24,10 +24,47 @@
   --color-section-raw: #f5f0e8;
 }
 
+:root {
+  --milk: #f7f3eb;
+  --cream: #fff8e7;
+  --caramel: #c69c6d;
+  --accent: #8d6e63;
+}
+
 html,
 body {
   margin: 0;
   min-height: 100%;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: var(--milk);
+  color: var(--coffee-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* Safe area support for mobile */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--coffee-200);
+  border-radius: 4px;
+}
+
+button,
+[role="button"],
+input[type="submit"],
+input[type="button"] {
+  cursor: pointer;
 }
 
 @utility btn {

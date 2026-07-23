@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { api } from '../lib/api.js';
+  import Icon from '../components/Icon.svelte';
 
   type Outlet = {
     id: string;
@@ -41,6 +43,8 @@
     }
   }
 
+  onMount(load);
+
   function formatRupiah(n: number): string {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -52,11 +56,11 @@
   function colorClasses(color: Outlet['color']) {
     switch (color) {
       case 'red':
-        return 'bg-red-50 border-red-200 text-red-800';
+        return 'bg-[#F9E8E8] border-[#E8B4B4] text-[#7A1F1F]';
       case 'yellow':
-        return 'bg-amber-50 border-amber-200 text-amber-800';
+        return 'bg-[#FDF6E3] border-[#EED99A] text-[#7A5C00]';
       case 'green':
-        return 'bg-green-50 border-green-200 text-green-800';
+        return 'bg-[#E8F5E9] border-[#A5D6A7] text-[#1B5E20]';
       default:
         return 'bg-coffee-50 border-coffee-200 text-coffee-700';
     }
@@ -65,13 +69,13 @@
   function colorBadge(color: Outlet['color']) {
     switch (color) {
       case 'red':
-        return 'bg-red-600 text-white';
+        return 'bg-[#C62828] text-white';
       case 'yellow':
-        return 'bg-amber-500 text-white';
+        return 'bg-[#F9A825] text-white';
       case 'green':
-        return 'bg-green-600 text-white';
+        return 'bg-[#2E7D32] text-white';
       default:
-        return 'bg-coffee-400 text-coffee-900';
+        return 'bg-coffee-300 text-coffee-900';
     }
   }
 
@@ -97,23 +101,27 @@
   <h1 class="mb-4 text-xl font-bold text-coffee-900">Beranda</h1>
 
   {#if loading}
-    <p class="py-8 text-center text-coffee-500">Memuat...</p>
+    <div class="flex flex-col items-center justify-center gap-3 py-16" style="color: var(--coffee-500);">
+      <div class="h-8 w-8 animate-spin rounded-full border-4 border-[var(--coffee-200)] border-t-[var(--coffee-600)]"></div>
+      <p class="text-sm font-medium">Memuat data...</p>
+    </div>
   {:else if error}
-    <div class="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+    <div class="mb-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
   {:else if data}
-    <div class="mb-5 grid grid-cols-2 gap-3">
+    <!-- Summary cards -->
+    <div class="mb-6 grid grid-cols-2 gap-3">
       <div class="card-dashboard">
-        <p class="text-xs font-medium text-coffee-500">Botol di pasar</p>
-        <p class="text-2xl font-bold text-coffee-900">{data.summary.total_bottles_in_market}</p>
+        <p class="text-xs font-semibold text-coffee-400">Botol di pasar</p>
+        <p class="mt-1 text-2xl font-extrabold text-coffee-900">{data.summary.total_bottles_in_market}</p>
       </div>
       <div class="card-dashboard">
-        <p class="text-xs font-medium text-coffee-500">Wajib tarik</p>
-        <p class="text-2xl font-bold text-red-600">{data.summary.urgent_count}</p>
+        <p class="text-xs font-semibold text-coffee-400">Wajib tarik</p>
+        <p class="mt-1 text-2xl font-extrabold text-red-600">{data.summary.urgent_count}</p>
       </div>
       {#if data.summary.estimated_bill !== undefined}
         <div class="card-dashboard col-span-2">
-          <p class="text-xs font-medium text-coffee-500">Estimasi tagihan</p>
-          <p class="text-2xl font-bold text-coffee-900">{formatRupiah(data.summary.estimated_bill)}</p>
+          <p class="text-xs font-semibold text-coffee-400">Estimasi tagihan</p>
+          <p class="mt-1 text-2xl font-extrabold text-coffee-900">{formatRupiah(data.summary.estimated_bill)}</p>
         </div>
       {/if}
     </div>
@@ -124,21 +132,21 @@
     </div>
 
     {#if data.items.length === 0}
-      <div class="rounded-2xl border-2 border-dashed border-coffee-200 bg-coffee-50 py-12 text-center">
-        <p class="font-medium text-coffee-700">Belum ada warung</p>
+      <div class="rounded-3xl border-2 border-dashed border-coffee-200 bg-coffee-50 py-14 text-center">
+        <p class="font-semibold text-coffee-700">Belum ada warung</p>
         <p class="mt-1 text-xs text-coffee-500">Tambah warung di tab Warung</p>
       </div>
     {:else}
       <div class="space-y-3">
         {#each data.items as item (item.id)}
-          <div class="rounded-2xl border p-4 shadow-md {colorClasses(item.color)}">
+          <div class="rounded-2xl border p-4 shadow-sm {colorClasses(item.color)}">
             <div class="flex items-start justify-between gap-3">
-              <div class="flex-1">
+              <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
-                  <span class="rounded-lg px-2 py-0.5 text-xs font-bold {colorBadge(item.color)}">
+                  <span class="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide {colorBadge(item.color)}">
                     {colorLabel(item.color)}
                   </span>
-                  <p class="font-bold text-coffee-900">{item.name}</p>
+                  <p class="truncate font-bold text-coffee-900">{item.name}</p>
                 </div>
                 <p class="mt-2 text-xs font-medium opacity-90">
                   {#if item.open_cycles_count > 0}
@@ -148,12 +156,13 @@
                   {/if}
                 </p>
                 {#if item.estimated_bill !== undefined && item.open_cycles_count > 0}
-                  <p class="mt-1 text-xs font-bold opacity-95">Tagihan: {formatRupiah(item.estimated_bill)}</p>
+                  <p class="mt-1 text-xs font-semibold opacity-90">Tagihan: {formatRupiah(item.estimated_bill)}</p>
                 {/if}
               </div>
               <button
                 onclick={() => openMaps(item.latitude, item.longitude)}
-                class="btn-secondary shrink-0 px-2 py-1 text-xs"
+                class="flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-transform active:scale-95"
+                style="background: var(--coffee-600);"
               >
                 Arahkan
               </button>
