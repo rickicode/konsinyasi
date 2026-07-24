@@ -9,7 +9,6 @@
 
   const auth = getAuth();
   const tabs = $derived(allowedMasterSections(auth.role ?? ''));
-
   const active = $derived.by((): MasterSection => {
     const params = new URLSearchParams(router.querystring ?? '');
     const raw = params.get('tab') as MasterSection | null;
@@ -22,6 +21,7 @@
   }
 
   $effect(() => {
+    if (router.location !== '/master') return;
     const params = new URLSearchParams(router.querystring ?? '');
     const raw = params.get('tab') as MasterSection | null;
     const first = tabs[0]?.key;

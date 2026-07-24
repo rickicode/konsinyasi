@@ -92,14 +92,13 @@ export function createReportFilters(initialPeriod: ReportPeriod = 'this-month'):
   let to = $state<string>(initialRange.to);
   let user_id = $state<string>('');
 
-  $effect(() => {
-    if (period !== 'custom') {
-      const fixedPeriod = period as FixedPeriod;
-      const range = getPeriodRange(fixedPeriod);
+  function syncPeriodRange(nextPeriod: ReportPeriod) {
+    if (nextPeriod !== 'custom') {
+      const range = getPeriodRange(nextPeriod as FixedPeriod);
       from = range.from;
       to = range.to;
     }
-  });
+  }
 
   const filters = $derived<ReportFilters>({
     from,
@@ -113,6 +112,7 @@ export function createReportFilters(initialPeriod: ReportPeriod = 'this-month'):
     },
     set period(value: ReportPeriod) {
       period = value;
+      syncPeriodRange(value);
     },
     get from() {
       return from;

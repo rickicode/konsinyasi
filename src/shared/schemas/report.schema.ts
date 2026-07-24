@@ -74,5 +74,6 @@ export const reportResponseSchema = z.object({
   by_outlet: z.array(reportBreakdownItemSchema),
   by_product: z.array(reportBreakdownItemSchema),
   by_user: z.array(reportBreakdownItemSchema),
+  fallback: z.boolean().optional(),
 });
 export type ReportResponse = z.infer<typeof reportResponseSchema>;

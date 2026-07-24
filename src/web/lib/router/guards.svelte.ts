@@ -1,15 +1,14 @@
 import { replace } from 'svelte-spa-router';
 import type { RoutePrecondition } from 'svelte-spa-router';
-import { getAuth } from '$lib/stores/auth.svelte';
+import { auth } from '$lib/stores/auth.svelte';
 
 /**
  * Redirect unauthenticated users to /login before the route resolves.
  *
- * Transparently waits for the current user check to finish so routes can be
- * wrapped safely without leaking protected code chunks.
+ * Uses the global auth singleton because route preconditions run outside
+ * Svelte component initialization, where `getContext` is not allowed.
  */
 export const requireAuth: RoutePrecondition = async () => {
-  const auth = getAuth();
   await auth.ensureLoaded();
   if (!auth.isAuthenticated) {
     replace('/login');
@@ -23,7 +22,6 @@ export const requireAuth: RoutePrecondition = async () => {
  *   conditions: [requireAuth, requireOwner]
  */
 export const requireOwner: RoutePrecondition = async () => {
-  const auth = getAuth();
   await auth.ensureLoaded();
   if (!auth.isAuthenticated) {
     replace('/login');

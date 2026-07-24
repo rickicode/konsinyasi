@@ -13,7 +13,7 @@ export const routes = {
   '/login': lazy(() => import('./features/auth/pages/LoginPage.svelte')),
 
   // Phase D public / field screens.
-  '/': lazy(() => import('./features/dashboard/pages/DashboardPage.svelte'), {
+  '/': lazy(() => import('./features/visits/pages/PlaceCoffeePage.svelte'), {
     conditions: [requireAuth],
   }),
   '/beranda': lazy(() => import('./features/dashboard/pages/DashboardPage.svelte'), {

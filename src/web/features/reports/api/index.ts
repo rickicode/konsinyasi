@@ -16,7 +16,7 @@ function buildQuery(filters: ReportFilters): string {
   return `?${params.toString()}`;
 }
 
-function emptyReportResponse(filters: ReportFilters): ReportResponse & { fallback: true } {
+function emptyReportResponse(filters: ReportFilters): ReportResponse {
   return {
     from: filters.from,
     to: filters.to,
@@ -46,7 +46,7 @@ function emptyReportResponse(filters: ReportFilters): ReportResponse & { fallbac
 export async function getReport(
   filters: ReportFilters,
   client: ApiClient = apiClient
-): Promise<ReportResponse & { fallback?: true }> {
+): Promise<ReportResponse> {
   try {
     return await client.get(`/api/reports/${buildQuery(filters)}`, reportResponseSchema);
   } catch (error) {

@@ -12,8 +12,9 @@ import outlets from './routes/outlets.js';
 import media from './routes/media.js';
 import visits from './routes/visit.js';
 import dashboard from './routes/dashboard.js';
+import reports from './routes/reports.js';
 
-const app = new Hono<Env>();
+const app = new Hono<Env>({ strict: false });
 
 app.get('/api/health', (c) => c.json({ status: 'ok' }));
 
@@ -34,6 +35,7 @@ app.use('/api/settings/*', requirePermission('settings:read'));
 app.put('/api/settings/geofence', requirePermission('settings:write'));
 
 app.use('/api/dashboard', requirePermission('dashboard:read'));
+app.use('/api/reports', requirePermission('reports:read'));
 
 app.use('/api/media/*', requireAuth);
 
@@ -47,6 +49,7 @@ app.route('/api/products', products);
 app.route('/api/outlets', outlets);
 app.route('/api', visits);
 app.route('/api/dashboard', dashboard);
+app.route('/api/reports', reports);
 
 app.onError((err, c) => {
   if (err instanceof AppError) {
