@@ -38,16 +38,16 @@
 
   const outletId = $derived(params.outletId ?? params.id ?? '');
   const prepQuery = createQuery(() => visitPrepQueryOptions(outletId));
-  const pickerQuery = createQuery(productPickerQueryOptions());
-  const submitMutation = createMutation(submitVisitMutationOptions());
+  const pickerQuery = createQuery(() => productPickerQueryOptions());
+  const submitMutation = createMutation(() => submitVisitMutationOptions());
 
   let showReview = $state(false);
   let visitResult = $state<VisitResult | null>(null);
   let formError = $state<string | null>(null);
 
-  const outlet = $derived($prepQuery.data?.outlet ?? null);
-  const cycles = $derived($prepQuery.data?.cycles ?? []);
-  const radiusM = $derived($prepQuery.data?.geofence_radius_m ?? 100);
+  const outlet = $derived(prepQuery.data?.outlet ?? null);
+  const cycles = $derived(prepQuery.data?.cycles ?? []);
+  const radiusM = $derived(prepQuery.data?.geofence_radius_m ?? 100);
 
   const coords = $derived(geolocation.coords);
   const gpsReady = $derived(coords !== null);
@@ -63,7 +63,7 @@
 
   const hasWork = $derived(cycles.length > 0 || draft.drops.length > 0);
   const submitDisabledReason = $derived.by(() => {
-    if ($submitMutation.isPending) return null;
+    if (submitMutation.isPending) return null;
     if (!gpsReady) return 'GPS belum siap.';
     if (!isInside && !canOverride) return 'Anda di luar radius geofence.';
     if (!isInside && canOverride && (!draft.override || !draft.overrideReason.trim())) {
@@ -76,8 +76,8 @@
   });
 
   $effect(() => {
-    if ($prepQuery.data && !draft.isLoaded) {
-      draft.load(outletId, $prepQuery.data.cycles);
+    if (prepQuery.data && !draft.isLoaded) {
+      draft.load(outletId, prepQuery.data.cycles);
     }
   });
 
@@ -89,7 +89,7 @@
   });
 
   function handleAddDrop(productId: string, qty: number, notes: string) {
-    const product = $pickerQuery.data?.find((p) => p.id === productId);
+    const product = pickerQuery.data?.find((p) => p.id === productId);
     if (!product) return;
     draft.addDrop(product, qty, notes);
   }
@@ -111,7 +111,7 @@
       cycles
     );
     try {
-      const result = await $submitMutation.mutateAsync({ outletId, input: payload });
+      const result = await submitMutation.mutateAsync({ outletId, input: payload });
       visitResult = result;
       showReview = false;
       draft.clear();
@@ -218,15 +218,15 @@
       <h1 class="text-lg font-bold text-coffee-900">Kunjungan</h1>
     </div>
 
-    {#if $prepQuery.isLoading}
+    {#if prepQuery.isLoading}
       <div class="space-y-4">
         <div class="h-32 animate-pulse rounded-2xl bg-coffee-100"></div>
         <div class="h-48 animate-pulse rounded-2xl bg-coffee-100"></div>
       </div>
-    {:else if $prepQuery.error}
+    {:else if prepQuery.error}
       <ErrorState
-        message={$prepQuery.error instanceof Error
-          ? $prepQuery.error.message
+        message={prepQuery.error instanceof Error
+          ? prepQuery.error.message
           : 'Gagal memuat data kunjungan.'}
         onRetry={retryPrep}
       />
@@ -277,13 +277,13 @@
         bind:overrideReason={draft.overrideReason}
       />
 
-      <CyclePickupForm {cycles} {draft} editable={!$submitMutation.isPending} />
+      <CyclePickupForm {cycles} {draft} editable={!submitMutation.isPending} />
 
       <section class="space-y-3" aria-label="Titip stok baru">
         <DropSheet
-          products={$pickerQuery.data ?? []}
+          products={pickerQuery.data ?? []}
           onAdd={handleAddDrop}
-          disabled={$pickerQuery.isLoading || $submitMutation.isPending}
+          disabled={pickerQuery.isLoading || submitMutation.isPending}
         />
 
         {#if draft.drops.length > 0}
@@ -306,7 +306,7 @@
                   variant="ghost"
                   size="sm"
                   onclick={() => handleRemoveDrop(drop.id)}
-                  disabled={$submitMutation.isPending}
+                  disabled={submitMutation.isPending}
                   aria-label="Hapus penitipan {drop.productName}"
                 >
                   <Icon name="trash-2" size={18} />
@@ -322,7 +322,7 @@
         placeholder="Opsional"
         rows={3}
         bind:value={draft.notes}
-        disabled={$submitMutation.isPending}
+        disabled={submitMutation.isPending}
       />
 
       <div class="pt-2">
@@ -332,7 +332,7 @@
           fullWidth
           size="lg"
           onclick={openReview}
-          disabled={Boolean(submitDisabledReason) || $submitMutation.isPending}
+          disabled={Boolean(submitDisabledReason) || submitMutation.isPending}
           haptic
         >
           {submitDisabledReason ?? 'Lanjut ke Ringkasan'}
@@ -351,5 +351,5 @@
   {distanceM}
   {radiusM}
   disabled={Boolean(submitDisabledReason)}
-  isPending={$submitMutation.isPending}
+  isPending={submitMutation.isPending}
 />

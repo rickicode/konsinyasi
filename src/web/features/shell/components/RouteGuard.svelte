@@ -27,7 +27,7 @@
   }: Props = $props();
 
   const auth = getAuth();
-  const current = $derived($router.location ?? '/');
+  const current = $derived(router.location ?? '/');
   const isPublic = $derived(publicPaths.includes(current));
   const isOwnerOnly = $derived(
     ownerOnlyPaths.some((path) => current === path || current.startsWith(`${path}/`))

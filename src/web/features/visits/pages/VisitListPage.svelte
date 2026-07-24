@@ -12,11 +12,11 @@
   import type { Outlet } from '@shared/schemas/outlet.schema.js';
 
   const queryClient = useQueryClient();
-  const outletsQuery = createQuery(outletsQueryOptions());
+  const outletsQuery = createQuery(() => outletsQueryOptions());
   let search = $state('');
 
   const filtered = $derived(
-    ($outletsQuery.data ?? []).filter((outlet) =>
+    (outletsQuery.data ?? []).filter((outlet) =>
       outlet.name.toLowerCase().includes(search.toLowerCase().trim())
     )
   );
@@ -47,16 +47,16 @@
     <Input type="search" placeholder="Cari warung…" class="pl-11" bind:value={search} />
   </div>
 
-  {#if $outletsQuery.isLoading && !$outletsQuery.data}
+  {#if outletsQuery.isLoading && !outletsQuery.data}
     <div class="grid gap-4 sm:grid-cols-2" aria-busy="true" aria-label="Memuat warung">
       {#each Array.from({ length: 4 }) as _, i (i)}
         <div class="h-32 animate-pulse rounded-2xl bg-coffee-100"></div>
       {/each}
     </div>
-  {:else if $outletsQuery.error}
+  {:else if outletsQuery.error}
     <ErrorState
-      message={$outletsQuery.error instanceof Error
-        ? $outletsQuery.error.message
+      message={outletsQuery.error instanceof Error
+        ? outletsQuery.error.message
         : 'Gagal memuat warung.'}
       onRetry={refresh}
     />

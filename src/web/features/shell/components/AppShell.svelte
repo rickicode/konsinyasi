@@ -16,38 +16,44 @@
 
   const auth = getAuth();
   const motionClass = $derived(reducedMotionClass());
+  const current = $derived(router.location ?? '/');
 
-  const ownerPaths = [
-    '/owner',
-    '/pengguna',
-    '/pengaturan',
-    '/laporan',
-    '/master/produk',
-    '/master/bahan',
-    '/master/warung',
-  ];
+  const hideShellPaths = ['/login'];
+  const hideBottomNav = ['/login'];
 
-  const current = $derived($router.location ?? '/');
-  const hideBottomNav = $derived(
-    ownerPaths.some((path) => current === path || current.startsWith(`${path}/`))
-  );
+  const isLogin = $derived(hideShellPaths.includes(current));
+  const showDesktopRail = $derived(!isLogin);
+  const showTopBar = $derived(!isLogin);
+  const showBottomNav = $derived(!isLogin && !hideBottomNav.includes(current));
 </script>
 
-<div
-  class="{motionClass} flex min-h-dvh flex-col bg-milk text-coffee-900"
-  data-reduced-motion={motionClass ? 'true' : 'false'}
->
-  <DesktopRail isOwner={auth.isOwner} />
-  <div class="flex min-h-dvh flex-1 flex-col px-safe lg:pl-64">
-    <OfflineBanner />
-    <TopBar />
-    <main class="flex flex-1 flex-col overflow-y-auto px-4 pb-28">
-      <div class="mx-auto w-full max-w-3xl flex-1">
-        {@render children?.()}
-      </div>
+{#if isLogin}
+  <div class="{motionClass} flex min-h-dvh flex-col bg-milk text-coffee-900">
+    <main class="flex flex-1 flex-col items-center justify-center p-4">
+      {@render children?.()}
     </main>
-    {#if !hideBottomNav}
-      <BottomNav />
-    {/if}
   </div>
-</div>
+{:else}
+  <div
+    class="{motionClass} flex min-h-dvh flex-col bg-milk text-coffee-900"
+    data-reduced-motion={motionClass ? 'true' : 'false'}
+  >
+    {#if showDesktopRail}
+      <DesktopRail isOwner={auth.isOwner} />
+    {/if}
+    <div class="flex min-h-dvh flex-1 flex-col px-safe lg:pl-64">
+      <OfflineBanner />
+      {#if showTopBar}
+        <TopBar />
+      {/if}
+      <main class="flex flex-1 flex-col overflow-y-auto px-4 pb-28">
+        <div class="mx-auto w-full max-w-3xl flex-1">
+          {@render children?.()}
+        </div>
+      </main>
+      {#if showBottomNav}
+        <BottomNav />
+      {/if}
+    </div>
+  </div>
+{/if}

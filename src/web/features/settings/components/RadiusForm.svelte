@@ -18,8 +18,8 @@
   let clientError = $state('');
 
   $effect(() => {
-    if ($settingsQuery.data) {
-      radius = $settingsQuery.data.geofence_radius_m;
+    if (settingsQuery.data) {
+      radius = settingsQuery.data.geofence_radius_m;
     }
   });
 
@@ -58,10 +58,10 @@
 </script>
 
 <form class="space-y-5" onsubmit={handleSubmit}>
-  {#if $settingsQuery.error}
+  {#if settingsQuery.error}
     <ErrorState
-      message={$settingsQuery.error instanceof Error
-        ? $settingsQuery.error.message
+      message={settingsQuery.error instanceof Error
+        ? settingsQuery.error.message
         : 'Gagal memuat pengaturan.'}
       onRetry={refresh}
     />
@@ -71,10 +71,10 @@
         <div>
           <p class="text-sm font-medium text-coffee-500">Radius saat ini</p>
           <p class="mt-1 text-2xl font-bold text-coffee-900">
-            {#if $settingsQuery.isLoading && !$settingsQuery.data}
+            {#if settingsQuery.isLoading && !settingsQuery.data}
               <span class="inline-block h-6 w-16 animate-pulse rounded bg-coffee-100"></span>
             {:else}
-              {$settingsQuery.data?.geofence_radius_m ?? radius} m
+              {settingsQuery.data?.geofence_radius_m ?? radius} m
             {/if}
           </p>
         </div>
@@ -98,13 +98,13 @@
       required
       bind:value={radius}
       error={clientError}
-      disabled={$settingsQuery.isLoading && !$settingsQuery.data}
+      disabled={settingsQuery.isLoading && !settingsQuery.data}
     />
 
     <Button
       type="submit"
       fullWidth
-      loading={$updateMutation.isPending || ($settingsQuery.isLoading && !$settingsQuery.data)}
+      loading={updateMutation.isPending || (settingsQuery.isLoading && !settingsQuery.data)}
       disabled={!Number.isFinite(Number(radius))}
     >
       Simpan Radius

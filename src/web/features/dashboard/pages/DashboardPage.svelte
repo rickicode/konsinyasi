@@ -19,7 +19,7 @@
   const geo = useGeolocation();
   const network = useNetwork();
   const queryClient = useQueryClient();
-  const query = createQuery(dashboardQueryOptions());
+  const query = createQuery(() => dashboardQueryOptions());
 
   const colorRank = { red: 0, yellow: 1, green: 2, none: 3 };
 
@@ -37,7 +37,7 @@
     return formatDistance(km * 1000);
   }
 
-  const sortedItems = $derived(sortUrgentItems($query.data?.items ?? []));
+  const sortedItems = $derived(sortUrgentItems(query.data?.items ?? []));
   const showFinancial = $derived(auth.isOwner);
 
   onMount(() => {
@@ -60,7 +60,7 @@
 
   <PullToRefresh onRefresh={handleRefresh} class="flex-1">
     <div class="space-y-5 px-4 pb-28 pt-2">
-      {#if $query.isPending}
+      {#if query.isPending}
         <div class="grid grid-cols-2 gap-3">
           <Skeleton class="h-24 w-full rounded-2xl" />
           <Skeleton class="h-24 w-full rounded-2xl" />
@@ -72,13 +72,13 @@
           <Skeleton class="h-28 w-full rounded-2xl" />
           <Skeleton class="h-28 w-full rounded-2xl" />
         </div>
-      {:else if $query.isError}
+      {:else if query.isError}
         <ErrorState
-          message={$query.error?.message || 'Gagal memuat dashboard.'}
+          message={query.error?.message || 'Gagal memuat dashboard.'}
           onRetry={() => query.refetch()}
         />
-      {:else if $query.data}
-        <SummaryCards summary={$query.data.summary} {showFinancial} />
+      {:else if query.data}
+        <SummaryCards summary={query.data.summary} {showFinancial} />
 
         <div>
           <div class="mb-3 flex items-center justify-between">

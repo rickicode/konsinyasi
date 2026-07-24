@@ -3,6 +3,7 @@
   import { fade, fly } from 'svelte/transition';
   import type { Snippet } from 'svelte';
   import Icon from './icons/Icon.svelte';
+
   type Props = {
     open: boolean;
     title?: string;
@@ -11,12 +12,15 @@
     onClose: () => void;
     children?: Snippet;
   };
+
   let { open, title, description, class: className = '', onClose, children }: Props = $props();
+
   let dragStartY = $state(0);
   let dragCurrentY = $state(0);
   let isDragging = $state(false);
   let contentRef = $state<HTMLDivElement | null>(null);
   const SWIPE_CLOSE_THRESHOLD = 96;
+
   $effect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
@@ -29,24 +33,28 @@
       document.body.style.overflow = '';
     };
   });
+
   function handleKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape' && open) {
       e.preventDefault();
       onClose();
     }
   }
+
   function onDragStart(e: TouchEvent) {
     if (e.touches.length !== 1) return;
     isDragging = true;
     dragStartY = e.touches[0].clientY;
     dragCurrentY = dragStartY;
   }
+
   function onDragMove(e: TouchEvent) {
     if (!isDragging || e.touches.length !== 1) return;
     const y = e.touches[0].clientY;
     const delta = Math.max(0, y - dragStartY);
     dragCurrentY = dragStartY + delta;
   }
+
   function onDragEnd() {
     if (!isDragging) return;
     isDragging = false;
@@ -58,9 +66,7 @@
       dragStartY = 0;
     }
   }
-  function onBackdropClick() {
-    onClose();
-  }
+
   const dragTranslate = $derived(
     isDragging && dragCurrentY > dragStartY ? dragCurrentY - dragStartY : 0
   );
@@ -72,13 +78,27 @@
   <div
     class="fixed inset-0 z-50 flex items-end justify-center bg-coffee-950/40 lg:items-center"
     transition:fade={{ duration: 150 }}
-    onclick={onBackdropClick}
+    role="presentation"
+    aria-label="Tutup panel"
+    tabindex="-1"
+    onkeydown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClose();
+      }
+    }}
+    onclick={(e) => {
+      if (e.target === e.currentTarget) {
+        onClose();
+      }
+    }}
   >
     <div
       class="pointer-events-none flex w-full max-w-full flex-1 items-end justify-center lg:items-center"
       transition:fly={{ y: 300, duration: 200 }}
     >
       <div
+        bind:this={contentRef}
         class={cn(
           'pointer-events-auto flex w-full max-w-full flex-col rounded-t-2xl bg-cream shadow-float lg:h-auto lg:max-h-[80vh] lg:max-w-md lg:rounded-2xl',
           className
@@ -89,10 +109,13 @@
         aria-modal="true"
         aria-labelledby={title ? 'sheet-title' : undefined}
         aria-describedby={description ? 'sheet-desc' : undefined}
-        onclick={(e) => e.stopPropagation()}
+        tabindex="-1"
       >
         <!-- Drag handle -->
         <div
+          role="button"
+          tabindex="-1"
+          aria-label="Geser ke bawah untuk menutup"
           class="flex cursor-grab touch-none items-center justify-center pt-3 pb-1 active:cursor-grabbing"
           ontouchstart={onDragStart}
           ontouchmove={onDragMove}
@@ -100,7 +123,6 @@
         >
           <div class="h-1.5 w-10 rounded-full bg-coffee-300"></div>
         </div>
-
         <div class="flex items-start justify-between gap-4 px-5 pb-3">
           <div class="flex-1">
             {#if title}
@@ -120,11 +142,11 @@
           </button>
         </div>
 
-        <div bind:this={contentRef} class="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
-          {#if children}
+        {#if children}
+          <div class="flex-1 overflow-y-auto px-5 pb-6">
             {@render children()}
-          {/if}
-        </div>
+          </div>
+        {/if}
       </div>
     </div>
   </div>

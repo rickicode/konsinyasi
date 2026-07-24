@@ -35,9 +35,9 @@
   const isCreate = $derived(!id);
 
   const detailQuery = createQuery(() => outletDetailQueryOptions(id));
-  const createItem = createMutation(createOutletMutationOptions());
-  const updateItem = createMutation(updateOutletMutationOptions());
-  const uploadPhoto = createMutation(uploadOutletPhotoMutationOptions());
+  const createItem = createMutation(() => createOutletMutationOptions());
+  const updateItem = createMutation(() => updateOutletMutationOptions());
+  const uploadPhoto = createMutation(() => uploadOutletPhotoMutationOptions());
 
   let name = $state('');
   let address = $state('');
@@ -52,9 +52,7 @@
   let photoPreviewUrl = $state<string | null>(null);
   let formError = $state<string | null>(null);
 
-  const isSaving = $derived(
-    $createItem.isPending || $updateItem.isPending || $uploadPhoto.isPending
-  );
+  const isSaving = $derived(createItem.isPending || updateItem.isPending || uploadPhoto.isPending);
   const canWrite = $derived(auth.can('outlets:write'));
 
   const statusOptions = [
@@ -63,7 +61,7 @@
   ];
 
   $effect(() => {
-    const outlet = $detailQuery.data;
+    const outlet = detailQuery.data;
     if (!outlet || isCreate) return;
     name = outlet.name;
     address = outlet.address;
@@ -149,7 +147,7 @@
 
   function buildUpdatePayload(): OutletUpdateInput {
     const payload: OutletUpdateInput = {};
-    const outlet = $detailQuery.data;
+    const outlet = detailQuery.data;
     if (!outlet) return payload;
     if (name.trim() !== outlet.name) payload.name = name.trim();
     if (address.trim() !== outlet.address) payload.address = address.trim();
@@ -178,17 +176,17 @@
     try {
       let savedId = id;
       if (isCreate) {
-        const created = await $createItem.mutateAsync(buildCreatePayload());
+        const created = await createItem.mutateAsync(buildCreatePayload());
         savedId = created.id;
         toast.add('Warung berhasil dibuat', 'success');
       } else {
         const payload = buildUpdatePayload();
-        await $updateItem.mutateAsync({ id, input: payload });
+        await updateItem.mutateAsync({ id, input: payload });
         toast.add('Warung berhasil diperbarui', 'success');
       }
 
       if (photoFile) {
-        await $uploadPhoto.mutateAsync({
+        await uploadPhoto.mutateAsync({
           id: savedId,
           photo: photoFile,
           latitude: lat,
@@ -227,17 +225,17 @@
     </h1>
   </div>
 
-  {#if $detailQuery.isLoading && !isCreate}
+  {#if detailQuery.isLoading && !isCreate}
     <div class="space-y-4">
       <div class="h-48 animate-pulse rounded-2xl bg-coffee-100"></div>
       <div class="h-40 animate-pulse rounded-2xl bg-coffee-100"></div>
     </div>
-  {:else if $detailQuery.error && !isCreate}
+  {:else if detailQuery.error && !isCreate}
     <ErrorState
-      message={$detailQuery.error instanceof Error
-        ? $detailQuery.error.message
+      message={detailQuery.error instanceof Error
+        ? detailQuery.error.message
         : 'Gagal memuat data warung.'}
-      onRetry={() => $detailQuery.refetch()}
+      onRetry={() => detailQuery.refetch()}
     />
   {:else}
     <form class="space-y-4" onsubmit={handleSubmit}>

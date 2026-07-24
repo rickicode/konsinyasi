@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createQuery } from '@tanstack/svelte-query';
-  import { BarChart3, Users, Store, Package } from 'lucide-svelte';
+  import { BarChart3 } from 'lucide-svelte';
   import { reportQueryOptions } from '../api/index.js';
   import { usersQueryOptions } from '../../users/api/index.js';
   import { reportFilters } from '../stores/report-filters.svelte.js';
@@ -18,10 +18,10 @@
   const reportQuery = createQuery(() => reportQueryOptions(filters));
   const usersQuery = createQuery(() => usersQueryOptions());
 
-  const isLoading = $derived($reportQuery.isPending);
-  const isError = $derived($reportQuery.isError);
-  const data = $derived($reportQuery.data);
-  const users = $derived($usersQuery.data ?? []);
+  const isLoading = $derived(reportQuery.isPending);
+  const isError = $derived(reportQuery.isError);
+  const data = $derived(reportQuery.data);
+  const users = $derived(usersQuery.data ?? []);
 
   const periodLabel = $derived(
     data
@@ -47,7 +47,7 @@
   ]);
 
   function handleRetry() {
-    $reportQuery.refetch();
+    reportQuery.refetch();
   }
 </script>
 
@@ -63,7 +63,7 @@
         <Icon name="file-text" size={18} class="text-coffee-600" />
         <h2 class="text-sm font-bold text-coffee-800">Filter</h2>
       </div>
-      <ReportFilters filters={reportFilters} {users} loading={$usersQuery.isPending || isLoading} />
+      <ReportFilters filters={reportFilters} {users} loading={usersQuery.isPending || isLoading} />
     </Card>
 
     {#if data?.fallback}
@@ -83,7 +83,7 @@
       </div>
     {:else if isError}
       <ErrorState
-        message={$reportQuery.error?.message || 'Gagal memuat laporan.'}
+        message={reportQuery.error?.message || 'Gagal memuat laporan.'}
         onRetry={handleRetry}
       />
     {:else if data}
@@ -109,10 +109,14 @@
         </div>
       </div>
 
-      {#snippet breakdownSection(icon: typeof Store, title: string, items: ReportBreakdownItem[])}
+      {#snippet breakdownSection(
+        iconName: 'store' | 'package' | 'users',
+        title: string,
+        items: ReportBreakdownItem[]
+      )}
         <div>
           <div class="mb-3 flex items-center gap-2">
-            <svelte:component this={icon} size={18} class="text-coffee-600" />
+            <Icon name={iconName} size={18} class="text-coffee-600" />
             <h2 class="text-sm font-bold text-coffee-800">{title}</h2>
             <span
               class="ml-auto rounded-full bg-coffee-100 px-2.5 py-0.5 text-xs font-semibold text-coffee-700"
@@ -156,9 +160,9 @@
         </div>
       {/snippet}
 
-      {@render breakdownSection(Store, 'Per warung', data.by_outlet)}
-      {@render breakdownSection(Package, 'Per produk', data.by_product)}
-      {@render breakdownSection(Users, 'Per petugas', data.by_user)}
+      {@render breakdownSection('store', 'Per warung', data.by_outlet)}
+      {@render breakdownSection('package', 'Per produk', data.by_product)}
+      {@render breakdownSection('users', 'Per petugas', data.by_user)}
 
       <ReportPdfLink filters={data} fallback={data.fallback} />
     {/if}

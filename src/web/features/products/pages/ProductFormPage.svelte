@@ -41,11 +41,11 @@
   const isCreate = $derived(!id);
 
   const detailQuery = createQuery(() => productDetailQueryOptions(id));
-  const materialsQuery = createQuery(rawMaterialsQueryOptions());
+  const materialsQuery = createQuery(() => rawMaterialsQueryOptions());
 
-  const createProductItem = createMutation(createProductMutationOptions());
-  const updateProductItem = createMutation(updateProductMutationOptions());
-  const deleteProductItem = createMutation(deleteProductMutationOptions());
+  const createProductItem = createMutation(() => createProductMutationOptions());
+  const updateProductItem = createMutation(() => updateProductMutationOptions());
+  const deleteProductItem = createMutation(() => deleteProductMutationOptions());
 
   // Form state
   let name = $state('');
@@ -59,8 +59,8 @@
   let attemptedSubmit = $state(false);
 
   const canManageFinancial = $derived(auth.isOwner);
-  const isSaving = $derived($createProductItem.isPending || $updateProductItem.isPending);
-  const isDeleting = $derived($deleteProductItem.isPending);
+  const isSaving = $derived(createProductItem.isPending || updateProductItem.isPending);
+  const isDeleting = $derived(deleteProductItem.isPending);
 
   const statusOptions = [
     { value: 'active', label: 'Aktif' },
@@ -68,7 +68,7 @@
   ];
 
   $effect(() => {
-    const product = $detailQuery.data;
+    const product = detailQuery.data;
     if (!product || isCreate) return;
     name = product.name;
     status = product.status;
@@ -157,7 +157,7 @@
       return Number.isFinite(override) && override > 0 ? override : 0;
     }
 
-    const materials = $materialsQuery.data ?? [];
+    const materials = materialsQuery.data ?? [];
     let total = 0;
     for (const line of recipeLines) {
       const material = materials.find((m) => m.id === line.raw_material_id);
@@ -173,7 +173,7 @@
   });
 
   const displayHpp = $derived(
-    isCreate ? previewHpp() : ($detailQuery.data?.hpp ?? previewHpp() ?? 0)
+    isCreate ? previewHpp() : (detailQuery.data?.hpp ?? previewHpp() ?? 0)
   );
 
   const displayPrice = $derived(
@@ -194,10 +194,10 @@
     try {
       const payload = buildPayload();
       if (isCreate) {
-        await $createProductItem.mutateAsync(payload as ProductCreateInput);
+        await createProductItem.mutateAsync(payload as ProductCreateInput);
         toast.add('Produk berhasil dibuat', 'success');
       } else {
-        await $updateProductItem.mutateAsync({
+        await updateProductItem.mutateAsync({
           id,
           input: payload as ProductUpdateInput,
         });
@@ -216,7 +216,7 @@
 
   async function handleDelete() {
     try {
-      await $deleteProductItem.mutateAsync(id);
+      await deleteProductItem.mutateAsync(id);
       toast.add('Produk berhasil dihapus', 'success');
       await queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
       push('/master/produk');
@@ -239,17 +239,17 @@
     </h1>
   </div>
 
-  {#if $detailQuery.isLoading}
+  {#if detailQuery.isLoading}
     <div class="space-y-4">
       <div class="h-48 animate-pulse rounded-2xl bg-coffee-100"></div>
       <div class="h-40 animate-pulse rounded-2xl bg-coffee-100"></div>
     </div>
-  {:else if $detailQuery.error}
+  {:else if detailQuery.error}
     <ErrorState
-      message={$detailQuery.error instanceof Error
-        ? $detailQuery.error.message
+      message={detailQuery.error instanceof Error
+        ? detailQuery.error.message
         : 'Gagal memuat data produk.'}
-      onRetry={() => $detailQuery.refetch()}
+      onRetry={() => detailQuery.refetch()}
     />
   {:else}
     <form class="space-y-4" onsubmit={handleSubmit}>
@@ -321,11 +321,11 @@
         <Card variant="product">
           <RecipeEditor
             bind:lines={recipeLines}
-            materials={$materialsQuery.data ?? []}
+            materials={materialsQuery.data ?? []}
             disabled={false}
             errors={fieldErrors}
           />
-          {#if attemptedSubmit && $materialsQuery.error}
+          {#if attemptedSubmit && materialsQuery.error}
             <p class="mt-2 text-sm text-danger" role="alert">Gagal memuat bahan baku.</p>
           {/if}
         </Card>

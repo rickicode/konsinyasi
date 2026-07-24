@@ -20,20 +20,20 @@
   const toast = useToast();
   const queryClient = useQueryClient();
 
-  const rawMaterialsQuery = createQuery(rawMaterialsQueryOptions());
-  const deleteItemMutation = createMutation(deleteRawMaterialMutationOptions());
+  const rawMaterialsQuery = createQuery(() => rawMaterialsQueryOptions());
+  const deleteItemMutation = createMutation(() => deleteRawMaterialMutationOptions());
 
   let search = $state('');
   let deletingId = $state<string | null>(null);
 
   const filtered = $derived(
-    ($rawMaterialsQuery.data ?? []).filter((item) =>
+    (rawMaterialsQuery.data ?? []).filter((item) =>
       item.name.toLowerCase().includes(search.toLowerCase().trim())
     )
   );
 
   const deletingItem = $derived(
-    ($rawMaterialsQuery.data ?? []).find((item) => item.id === deletingId) ?? null
+    (rawMaterialsQuery.data ?? []).find((item) => item.id === deletingId) ?? null
   );
 
   const unitLabels: Record<string, string> = {
@@ -84,16 +84,16 @@
     <Input type="search" placeholder="Cari bahan baku..." class="pl-11" bind:value={search} />
   </div>
 
-  {#if $rawMaterialsQuery.isLoading && !$rawMaterialsQuery.data}
+  {#if rawMaterialsQuery.isLoading && !rawMaterialsQuery.data}
     <div class="space-y-3" aria-busy="true" aria-label="Memuat bahan baku">
       {#each Array.from({ length: 4 }) as _, i (i)}
         <div class="h-28 animate-pulse rounded-2xl bg-coffee-100"></div>
       {/each}
     </div>
-  {:else if $rawMaterialsQuery.error}
+  {:else if rawMaterialsQuery.error}
     <ErrorState
-      message={$rawMaterialsQuery.error instanceof Error
-        ? $rawMaterialsQuery.error.message
+      message={rawMaterialsQuery.error instanceof Error
+        ? rawMaterialsQuery.error.message
         : 'Gagal memuat bahan baku.'}
       onRetry={refresh}
     />
@@ -156,8 +156,8 @@
                     variant="danger"
                     size="sm"
                     class="flex-1"
-                    loading={$deleteItemMutation.isPending && deletingId === item.id}
-                    disabled={$deleteItemMutation.isPending}
+                    loading={deleteItemMutation.isPending && deletingId === item.id}
+                    disabled={deleteItemMutation.isPending}
                     onclick={() => (deletingId = item.id)}
                   >
                     Hapus

@@ -44,7 +44,7 @@
   const currentUserId = $derived(auth.user?.id ?? null);
 
   const filtered = $derived(
-    ($usersQuery.data ?? []).filter((user) => {
+    (usersQuery.data ?? []).filter((user) => {
       const term = search.trim().toLowerCase();
       if (!term) return true;
       return user.name.toLowerCase().includes(term) || user.email.toLowerCase().includes(term);
@@ -192,16 +192,16 @@
     <Input type="search" placeholder="Cari pengguna..." class="pl-11" bind:value={search} />
   </div>
 
-  {#if $usersQuery.isLoading && !$usersQuery.data}
+  {#if usersQuery.isLoading && !usersQuery.data}
     <div class="space-y-3" aria-busy="true" aria-label="Memuat pengguna">
       {#each Array.from({ length: 4 }) as _, i (i)}
         <div class="h-36 animate-pulse rounded-2xl bg-coffee-100"></div>
       {/each}
     </div>
-  {:else if $usersQuery.error}
+  {:else if usersQuery.error}
     <ErrorState
-      message={$usersQuery.error instanceof Error
-        ? $usersQuery.error.message
+      message={usersQuery.error instanceof Error
+        ? usersQuery.error.message
         : 'Gagal memuat pengguna.'}
       onRetry={refresh}
     />
@@ -299,7 +299,7 @@
                       size="sm"
                       class="flex-1"
                       onclick={() => promptStatusToggle(user)}
-                      loading={pendingStatusUser?.id === user.id && $updateUserMutation.isPending}
+                      loading={pendingStatusUser?.id === user.id && updateUserMutation.isPending}
                     >
                       {statusLabel(user)}
                     </Button>
@@ -325,7 +325,7 @@
   <UserForm
     {mode}
     initial={editingUser}
-    loading={$createUserMutation.isPending || $updateUserMutation.isPending}
+    loading={createUserMutation.isPending || updateUserMutation.isPending}
     onSubmit={handleFormSubmit}
     onCancel={closeSheet}
   />
@@ -353,7 +353,7 @@
       <Button
         type="submit"
         fullWidth
-        loading={$resetPasswordMutation.isPending}
+        loading={resetPasswordMutation.isPending}
         disabled={!newPassword || newPassword.length < 6}
       >
         Reset Password

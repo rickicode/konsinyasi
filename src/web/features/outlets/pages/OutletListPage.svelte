@@ -19,7 +19,7 @@
   const auth = getAuth();
   const geolocation = useGeolocation();
   const filter = useOutletFilter();
-  const outletsQuery = createQuery(outletsQueryOptions());
+  const outletsQuery = createQuery(() => outletsQueryOptions());
 
   let search = $state(filter.search);
   let status = $state<'all' | 'active' | 'inactive'>(filter.status);
@@ -47,7 +47,7 @@
     { value: 'recent', label: 'Terbaru' },
   ];
 
-  const baseItems = $derived($outletsQuery.data ?? []);
+  const baseItems = $derived(outletsQuery.data ?? []);
   const filtered = $derived(filter.apply(baseItems));
   const sorted = $derived.by(() => {
     if (sortBy !== 'distance' || !geolocation.coords) {
@@ -110,16 +110,16 @@
     </div>
   </div>
 
-  {#if $outletsQuery.isLoading && !$outletsQuery.data}
+  {#if outletsQuery.isLoading && !outletsQuery.data}
     <div class="grid gap-4 sm:grid-cols-2" aria-busy="true" aria-label="Memuat warung">
       {#each Array.from({ length: 4 }) as _, i (i)}
         <div class="h-64 animate-pulse rounded-2xl bg-coffee-100"></div>
       {/each}
     </div>
-  {:else if $outletsQuery.error}
+  {:else if outletsQuery.error}
     <ErrorState
-      message={$outletsQuery.error instanceof Error
-        ? $outletsQuery.error.message
+      message={outletsQuery.error instanceof Error
+        ? outletsQuery.error.message
         : 'Gagal memuat warung.'}
       onRetry={refresh}
     />

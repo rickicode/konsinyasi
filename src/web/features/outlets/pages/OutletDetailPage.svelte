@@ -30,12 +30,12 @@
 
   const id = $derived(params.id ?? '');
   const detailQuery = createQuery(() => outletDetailQueryOptions(id));
-  const outlet = $derived($detailQuery.data);
+  const outlet = $derived(detailQuery.data);
   const distance = $derived(
     outlet ? geolocation.distanceTo(outlet.latitude, outlet.longitude) : null
   );
 
-  const deleteItem = createMutation(deleteOutletMutationOptions());
+  const deleteItem = createMutation(() => deleteOutletMutationOptions());
   let showDeleteDialog = $state(false);
 
   const statusLabel: Record<'active' | 'inactive', string> = {
@@ -60,7 +60,7 @@
 
   async function handleDelete() {
     try {
-      await $deleteItem.mutateAsync(id);
+      await deleteItem.mutateAsync(id);
       toast.add('Warung berhasil dihapus', 'success');
       await queryClient.invalidateQueries({ queryKey: queryKeys.outlets.all });
       push('/warung');
@@ -86,16 +86,16 @@
     {/if}
   </div>
 
-  {#if $detailQuery.isLoading}
+  {#if detailQuery.isLoading}
     <div class="space-y-4">
       <div class="aspect-video animate-pulse rounded-2xl bg-coffee-100"></div>
       <div class="h-6 w-2/3 animate-pulse rounded bg-coffee-100"></div>
       <div class="h-4 w-1/2 animate-pulse rounded bg-coffee-100"></div>
     </div>
-  {:else if $detailQuery.error}
+  {:else if detailQuery.error}
     <ErrorState
-      message={$detailQuery.error instanceof Error
-        ? $detailQuery.error.message
+      message={detailQuery.error instanceof Error
+        ? detailQuery.error.message
         : 'Gagal memuat detail warung.'}
       onRetry={refresh}
     />
@@ -196,7 +196,7 @@
               variant="danger"
               fullWidth
               onclick={() => (showDeleteDialog = true)}
-              loading={$deleteItem.isPending}
+              loading={deleteItem.isPending}
             >
               <Icon name="trash-2" size={18} />
               Hapus Warung

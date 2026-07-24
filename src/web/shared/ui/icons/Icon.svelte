@@ -8,6 +8,8 @@
     BarChart3,
     Camera,
     Check,
+    LayoutGrid,
+    ClipboardList,
     CheckCircle,
     ChevronDown,
     ChevronLeft,
@@ -60,12 +62,14 @@
     | 'chevron-left'
     | 'chevron-right'
     | 'chevron-up'
+    | 'clipboard-list'
     | 'clock'
     | 'dollar-sign'
     | 'edit'
     | 'file-text'
     | 'home'
     | 'info'
+    | 'layout-grid'
     | 'loader-2'
     | 'log-out'
     | 'mail'
@@ -116,12 +120,14 @@
     'chevron-left': ChevronLeft,
     'chevron-right': ChevronRight,
     'chevron-up': ChevronUp,
+    'clipboard-list': ClipboardList,
     clock: Clock,
     'dollar-sign': DollarSign,
     edit: Edit,
     'file-text': FileText,
     home: Home,
     info: Info,
+    'layout-grid': LayoutGrid,
     'loader-2': Loader2,
     'log-out': LogOut,
     mail: Mail,

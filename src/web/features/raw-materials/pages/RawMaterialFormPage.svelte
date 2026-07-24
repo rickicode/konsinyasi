@@ -35,9 +35,9 @@
   const id = $derived(params.id ?? '');
   const isCreate = $derived(!id);
 
-  const detailQuery = createQuery(rawMaterialDetailQueryOptions(id));
-  const createItemMutation = createMutation(createRawMaterialMutationOptions());
-  const updateItemMutation = createMutation(updateRawMaterialMutationOptions());
+  const detailQuery = createQuery(() => rawMaterialDetailQueryOptions(id));
+  const createItemMutation = createMutation(() => createRawMaterialMutationOptions());
+  const updateItemMutation = createMutation(() => updateRawMaterialMutationOptions());
 
   const unitOptions = BASE_UNIT.map((value) => ({
     value,
@@ -59,7 +59,7 @@
   let fieldErrors = $state<Record<string, string>>({});
 
   $effect(() => {
-    const item = $detailQuery.data;
+    const item = detailQuery.data;
     if (!isCreate && item) {
       formName = item.name;
       formUnit = item.base_unit;
@@ -68,7 +68,7 @@
   });
 
   const isPending = $derived(
-    $detailQuery.isLoading || createItemMutation.isPending || updateItemMutation.isPending
+    detailQuery.isLoading || createItemMutation.isPending || updateItemMutation.isPending
   );
 
   function goBack() {
@@ -137,14 +137,14 @@
     </h1>
   </div>
 
-  {#if !isCreate && $detailQuery.error}
+  {#if !isCreate && detailQuery.error}
     <ErrorState
-      message={$detailQuery.error instanceof Error
-        ? $detailQuery.error.message
+      message={detailQuery.error instanceof Error
+        ? detailQuery.error.message
         : 'Gagal memuat data bahan baku.'}
-      onRetry={() => $detailQuery.refetch()}
+      onRetry={() => detailQuery.refetch()}
     />
-  {:else if !isCreate && $detailQuery.isLoading}
+  {:else if !isCreate && detailQuery.isLoading}
     <div class="space-y-4">
       <div class="h-10 animate-pulse rounded-2xl bg-coffee-100"></div>
       <div class="h-10 animate-pulse rounded-2xl bg-coffee-100"></div>

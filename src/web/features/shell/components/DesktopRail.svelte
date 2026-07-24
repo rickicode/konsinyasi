@@ -1,48 +1,11 @@
 <script lang="ts">
   import { link, router } from 'svelte-spa-router';
-  import {
-    Home,
-    ClipboardList,
-    Store,
-    Package,
-    LayoutGrid,
-    User,
-    Users,
-    Settings,
-    FileText,
-    Shield,
-  } from 'lucide-svelte';
+  import { getAuth } from '$lib/stores/auth.svelte';
+  import { bottomNavTabs, topMenuTabs } from '$lib/role.js';
+  import Icon from '../../../shared/ui/icons/Icon.svelte';
 
-  type Props = {
-    /** The rail only renders owner-only links when this is true. */
-    isOwner?: boolean;
-  };
-
-  let { isOwner = false }: Props = $props();
-
-  type RailItem = {
-    path: string;
-    label: string;
-    icon: typeof Home;
-  };
-
-  const mainItems: RailItem[] = [
-    { path: '/beranda', label: 'Beranda', icon: Home },
-    { path: '/produk', label: 'Produk', icon: Package },
-    { path: '/kunjungan', label: 'Kunjungan', icon: ClipboardList },
-    { path: '/warung', label: 'Warung', icon: Store },
-    { path: '/master', label: 'Master', icon: LayoutGrid },
-    { path: '/profil', label: 'Profil', icon: User },
-  ];
-
-  const ownerItems: RailItem[] = [
-    { path: '/owner', label: 'Admin', icon: Shield },
-    { path: '/laporan', label: 'Laporan', icon: FileText },
-    { path: '/pengguna', label: 'Pengguna', icon: Users },
-    { path: '/pengaturan', label: 'Pengaturan', icon: Settings },
-  ];
-
-  const items = $derived(isOwner ? [...mainItems, ...ownerItems] : mainItems);
+  const auth = getAuth();
+  const items = $derived([...bottomNavTabs(auth.role ?? ''), ...topMenuTabs(auth.role ?? '')]);
   const current = $derived(router.location ?? '/');
 </script>
 
@@ -59,7 +22,6 @@
   </div>
   <nav class="flex-1 space-y-1 px-3 pt-4">
     {#each items as item (item.path)}
-      {@const Icon = item.icon}
       {@const active =
         current === item.path || (item.path !== '/' && current.startsWith(item.path))}
       <a
@@ -72,7 +34,7 @@
         class:text-coffee-600={!active}
         class:hover:bg-coffee-100={!active}
       >
-        <Icon size={20} />
+        <Icon name={item.icon} size={20} />
         {item.label}
       </a>
     {/each}

@@ -13,10 +13,10 @@
   import Icon from '../../../shared/ui/icons/Icon.svelte';
   const queryClient = useQueryClient();
   const auth = getAuth();
-  const productsQuery = createQuery(productsQueryOptions());
+  const productsQuery = createQuery(() => productsQueryOptions());
   let search = $state('');
   const filtered = $derived(
-    ($productsQuery.data ?? []).filter((product) =>
+    (productsQuery.data ?? []).filter((product) =>
       product.name.toLowerCase().includes(search.toLowerCase().trim())
     )
   );
@@ -49,16 +49,16 @@
     />
     <Input type="search" placeholder="Cari produk..." class="pl-11" bind:value={search} />
   </div>
-  {#if $productsQuery.isLoading && !$productsQuery.data}
+  {#if productsQuery.isLoading && !productsQuery.data}
     <div class="grid gap-4 sm:grid-cols-2" aria-busy="true" aria-label="Memuat produk">
       {#each Array.from({ length: 4 }) as _, i (i)}
         <div class="h-64 animate-pulse rounded-2xl bg-coffee-100"></div>
       {/each}
     </div>
-  {:else if $productsQuery.error}
+  {:else if productsQuery.error}
     <ErrorState
-      message={$productsQuery.error instanceof Error
-        ? $productsQuery.error.message
+      message={productsQuery.error instanceof Error
+        ? productsQuery.error.message
         : 'Gagal memuat produk.'}
       onRetry={refresh}
     />

@@ -3,6 +3,7 @@
   import { fade, scale } from 'svelte/transition';
   import Button from './Button.svelte';
   import Icon from './icons/Icon.svelte';
+
   type Props = {
     open: boolean;
     title: string;
@@ -13,6 +14,7 @@
     onClose: () => void;
     onConfirm?: () => void;
   };
+
   let {
     open,
     title,
@@ -23,12 +25,14 @@
     onClose,
     onConfirm,
   }: Props = $props();
+
   function handleKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape' && open) {
       e.preventDefault();
       onClose();
     }
   }
+
   function handleConfirm() {
     if (onConfirm) {
       onConfirm();
@@ -44,7 +48,20 @@
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-coffee-950/50 p-4"
     transition:fade={{ duration: 150 }}
-    onclick={onClose}
+    role="presentation"
+    aria-label="Tutup dialog"
+    tabindex="-1"
+    onkeydown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClose();
+      }
+    }}
+    onclick={(e) => {
+      if (e.target === e.currentTarget) {
+        onClose();
+      }
+    }}
   >
     <div
       class={cn(
@@ -56,7 +73,7 @@
       aria-modal="true"
       aria-labelledby="dialog-title"
       aria-describedby={description ? 'dialog-desc' : undefined}
-      onclick={(e) => e.stopPropagation()}
+      tabindex="-1"
     >
       <div class="flex items-start gap-3">
         <div

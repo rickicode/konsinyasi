@@ -11,7 +11,7 @@
   const tabs = $derived(allowedMasterSections(auth.role ?? ''));
 
   const active = $derived.by((): MasterSection => {
-    const params = new URLSearchParams($router.querystring ?? '');
+    const params = new URLSearchParams(router.querystring ?? '');
     const raw = params.get('tab') as MasterSection | null;
     if (raw && tabs.some((t) => t.key === raw)) return raw;
     return tabs[0]?.key ?? 'produk';
@@ -22,7 +22,7 @@
   }
 
   $effect(() => {
-    const params = new URLSearchParams($router.querystring ?? '');
+    const params = new URLSearchParams(router.querystring ?? '');
     const raw = params.get('tab') as MasterSection | null;
     const first = tabs[0]?.key;
     if (first && (!raw || !tabs.some((t) => t.key === raw))) {

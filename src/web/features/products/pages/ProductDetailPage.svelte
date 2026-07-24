@@ -17,7 +17,7 @@
   const auth = getAuth();
   const id = $derived(params.id ?? '');
   const detailQuery = createQuery(() => productDetailQueryOptions(id));
-  const product = $derived($detailQuery.data);
+  const product = $derived(detailQuery.data);
   const statusLabel: Record<'active' | 'inactive', string> = {
     active: 'Aktif',
     inactive: 'Nonaktif',
@@ -46,16 +46,16 @@
       </Button>
     {/if}
   </div>
-  {#if $detailQuery.isLoading}
+  {#if detailQuery.isLoading}
     <div class="space-y-4">
       <div class="aspect-[4/3] animate-pulse rounded-2xl bg-coffee-100"></div>
       <div class="h-6 w-2/3 animate-pulse rounded bg-coffee-100"></div>
       <div class="h-4 w-1/2 animate-pulse rounded bg-coffee-100"></div>
     </div>
-  {:else if $detailQuery.error}
+  {:else if detailQuery.error}
     <ErrorState
-      message={$detailQuery.error instanceof Error
-        ? $detailQuery.error.message
+      message={detailQuery.error instanceof Error
+        ? detailQuery.error.message
         : 'Gagal memuat detail produk.'}
       onRetry={refresh}
     />
