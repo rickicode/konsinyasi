@@ -1,0 +1,244 @@
+[
+  {
+    "name": "users",
+    "file": "src/worker/db/schema.ts",
+    "orm": "drizzle",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "email",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "password_hash",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "role",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "line": 12
+  },
+  {
+    "name": "sessions",
+    "file": "src/worker/db/schema.ts",
+    "orm": "drizzle",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "user_id",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "line": 31
+  },
+  {
+    "name": "app_settings",
+    "file": "src/worker/db/schema.ts",
+    "orm": "drizzle",
+    "fields": [
+      {
+        "name": "key",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "value",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "line": 43
+  },
+  {
+    "name": "raw_materials",
+    "file": "src/worker/db/schema.ts",
+    "orm": "drizzle",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "base_unit",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "line": 52
+  },
+  {
+    "name": "products",
+    "file": "src/worker/db/schema.ts",
+    "orm": "drizzle",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "hpp",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "hpp_override",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "price_to_outlet",
+        "type": "integer",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "line": 72
+  },
+  {
+    "name": "product_recipes",
+    "file": "src/worker/db/schema.ts",
+    "orm": "drizzle",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "product_id",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "line": 97
+  },
+  {
+    "name": "outlets",
+    "file": "src/worker/db/schema.ts",
+    "orm": "drizzle",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "address",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "latitude",
+        "type": "real",
+        "nullable": false
+      },
+      {
+        "name": "longitude",
+        "type": "real",
+        "nullable": false
+      },
+      {
+        "name": "location_accuracy_m",
+        "type": "real",
+        "nullable": false
+      },
+      {
+        "name": "location_captured_at",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "photo_key",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "notes",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "line": 123
+  },
+  {
+    "name": "consignment_cycles",
+    "file": "src/worker/db/schema.ts",
+    "orm": "drizzle",
+    "fields": [
+      {
+        "name": "id",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "outlet_id",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "line": 156
+  },
+  {
+    "name": "visit_submissions",
+    "file": "src/worker/db/schema.ts",
+    "orm": "drizzle",
+    "fields": [
+      {
+        "name": "idempotency_key",
+        "type": "text",
+        "nullable": false
+      },
+      {
+        "name": "outlet_id",
+        "type": "text",
+        "nullable": false
+      }
+    ],
+    "line": 203
+  }
+]

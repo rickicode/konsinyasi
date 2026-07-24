@@ -1,0 +1,3538 @@
+{
+  "schemaVersion": 1,
+  "evidenceFloor": 12,
+  "byLanguage": [
+    {
+      "language": "JavaScript",
+      "idioms": {
+        "functionForm": {
+          "signal": null,
+          "reason": "below_floor"
+        },
+        "binding": {
+          "dominant": "const",
+          "ratio": 1,
+          "samples": 12,
+          "options": {
+            "const": 12
+          }
+        },
+        "conditionalForm": {
+          "signal": null,
+          "reason": "below_floor"
+        },
+        "asyncForm": {
+          "signal": null,
+          "reason": "below_floor"
+        },
+        "stringForm": {
+          "signal": null,
+          "reason": "below_floor"
+        },
+        "functionNaming": {
+          "signal": null,
+          "reason": "below_floor"
+        }
+      },
+      "functionsSampled": 2
+    },
+    {
+      "language": "TypeScript",
+      "idioms": {
+        "functionForm": {
+          "dominant": "declaration",
+          "ratio": 0.6589,
+          "samples": 343,
+          "options": {
+            "arrow": 11,
+            "declaration": 226,
+            "method": 106
+          }
+        },
+        "binding": {
+          "dominant": "const",
+          "ratio": 0.9257,
+          "samples": 713,
+          "options": {
+            "const": 660,
+            "let": 53
+          }
+        },
+        "conditionalForm": {
+          "dominant": "if",
+          "ratio": 0.8243,
+          "samples": 296,
+          "options": {
+            "if": 244,
+            "ternary": 52
+          }
+        },
+        "asyncForm": {
+          "dominant": "await",
+          "ratio": 0.9895,
+          "samples": 190,
+          "options": {
+            "await": 188,
+            "then": 2
+          }
+        },
+        "stringForm": {
+          "dominant": "template",
+          "ratio": 1,
+          "samples": 87,
+          "options": {
+            "template": 87
+          }
+        },
+        "functionNaming": {
+          "dominant": "camelCase",
+          "ratio": 0.9953,
+          "samples": 426,
+          "options": {
+            "camelCase": 424,
+            "snake_case": 2
+          }
+        }
+      },
+      "functionsSampled": 513
+    }
+  ],
+  "regions": [
+    {
+      "communityId": "scripts/generate-pwa-icons.js::renderIcon",
+      "label": "renderIcon",
+      "byLanguage": [
+        {
+          "language": "JavaScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 1,
+              "samples": 12,
+              "options": {
+                "const": 12
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 2
+        }
+      ]
+    },
+    {
+      "communityId": "src/shared/lib/age.ts::ageHours",
+      "label": "ageHours",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 6
+        }
+      ]
+    },
+    {
+      "communityId": "src/shared/lib/id.ts::isUuid",
+      "label": "isUuid",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 8
+        }
+      ]
+    },
+    {
+      "communityId": "src/shared/lib/money.ts::formatRupiah",
+      "label": "formatRupiah",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 8
+        }
+      ]
+    },
+    {
+      "communityId": "src/shared/lib/units.ts::convertQuantity",
+      "label": "convertQuantity",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 2
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/features/auth/api/auth.api.ts::login",
+      "label": "login",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 6
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/features/auth/api/index.ts::getCurrentUser",
+      "label": "get",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "dominant": "declaration",
+              "ratio": 1,
+              "samples": 52,
+              "options": {
+                "declaration": 52
+              }
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "dominant": "template",
+              "ratio": 1,
+              "samples": 14,
+              "options": {
+                "template": 14
+              }
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 104,
+              "options": {
+                "camelCase": 104
+              }
+            }
+          },
+          "functionsSampled": 104
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/features/auth/api/index.ts::loginMutationOptions",
+      "label": "post",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "dominant": "declaration",
+              "ratio": 1,
+              "samples": 12,
+              "options": {
+                "declaration": 12
+              }
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 20,
+              "options": {
+                "camelCase": 20
+              }
+            }
+          },
+          "functionsSampled": 24
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/features/auth/stores/auth.svelte.ts::createAuthStore",
+      "label": "createAuthStore",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 4
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/features/outlets/stores/outlet-filter.svelte.ts::setOutletFilterContext",
+      "label": "createOutletFilterState",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "dominant": "method",
+              "ratio": 0.7692,
+              "samples": 13,
+              "options": {
+                "declaration": 3,
+                "method": 10
+              }
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 15
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/features/reports/api/index.ts::exportReportPdf",
+      "label": "buildQuery",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "dominant": "declaration",
+              "ratio": 0.5294,
+              "samples": 17,
+              "options": {
+                "declaration": 9,
+                "method": 8
+              }
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 0.7647,
+              "samples": 17,
+              "options": {
+                "const": 13,
+                "let": 4
+              }
+            },
+            "conditionalForm": {
+              "dominant": "if",
+              "ratio": 0.6842,
+              "samples": 19,
+              "options": {
+                "if": 13,
+                "ternary": 6
+              }
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 15,
+              "options": {
+                "camelCase": 15
+              }
+            }
+          },
+          "functionsSampled": 21
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/features/reports/stores/report-filters.svelte.ts::toISODate",
+      "label": "getPeriodRange",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "dominant": "method",
+              "ratio": 0.625,
+              "samples": 16,
+              "options": {
+                "declaration": 6,
+                "method": 10
+              }
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 0.8571,
+              "samples": 28,
+              "options": {
+                "const": 24,
+                "let": 4
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 17
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/features/visits/stores/visit-draft.svelte.ts::loadFromStorage",
+      "label": "isFresh",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "dominant": "method",
+              "ratio": 0.7273,
+              "samples": 33,
+              "options": {
+                "arrow": 1,
+                "declaration": 8,
+                "method": 24
+              }
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 0.625,
+              "samples": 24,
+              "options": {
+                "const": 15,
+                "let": 9
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 25,
+              "options": {
+                "camelCase": 25
+              }
+            }
+          },
+          "functionsSampled": 34
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/api/errors.ts::ApiError.constructor",
+      "label": "constructor",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 3
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/api/query-client.ts::getQueryClient",
+      "label": "getQueryClient",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 2
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/photo.ts::compressPhoto",
+      "label": "compressPhoto",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 0.8333,
+              "samples": 12,
+              "options": {
+                "const": 10,
+                "let": 2
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 4
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/role.ts::allowedMasterSections",
+      "label": "allowedMasterSections",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 10
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/router/guards.svelte.ts::requireAuth",
+      "label": "requireAuth",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 2
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/router/lazy.ts::lazy",
+      "label": "lazy",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 2
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/stores/auth.svelte.ts::login",
+      "label": "getCurrentUser",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "dominant": "method",
+              "ratio": 0.7059,
+              "samples": 17,
+              "options": {
+                "declaration": 5,
+                "method": 12
+              }
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 20
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/stores/geolocation.svelte.ts::request",
+      "label": "queryPermission",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "dominant": "declaration",
+              "ratio": 0.5238,
+              "samples": 21,
+              "options": {
+                "declaration": 11,
+                "method": 10
+              }
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 0.7895,
+              "samples": 19,
+              "options": {
+                "const": 15,
+                "let": 4
+              }
+            },
+            "conditionalForm": {
+              "dominant": "if",
+              "ratio": 0.9286,
+              "samples": 14,
+              "options": {
+                "if": 13,
+                "ternary": 1
+              }
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 19,
+              "options": {
+                "camelCase": 19
+              }
+            }
+          },
+          "functionsSampled": 27
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/stores/network.svelte.ts::readConnection",
+      "label": "readConnection",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "dominant": "method",
+              "ratio": 0.6111,
+              "samples": 18,
+              "options": {
+                "declaration": 7,
+                "method": 11
+              }
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 15,
+              "options": {
+                "camelCase": 15
+              }
+            }
+          },
+          "functionsSampled": 20
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/stores/toast.svelte.ts::add",
+      "label": "add",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 8
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/utils/animations.ts::prefersReducedMotion",
+      "label": "prefersReducedMotion",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 20,
+              "options": {
+                "camelCase": 20
+              }
+            }
+          },
+          "functionsSampled": 21
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/utils/cn.ts::cn",
+      "label": "cn",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 2
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/utils/format.ts::toDate",
+      "label": "toDate",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 1,
+              "samples": 15,
+              "options": {
+                "const": 15
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 12,
+              "options": {
+                "camelCase": 12
+              }
+            }
+          },
+          "functionsSampled": 12
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/utils/haptics.ts::haptic",
+      "label": "haptic",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 14,
+              "options": {
+                "camelCase": 14
+              }
+            }
+          },
+          "functionsSampled": 16
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/utils/local-storage.ts::getItem",
+      "label": "getItem",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 6
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/lib/visit.ts::toRad",
+      "label": "toRad",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 15,
+              "options": {
+                "camelCase": 15
+              }
+            }
+          },
+          "functionsSampled": 16
+        }
+      ]
+    },
+    {
+      "communityId": "src/web/main.ts::onNeedRefresh",
+      "label": "onNeedRefresh",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 5
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/lib/errors.ts::AppError.constructor",
+      "label": "constructor",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 5
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/lib/password.ts::hashPassword",
+      "label": "assertMinLength",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 0.8889,
+              "samples": 27,
+              "options": {
+                "const": 24,
+                "let": 3
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 10
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/lib/rbac.ts::requirePermission",
+      "label": "can",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 4
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/lib/session.ts::cookieOptions",
+      "label": "cookieOptions",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 1,
+              "samples": 18,
+              "options": {
+                "const": 18
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 15,
+              "options": {
+                "camelCase": 15
+              }
+            }
+          },
+          "functionsSampled": 15
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/lib/session.ts::optionalAuth",
+      "label": "getSessionUser",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 2
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/routes/dashboard.ts::colorRank",
+      "label": "colorRank",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 0.9286,
+              "samples": 14,
+              "options": {
+                "const": 13,
+                "let": 1
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 1
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/routes/outlets.ts::extensionFromFileName",
+      "label": "extensionFromFileName",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 1,
+              "samples": 46,
+              "options": {
+                "const": 46
+              }
+            },
+            "conditionalForm": {
+              "dominant": "if",
+              "ratio": 0.7813,
+              "samples": 32,
+              "options": {
+                "if": 25,
+                "ternary": 7
+              }
+            },
+            "asyncForm": {
+              "dominant": "await",
+              "ratio": 1,
+              "samples": 16,
+              "options": {
+                "await": 16
+              }
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 3
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/routes/products.ts::isOwner",
+      "label": "isOwner",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 1,
+              "samples": 47,
+              "options": {
+                "const": 47
+              }
+            },
+            "conditionalForm": {
+              "dominant": "if",
+              "ratio": 0.9091,
+              "samples": 22,
+              "options": {
+                "if": 20,
+                "ternary": 2
+              }
+            },
+            "asyncForm": {
+              "dominant": "await",
+              "ratio": 1,
+              "samples": 20,
+              "options": {
+                "await": 20
+              }
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 2
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/routes/raw_materials.ts::pickRawMaterial",
+      "label": "pickRawMaterial",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 1,
+              "samples": 23,
+              "options": {
+                "const": 23
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "dominant": "await",
+              "ratio": 1,
+              "samples": 12,
+              "options": {
+                "await": 12
+              }
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 1
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/routes/users.ts::pickUser",
+      "label": "pickUser",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 1,
+              "samples": 24,
+              "options": {
+                "const": 24
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "dominant": "await",
+              "ratio": 1,
+              "samples": 14,
+              "options": {
+                "await": 14
+              }
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 1
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/routes/visit.ts::pickVisitResult",
+      "label": "pickVisitResult",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 0.9706,
+              "samples": 34,
+              "options": {
+                "const": 33,
+                "let": 1
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 2
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/services/hpp.ts::isUnit",
+      "label": "computeHPP",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 0.9667,
+              "samples": 30,
+              "options": {
+                "const": 29,
+                "let": 1
+              }
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "dominant": "await",
+              "ratio": 1,
+              "samples": 17,
+              "options": {
+                "await": 17
+              }
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 12,
+              "options": {
+                "camelCase": 12
+              }
+            }
+          },
+          "functionsSampled": 12
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/services/visit.ts::processVisit",
+      "label": "nowUtcIso",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "dominant": "const",
+              "ratio": 1,
+              "samples": 37,
+              "options": {
+                "const": 37
+              }
+            },
+            "conditionalForm": {
+              "dominant": "if",
+              "ratio": 0.8571,
+              "samples": 21,
+              "options": {
+                "if": 18,
+                "ternary": 3
+              }
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "dominant": "camelCase",
+              "ratio": 1,
+              "samples": 13,
+              "options": {
+                "camelCase": 13
+              }
+            }
+          },
+          "functionsSampled": 13
+        }
+      ]
+    },
+    {
+      "communityId": "src/worker/services/voidVisit.ts::voidVisit",
+      "label": "nowUtcIso",
+      "byLanguage": [
+        {
+          "language": "TypeScript",
+          "idioms": {
+            "functionForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "binding": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "conditionalForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "asyncForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "stringForm": {
+              "signal": null,
+              "reason": "below_floor"
+            },
+            "functionNaming": {
+              "signal": null,
+              "reason": "below_floor"
+            }
+          },
+          "functionsSampled": 4
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "filePath": "e2e/mobile-flow.spec.ts",
+      "language": "TypeScript",
+      "counters": {
+        "asyncForm": {
+          "await": 2
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "eslint.config.js",
+      "language": "JavaScript",
+      "counters": {},
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "playwright.config.ts",
+      "language": "TypeScript",
+      "counters": {
+        "conditionalForm": {
+          "ternary": 2
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "prettier.config.js",
+      "language": "JavaScript",
+      "counters": {},
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "scripts/generate-pwa-icons.js",
+      "language": "JavaScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 1
+        },
+        "functionForm": {
+          "declaration": 2
+        },
+        "binding": {
+          "const": 12
+        },
+        "conditionalForm": {
+          "ternary": 1
+        },
+        "asyncForm": {
+          "await": 6,
+          "then": 1
+        },
+        "stringForm": {
+          "template": 5
+        }
+      },
+      "functionsSampled": 2
+    },
+    {
+      "filePath": "scripts/seed-owner.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionForm": {
+          "declaration": 1
+        },
+        "binding": {
+          "const": 8
+        },
+        "conditionalForm": {
+          "if": 2
+        },
+        "asyncForm": {
+          "await": 2
+        },
+        "stringForm": {
+          "template": 2
+        }
+      },
+      "functionsSampled": 1
+    },
+    {
+      "filePath": "src/shared/lib/__tests__/age.test.ts",
+      "language": "TypeScript",
+      "counters": {},
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/lib/__tests__/id.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "let": 1,
+          "const": 1
+        },
+        "stringForm": {
+          "template": 1
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/lib/__tests__/money.test.ts",
+      "language": "TypeScript",
+      "counters": {},
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/lib/__tests__/units.test.ts",
+      "language": "TypeScript",
+      "counters": {},
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/lib/age.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 6
+        },
+        "functionForm": {
+          "declaration": 3
+        },
+        "binding": {
+          "const": 1
+        },
+        "conditionalForm": {
+          "if": 4
+        }
+      },
+      "functionsSampled": 6
+    },
+    {
+      "filePath": "src/shared/lib/id.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 8
+        },
+        "functionForm": {
+          "declaration": 4
+        },
+        "binding": {
+          "const": 1
+        }
+      },
+      "functionsSampled": 8
+    },
+    {
+      "filePath": "src/shared/lib/money.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 8
+        },
+        "functionForm": {
+          "declaration": 4
+        },
+        "binding": {
+          "const": 5
+        },
+        "conditionalForm": {
+          "ternary": 3,
+          "if": 2
+        },
+        "stringForm": {
+          "template": 1
+        }
+      },
+      "functionsSampled": 8
+    },
+    {
+      "filePath": "src/shared/lib/units.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 2
+        },
+        "functionForm": {
+          "declaration": 1
+        },
+        "binding": {
+          "const": 4
+        },
+        "conditionalForm": {
+          "if": 1
+        },
+        "stringForm": {
+          "template": 1
+        }
+      },
+      "functionsSampled": 2
+    },
+    {
+      "filePath": "src/shared/schemas/auth.schema.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 4
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/schemas/outlet.schema.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 8
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/schemas/product.schema.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 9
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/schemas/raw-material.schema.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 4
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/schemas/report.schema.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 7
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/schemas/settings.schema.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 2
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/schemas/user.schema.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 7
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/schemas/visit.schema.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 13
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/shared/types/api.types.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 3
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/web/features/auth/api/auth.api.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 2
+        },
+        "functionForm": {
+          "declaration": 3
+        },
+        "binding": {
+          "const": 1
+        },
+        "asyncForm": {
+          "await": 1
+        },
+        "stringForm": {
+          "template": 3
+        }
+      },
+      "functionsSampled": 6
+    },
+    {
+      "filePath": "src/web/features/auth/api/index.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 8
+        },
+        "functionForm": {
+          "declaration": 6
+        },
+        "asyncForm": {
+          "then": 1
+        }
+      },
+      "functionsSampled": 12
+    },
+    {
+      "filePath": "src/web/features/auth/stores/auth.svelte.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 4
+        },
+        "functionForm": {
+          "declaration": 2
+        }
+      },
+      "functionsSampled": 4
+    },
+    {
+      "filePath": "src/web/features/dashboard/api/index.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 4
+        },
+        "functionForm": {
+          "declaration": 2
+        }
+      },
+      "functionsSampled": 4
+    },
+    {
+      "filePath": "src/web/features/outlets/api/index.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 24
+        },
+        "functionForm": {
+          "declaration": 12
+        },
+        "binding": {
+          "const": 2
+        },
+        "conditionalForm": {
+          "if": 1
+        },
+        "stringForm": {
+          "template": 4
+        }
+      },
+      "functionsSampled": 24
+    },
+    {
+      "filePath": "src/web/features/outlets/lib/__tests__/photo.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 2
+        },
+        "functionForm": {
+          "method": 5,
+          "declaration": 1
+        },
+        "binding": {
+          "let": 3,
+          "const": 9
+        },
+        "conditionalForm": {
+          "if": 2
+        },
+        "asyncForm": {
+          "await": 7
+        },
+        "stringForm": {
+          "template": 1
+        }
+      },
+      "functionsSampled": 6
+    },
+    {
+      "filePath": "src/web/features/outlets/stores/outlet-filter.svelte.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 11
+        },
+        "functionForm": {
+          "declaration": 3,
+          "method": 10
+        },
+        "binding": {
+          "const": 5,
+          "let": 4
+        },
+        "conditionalForm": {
+          "if": 3
+        }
+      },
+      "functionsSampled": 15
+    },
+    {
+      "filePath": "src/web/features/products/api/index.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 24
+        },
+        "functionForm": {
+          "declaration": 12
+        },
+        "binding": {
+          "const": 1
+        },
+        "stringForm": {
+          "template": 3
+        }
+      },
+      "functionsSampled": 24
+    },
+    {
+      "filePath": "src/web/features/raw-materials/api/index.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 20
+        },
+        "functionForm": {
+          "declaration": 10
+        },
+        "binding": {
+          "const": 1
+        },
+        "stringForm": {
+          "template": 3
+        }
+      },
+      "functionsSampled": 20
+    },
+    {
+      "filePath": "src/web/features/reports/api/index.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 10
+        },
+        "functionForm": {
+          "declaration": 6
+        },
+        "binding": {
+          "const": 2
+        },
+        "conditionalForm": {
+          "if": 3
+        },
+        "asyncForm": {
+          "await": 2
+        },
+        "stringForm": {
+          "template": 4
+        }
+      },
+      "functionsSampled": 10
+    },
+    {
+      "filePath": "src/web/features/reports/stores/report-filters.svelte.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 7,
+          "snake_case": 2
+        },
+        "functionForm": {
+          "declaration": 6,
+          "method": 10
+        },
+        "binding": {
+          "const": 24,
+          "let": 4
+        },
+        "conditionalForm": {
+          "ternary": 2,
+          "if": 1
+        },
+        "stringForm": {
+          "template": 2
+        }
+      },
+      "functionsSampled": 17
+    },
+    {
+      "filePath": "src/web/features/settings/api/index.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 8
+        },
+        "functionForm": {
+          "declaration": 4
+        }
+      },
+      "functionsSampled": 8
+    },
+    {
+      "filePath": "src/web/features/users/api/index.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 24
+        },
+        "functionForm": {
+          "declaration": 12
+        },
+        "binding": {
+          "const": 1
+        },
+        "stringForm": {
+          "template": 4
+        }
+      },
+      "functionsSampled": 24
+    },
+    {
+      "filePath": "src/web/features/visits/api/index.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 12
+        },
+        "functionForm": {
+          "declaration": 6
+        },
+        "binding": {
+          "const": 1
+        },
+        "stringForm": {
+          "template": 3
+        }
+      },
+      "functionsSampled": 12
+    },
+    {
+      "filePath": "src/web/features/visits/components/__tests__/GeofenceStatus.spec.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 5
+        },
+        "asyncForm": {
+          "await": 1
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/web/features/visits/stores/__tests__/draft.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 1
+        },
+        "functionForm": {
+          "arrow": 1
+        },
+        "binding": {
+          "const": 8,
+          "let": 2
+        }
+      },
+      "functionsSampled": 1
+    },
+    {
+      "filePath": "src/web/features/visits/stores/visit-draft.svelte.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 25
+        },
+        "functionForm": {
+          "arrow": 1,
+          "declaration": 8,
+          "method": 24
+        },
+        "binding": {
+          "const": 15,
+          "let": 9
+        },
+        "conditionalForm": {
+          "ternary": 5,
+          "if": 6
+        },
+        "stringForm": {
+          "template": 1
+        }
+      },
+      "functionsSampled": 34
+    },
+    {
+      "filePath": "src/web/lib/__tests__/draft.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "let": 1,
+          "const": 8
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/web/lib/__tests__/format.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 1
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/web/lib/__tests__/geofence.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 4
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/web/lib/__tests__/role.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 4
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/web/lib/api/client.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 5
+        },
+        "functionForm": {
+          "declaration": 3,
+          "method": 8
+        },
+        "binding": {
+          "const": 11,
+          "let": 4
+        },
+        "conditionalForm": {
+          "if": 10,
+          "ternary": 6
+        },
+        "asyncForm": {
+          "await": 4
+        },
+        "stringForm": {
+          "template": 3
+        }
+      },
+      "functionsSampled": 11
+    },
+    {
+      "filePath": "src/web/lib/api/errors.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 2
+        },
+        "functionForm": {
+          "method": 1,
+          "declaration": 1
+        },
+        "binding": {
+          "const": 1
+        }
+      },
+      "functionsSampled": 3
+    },
+    {
+      "filePath": "src/web/lib/api/query-client.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 2
+        },
+        "functionForm": {
+          "declaration": 1
+        },
+        "binding": {
+          "const": 2
+        },
+        "conditionalForm": {
+          "if": 2
+        }
+      },
+      "functionsSampled": 2
+    },
+    {
+      "filePath": "src/web/lib/api/query-keys.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 1
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/web/lib/photo.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 4
+        },
+        "functionForm": {
+          "declaration": 2
+        },
+        "binding": {
+          "const": 10,
+          "let": 2
+        },
+        "conditionalForm": {
+          "if": 4
+        },
+        "asyncForm": {
+          "await": 2
+        },
+        "stringForm": {
+          "template": 2
+        }
+      },
+      "functionsSampled": 4
+    },
+    {
+      "filePath": "src/web/lib/role.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 10
+        },
+        "functionForm": {
+          "declaration": 5
+        },
+        "binding": {
+          "const": 3
+        }
+      },
+      "functionsSampled": 10
+    },
+    {
+      "filePath": "src/web/lib/router/guards.svelte.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 2
+        },
+        "functionForm": {
+          "arrow": 2
+        },
+        "binding": {
+          "const": 2
+        },
+        "conditionalForm": {
+          "if": 3
+        },
+        "asyncForm": {
+          "await": 2
+        }
+      },
+      "functionsSampled": 2
+    },
+    {
+      "filePath": "src/web/lib/router/lazy.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionForm": {
+          "declaration": 1
+        }
+      },
+      "functionsSampled": 2
+    },
+    {
+      "filePath": "src/web/lib/stores/auth.svelte.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 11
+        },
+        "functionForm": {
+          "declaration": 5,
+          "method": 12
+        },
+        "binding": {
+          "const": 4,
+          "let": 5
+        },
+        "conditionalForm": {
+          "ternary": 1,
+          "if": 4
+        },
+        "asyncForm": {
+          "await": 4
+        }
+      },
+      "functionsSampled": 20
+    },
+    {
+      "filePath": "src/web/lib/stores/geolocation.svelte.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 19
+        },
+        "functionForm": {
+          "declaration": 11,
+          "method": 10
+        },
+        "binding": {
+          "const": 15,
+          "let": 4
+        },
+        "conditionalForm": {
+          "if": 13,
+          "ternary": 1
+        },
+        "asyncForm": {
+          "await": 2,
+          "then": 1
+        },
+        "stringForm": {
+          "template": 3
+        }
+      },
+      "functionsSampled": 27
+    },
+    {
+      "filePath": "src/web/lib/stores/network.svelte.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 15
+        },
+        "functionForm": {
+          "declaration": 7,
+          "method": 11
+        },
+        "binding": {
+          "const": 5,
+          "let": 5
+        },
+        "conditionalForm": {
+          "if": 6,
+          "ternary": 2
+        }
+      },
+      "functionsSampled": 20
+    },
+    {
+      "filePath": "src/web/lib/stores/toast.svelte.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 5
+        },
+        "functionForm": {
+          "declaration": 3,
+          "method": 3
+        },
+        "binding": {
+          "const": 3,
+          "let": 1
+        },
+        "conditionalForm": {
+          "ternary": 1
+        }
+      },
+      "functionsSampled": 8
+    },
+    {
+      "filePath": "src/web/lib/utils/animations.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 20
+        },
+        "functionForm": {
+          "declaration": 11
+        },
+        "binding": {
+          "const": 7
+        },
+        "conditionalForm": {
+          "if": 8,
+          "ternary": 2
+        },
+        "stringForm": {
+          "template": 1
+        }
+      },
+      "functionsSampled": 21
+    },
+    {
+      "filePath": "src/web/lib/utils/cn.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionForm": {
+          "declaration": 1
+        }
+      },
+      "functionsSampled": 2
+    },
+    {
+      "filePath": "src/web/lib/utils/format.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 12
+        },
+        "functionForm": {
+          "declaration": 6
+        },
+        "binding": {
+          "const": 15
+        },
+        "conditionalForm": {
+          "ternary": 2,
+          "if": 8
+        },
+        "stringForm": {
+          "template": 2
+        }
+      },
+      "functionsSampled": 12
+    },
+    {
+      "filePath": "src/web/lib/utils/haptics.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 14
+        },
+        "functionForm": {
+          "declaration": 8
+        },
+        "binding": {
+          "let": 1
+        },
+        "conditionalForm": {
+          "if": 9,
+          "ternary": 1
+        }
+      },
+      "functionsSampled": 16
+    },
+    {
+      "filePath": "src/web/lib/utils/local-storage.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 6
+        },
+        "functionForm": {
+          "declaration": 3
+        },
+        "binding": {
+          "const": 2
+        },
+        "conditionalForm": {
+          "ternary": 1,
+          "if": 4
+        }
+      },
+      "functionsSampled": 6
+    },
+    {
+      "filePath": "src/web/lib/visit.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 15
+        },
+        "functionForm": {
+          "declaration": 7,
+          "arrow": 2
+        },
+        "binding": {
+          "const": 10
+        },
+        "conditionalForm": {
+          "if": 4
+        },
+        "stringForm": {
+          "template": 1
+        }
+      },
+      "functionsSampled": 16
+    },
+    {
+      "filePath": "src/web/main.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 5
+        },
+        "functionForm": {
+          "declaration": 1,
+          "method": 4
+        },
+        "binding": {
+          "const": 2
+        },
+        "conditionalForm": {
+          "if": 4
+        }
+      },
+      "functionsSampled": 5
+    },
+    {
+      "filePath": "src/web/routes.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 1
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/web/shared/ui/__tests__/AgeBadge.spec.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 5
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/web/shared/ui/__tests__/QtyStepper.spec.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 6
+        },
+        "asyncForm": {
+          "await": 9
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/web/vite-env.d.ts",
+      "language": "TypeScript",
+      "counters": {},
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/db/client.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 2
+        },
+        "functionForm": {
+          "declaration": 1
+        }
+      },
+      "functionsSampled": 2
+    },
+    {
+      "filePath": "src/worker/db/schema.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 9
+        },
+        "stringForm": {
+          "template": 32
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/index.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 3
+        },
+        "conditionalForm": {
+          "if": 2
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/lib/__tests__/password.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 2
+        },
+        "asyncForm": {
+          "await": 7
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/lib/__tests__/rbac.test.ts",
+      "language": "TypeScript",
+      "counters": {},
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/lib/errors.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionForm": {
+          "method": 5
+        }
+      },
+      "functionsSampled": 5
+    },
+    {
+      "filePath": "src/worker/lib/password.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 9
+        },
+        "functionForm": {
+          "declaration": 7
+        },
+        "binding": {
+          "const": 16,
+          "let": 3
+        },
+        "conditionalForm": {
+          "if": 4
+        },
+        "asyncForm": {
+          "await": 3
+        },
+        "stringForm": {
+          "template": 2
+        }
+      },
+      "functionsSampled": 9
+    },
+    {
+      "filePath": "src/worker/lib/rbac.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 2
+        },
+        "functionForm": {
+          "declaration": 2
+        },
+        "binding": {
+          "const": 2
+        },
+        "conditionalForm": {
+          "if": 2
+        },
+        "asyncForm": {
+          "await": 2
+        }
+      },
+      "functionsSampled": 4
+    },
+    {
+      "filePath": "src/worker/lib/session.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 15
+        },
+        "functionForm": {
+          "declaration": 7,
+          "arrow": 2
+        },
+        "binding": {
+          "const": 18
+        },
+        "conditionalForm": {
+          "if": 7
+        },
+        "asyncForm": {
+          "await": 8
+        }
+      },
+      "functionsSampled": 15
+    },
+    {
+      "filePath": "src/worker/routes/auth.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 12
+        },
+        "conditionalForm": {
+          "if": 5
+        },
+        "asyncForm": {
+          "await": 5
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/routes/dashboard.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 1
+        },
+        "functionForm": {
+          "declaration": 1
+        },
+        "binding": {
+          "const": 13,
+          "let": 1
+        },
+        "conditionalForm": {
+          "ternary": 5,
+          "if": 4
+        },
+        "asyncForm": {
+          "await": 2
+        }
+      },
+      "functionsSampled": 1
+    },
+    {
+      "filePath": "src/worker/routes/media.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 5
+        },
+        "conditionalForm": {
+          "if": 3,
+          "ternary": 1
+        },
+        "asyncForm": {
+          "await": 1
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/routes/outlets.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 3
+        },
+        "functionForm": {
+          "declaration": 3
+        },
+        "binding": {
+          "const": 46
+        },
+        "conditionalForm": {
+          "if": 25,
+          "ternary": 7
+        },
+        "asyncForm": {
+          "await": 16
+        },
+        "stringForm": {
+          "template": 2
+        }
+      },
+      "functionsSampled": 3
+    },
+    {
+      "filePath": "src/worker/routes/products.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 2
+        },
+        "functionForm": {
+          "declaration": 2
+        },
+        "binding": {
+          "const": 47
+        },
+        "conditionalForm": {
+          "if": 20,
+          "ternary": 2
+        },
+        "asyncForm": {
+          "await": 20
+        }
+      },
+      "functionsSampled": 2
+    },
+    {
+      "filePath": "src/worker/routes/raw_materials.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 1
+        },
+        "functionForm": {
+          "declaration": 1
+        },
+        "binding": {
+          "const": 23
+        },
+        "conditionalForm": {
+          "if": 10
+        },
+        "asyncForm": {
+          "await": 12
+        }
+      },
+      "functionsSampled": 1
+    },
+    {
+      "filePath": "src/worker/routes/reports.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 3
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/routes/settings.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 9
+        },
+        "conditionalForm": {
+          "if": 2
+        },
+        "asyncForm": {
+          "await": 3
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/routes/users.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 1
+        },
+        "functionForm": {
+          "declaration": 1
+        },
+        "binding": {
+          "const": 24
+        },
+        "conditionalForm": {
+          "if": 11
+        },
+        "asyncForm": {
+          "await": 14
+        }
+      },
+      "functionsSampled": 1
+    },
+    {
+      "filePath": "src/worker/routes/visit.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 2
+        },
+        "functionForm": {
+          "declaration": 1
+        },
+        "binding": {
+          "const": 33,
+          "let": 1
+        },
+        "conditionalForm": {
+          "if": 7,
+          "ternary": 4
+        },
+        "asyncForm": {
+          "await": 9
+        }
+      },
+      "functionsSampled": 2
+    },
+    {
+      "filePath": "src/worker/services/__tests__/hpp.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 8
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/services/__tests__/visit-permissions.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 16,
+          "let": 1
+        },
+        "conditionalForm": {
+          "if": 1
+        },
+        "asyncForm": {
+          "await": 9
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/services/__tests__/visit.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "binding": {
+          "const": 7
+        }
+      },
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "src/worker/services/__tests__/voidVisit.test.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionForm": {
+          "method": 3,
+          "arrow": 2,
+          "declaration": 1
+        },
+        "binding": {
+          "const": 14
+        },
+        "conditionalForm": {
+          "if": 3
+        },
+        "asyncForm": {
+          "await": 7
+        }
+      },
+      "functionsSampled": 6
+    },
+    {
+      "filePath": "src/worker/services/hpp.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 12
+        },
+        "functionForm": {
+          "declaration": 7
+        },
+        "binding": {
+          "const": 29,
+          "let": 1
+        },
+        "conditionalForm": {
+          "if": 10,
+          "ternary": 1
+        },
+        "asyncForm": {
+          "await": 17
+        },
+        "stringForm": {
+          "template": 2
+        }
+      },
+      "functionsSampled": 12
+    },
+    {
+      "filePath": "src/worker/services/visit.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 13
+        },
+        "functionForm": {
+          "declaration": 7,
+          "arrow": 1
+        },
+        "binding": {
+          "const": 37
+        },
+        "conditionalForm": {
+          "if": 18,
+          "ternary": 3
+        },
+        "asyncForm": {
+          "await": 8
+        },
+        "stringForm": {
+          "template": 2
+        }
+      },
+      "functionsSampled": 13
+    },
+    {
+      "filePath": "src/worker/services/voidVisit.ts",
+      "language": "TypeScript",
+      "counters": {
+        "functionNaming": {
+          "camelCase": 4
+        },
+        "functionForm": {
+          "declaration": 3
+        },
+        "binding": {
+          "const": 10
+        },
+        "conditionalForm": {
+          "if": 6
+        },
+        "asyncForm": {
+          "await": 7
+        },
+        "stringForm": {
+          "template": 2
+        }
+      },
+      "functionsSampled": 4
+    },
+    {
+      "filePath": "src/worker/types.ts",
+      "language": "TypeScript",
+      "counters": {},
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "vite.config.ts",
+      "language": "TypeScript",
+      "counters": {},
+      "functionsSampled": 0
+    },
+    {
+      "filePath": "vitest.config.ts",
+      "language": "TypeScript",
+      "counters": {},
+      "functionsSampled": 0
+    }
+  ],
+  "fileRegions": {
+    "scripts/generate-pwa-icons.js": "scripts/generate-pwa-icons.js::renderIcon",
+    "scripts/seed-owner.ts": "src/worker/lib/password.ts::hashPassword",
+    "src/shared/lib/age.ts": "src/shared/lib/age.ts::ageHours",
+    "src/shared/lib/id.ts": "src/shared/lib/id.ts::isUuid",
+    "src/shared/lib/money.ts": "src/shared/lib/money.ts::formatRupiah",
+    "src/shared/lib/units.ts": "src/shared/lib/units.ts::convertQuantity",
+    "src/web/features/auth/api/auth.api.ts": "src/web/features/auth/api/auth.api.ts::login",
+    "src/web/features/auth/api/index.ts": "src/web/features/auth/api/index.ts::loginMutationOptions",
+    "src/web/features/auth/stores/auth.svelte.ts": "src/web/features/auth/stores/auth.svelte.ts::createAuthStore",
+    "src/web/features/dashboard/api/index.ts": "src/web/features/auth/api/index.ts::getCurrentUser",
+    "src/web/features/outlets/api/index.ts": "src/web/features/auth/api/index.ts::getCurrentUser",
+    "src/web/features/outlets/stores/outlet-filter.svelte.ts": "src/web/features/outlets/stores/outlet-filter.svelte.ts::setOutletFilterContext",
+    "src/web/features/products/api/index.ts": "src/web/features/auth/api/index.ts::getCurrentUser",
+    "src/web/features/raw-materials/api/index.ts": "src/web/features/auth/api/index.ts::getCurrentUser",
+    "src/web/features/reports/api/index.ts": "src/web/features/reports/api/index.ts::exportReportPdf",
+    "src/web/features/reports/stores/report-filters.svelte.ts": "src/web/features/reports/stores/report-filters.svelte.ts::toISODate",
+    "src/web/features/settings/api/index.ts": "src/web/features/auth/api/index.ts::getCurrentUser",
+    "src/web/features/users/api/index.ts": "src/web/features/auth/api/index.ts::getCurrentUser",
+    "src/web/features/visits/api/index.ts": "src/web/features/auth/api/index.ts::loginMutationOptions",
+    "src/web/features/visits/stores/visit-draft.svelte.ts": "src/web/features/visits/stores/visit-draft.svelte.ts::loadFromStorage",
+    "src/web/lib/api/client.ts": "src/web/features/reports/api/index.ts::exportReportPdf",
+    "src/web/lib/api/errors.ts": "src/web/lib/api/errors.ts::ApiError.constructor",
+    "src/web/lib/api/query-client.ts": "src/web/lib/api/query-client.ts::getQueryClient",
+    "src/web/lib/photo.ts": "src/web/lib/photo.ts::compressPhoto",
+    "src/web/lib/role.ts": "src/web/lib/role.ts::allowedMasterSections",
+    "src/web/lib/router/guards.svelte.ts": "src/web/lib/router/guards.svelte.ts::requireAuth",
+    "src/web/lib/router/lazy.ts": "src/web/lib/router/lazy.ts::lazy",
+    "src/web/lib/stores/auth.svelte.ts": "src/web/lib/stores/auth.svelte.ts::login",
+    "src/web/lib/stores/geolocation.svelte.ts": "src/web/lib/stores/geolocation.svelte.ts::request",
+    "src/web/lib/stores/network.svelte.ts": "src/web/lib/stores/network.svelte.ts::readConnection",
+    "src/web/lib/stores/toast.svelte.ts": "src/web/lib/stores/toast.svelte.ts::add",
+    "src/web/lib/utils/animations.ts": "src/web/lib/utils/animations.ts::prefersReducedMotion",
+    "src/web/lib/utils/cn.ts": "src/web/lib/utils/cn.ts::cn",
+    "src/web/lib/utils/format.ts": "src/web/lib/utils/format.ts::toDate",
+    "src/web/lib/utils/haptics.ts": "src/web/lib/utils/haptics.ts::haptic",
+    "src/web/lib/utils/local-storage.ts": "src/web/lib/utils/local-storage.ts::getItem",
+    "src/web/lib/visit.ts": "src/web/lib/visit.ts::toRad",
+    "src/web/main.ts": "src/web/main.ts::onNeedRefresh",
+    "src/worker/db/client.ts": "src/worker/lib/session.ts::optionalAuth",
+    "src/worker/lib/errors.ts": "src/worker/lib/errors.ts::AppError.constructor",
+    "src/worker/lib/password.ts": "src/worker/lib/password.ts::hashPassword",
+    "src/worker/lib/rbac.ts": "src/worker/lib/rbac.ts::requirePermission",
+    "src/worker/lib/session.ts": "src/worker/lib/session.ts::cookieOptions",
+    "src/worker/routes/dashboard.ts": "src/worker/routes/dashboard.ts::colorRank",
+    "src/worker/routes/outlets.ts": "src/worker/routes/outlets.ts::extensionFromFileName",
+    "src/worker/routes/products.ts": "src/worker/routes/products.ts::isOwner",
+    "src/worker/routes/raw_materials.ts": "src/worker/routes/raw_materials.ts::pickRawMaterial",
+    "src/worker/routes/users.ts": "src/worker/routes/users.ts::pickUser",
+    "src/worker/routes/visit.ts": "src/worker/routes/visit.ts::pickVisitResult",
+    "src/worker/services/hpp.ts": "src/worker/services/hpp.ts::isUnit",
+    "src/worker/services/visit.ts": "src/worker/services/visit.ts::processVisit",
+    "src/worker/services/voidVisit.ts": "src/worker/services/voidVisit.ts::voidVisit"
+  },
+  "generatedLanguages": [
+    "JavaScript",
+    "TypeScript"
+  ]
+}

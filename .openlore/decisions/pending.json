@@ -1,0 +1,66 @@
+{
+  "version": "1",
+  "sessionId": "73eb70c64f7c",
+  "updatedAt": "2026-07-23T20:29:01.768Z",
+  "sequence": 2,
+  "decisions": [
+    {
+      "id": "2ee51405",
+      "status": "rejected",
+      "scope": "cross-domain",
+      "title": "Rebuild frontend as Svelte 5 SPA with svelte-spa-router, TanStack Query, feature folders, and shared Zod schemas",
+      "rationale": "The existing src/web/ frontend has accumulated state-based navigation, duplicated types/helpers, no design system, and does not feel native on mobile. A full rewrite with real URLs, feature-based organization, a reusable design system, and a typed API layer is more cost-effective than incremental fixes. Svelte 5 and Vite 6 are already project standards; TanStack Query solves cache/invalidation for dashboard and visits; svelte-spa-router gives real URLs with minimal backend changes; shared Zod schemas eliminate duplicated worker/web contracts.",
+      "consequences": "Adds runtime deps including svelte-spa-router, @tanstack/svelte-query, bits-ui, lucide-svelte, clsx, tailwind-merge, and dev deps for PWA, ESLint, Prettier. Old src/web/pages/*, lib/api.ts, lib/router.ts, lib/role.ts, lib/visit.ts, lib/photo.ts, and components/Icon.svelte will be deleted in Phase H. Worker routes need to import request/response schemas from src/shared/schemas/* instead of redeclaring them inline. Two backend additions are required: GET /api/visits and /api/reports export.",
+      "proposedRequirement": null,
+      "affectedDomains": [],
+      "affectedFiles": [
+        "src/web/",
+        "src/shared/schemas/",
+        "docs/FRONTEND_ARCHITECTURE.md",
+        "docs/IMPLEMENTATION_PLAN.md"
+      ],
+      "anchors": [
+        {
+          "filePath": "src/web/"
+        },
+        {
+          "filePath": "src/shared/schemas/"
+        },
+        {
+          "filePath": "docs/FRONTEND_ARCHITECTURE.md",
+          "contentHash": "825a60f6cc793b61"
+        },
+        {
+          "filePath": "docs/IMPLEMENTATION_PLAN.md",
+          "contentHash": "87b46ac3abe3bd80"
+        }
+      ],
+      "sessionId": "73eb70c64f7c",
+      "recordedAt": "2026-07-23T20:28:53.687Z",
+      "confidence": "medium",
+      "syncedToSpecs": []
+    },
+    {
+      "id": "0de41376",
+      "status": "verified",
+      "title": "Rebuild frontend as Svelte 5 SPA with svelte-spa-router, TanStack Query, feature folders, and shared Zod schemas",
+      "rationale": "The existing src/web/ frontend has accumulated state-based navigation, duplicated types/helpers, no design system, and does not feel native on mobile. A full rewrite with real URLs, feature-based organization, a reusable design system, and a typed API layer is more cost-effective than incremental fixes. Svelte 5 and Vite 6 are already project standards; TanStack Query solves cache/invalidation for dashboard and visits; svelte-spa-router gives real URLs with minimal backend changes; shared Zod schemas eliminate duplicated worker/web contracts.",
+      "consequences": "Adds runtime deps including svelte-spa-router, @tanstack/svelte-query, bits-ui, lucide-svelte, clsx, tailwind-merge, and dev deps for PWA, ESLint, Prettier. Old src/web/pages/*, lib/api.ts, lib/router.ts, lib/role.ts, lib/visit.ts, lib/photo.ts, and components/Icon.svelte will be deleted in Phase H. Worker routes need to import request/response schemas from src/shared/schemas/* instead of redeclaring them inline. Two backend additions are required: GET /api/visits and /api/reports export.",
+      "proposedRequirement": "The system SHALL provide a Svelte 5 single-page application with real URL routing via svelte-spa-router, feature-based folder organization, a reusable design system, and shared Zod schemas for type-safe API contracts between frontend and worker.",
+      "affectedDomains": ["frontend", "backend-api", "shared-schemas"],
+      "affectedFiles": [
+        "src/web/",
+        "src/shared/schemas/",
+        "docs/FRONTEND_ARCHITECTURE.md",
+        "docs/IMPLEMENTATION_PLAN.md"
+      ],
+      "scope": "system",
+      "confidence": "medium",
+      "sessionId": "73eb70c64f7c",
+      "recordedAt": "2026-07-23T20:29:01.735Z",
+      "consolidatedAt": "2026-07-23T20:29:01.735Z",
+      "syncedToSpecs": []
+    }
+  ],
+  "lastConsolidatedAt": "2026-07-23T20:29:01.768Z"
+}

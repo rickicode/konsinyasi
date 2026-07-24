@@ -1,0 +1,2792 @@
+{
+  "stage": "services",
+  "success": true,
+  "data": [
+    {
+      "dependencies": ["ProductRepository", "RecipeLineRepository", "RawMaterialRepository"],
+      "domain": "hpp",
+      "name": "HPPService",
+      "operations": [
+        {
+          "description": "Computes the Harga Pokok Produksi (HPP / cost of goods sold) for a product based on its recipe lines by converting all units to base units and summing costs.",
+          "functionName": "computeHPP",
+          "inputs": ["lines: HPPRecipeLine[]"],
+          "name": "computeHPP",
+          "outputs": ["hpp: number"],
+          "scenarios": [
+            {
+              "and": [
+                "All units are valid and convertible to base units",
+                "Math.round is applied to final result"
+              ],
+              "given": "A product recipe with multiple lines of raw materials in various units (ml, l, gr, kg, pcs)",
+              "name": "Valid recipe lines with mixed units",
+              "then": "Returns the total HPP as a rounded number in base units",
+              "when": "computeHPP is called with the recipe lines"
+            },
+            {
+              "and": [
+                "Volume units convert via UNIT_TO_BASE",
+                "Mass units convert via UNIT_TO_BASE",
+                "Count units convert via UNIT_TO_BASE"
+              ],
+              "given": "Recipe lines with units from BASE_UNIT_ENUM",
+              "name": "Unit conversion to base",
+              "then": "Each line cost is calculated using normalized base unit quantities",
+              "when": "computeHPP processes lines with different DIMENSION types (vol, mass, count)"
+            },
+            {
+              "and": ["Lines array is empty"],
+              "given": "A product with no recipe lines",
+              "name": "Empty recipe",
+              "then": "Returns 0 as the HPP",
+              "when": "computeHPP is called with an empty array"
+            }
+          ]
+        },
+        {
+          "description": "Retrieves and enriches all recipe lines for a given product with raw material details including unit validation.",
+          "functionName": "fetchRecipeLines",
+          "inputs": ["db: DatabaseConnection", "productId: string"],
+          "name": "fetchRecipeLines",
+          "outputs": ["lines: EnrichedRecipeLine[]"],
+          "scenarios": [
+            {
+              "and": ["Validates unit fields using isUnit helper", "Joins with raw material data"],
+              "given": "A product with existing recipe lines in the database",
+              "name": "Product with recipe lines",
+              "then": "Returns enriched recipe lines with material names, units, and quantities",
+              "when": "fetchRecipeLines is called with the product ID"
+            },
+            {
+              "and": ["Query uses eq filters for productId matching"],
+              "given": "A product with no recipe lines",
+              "name": "Product without recipe lines",
+              "then": "Returns an empty array",
+              "when": "fetchRecipeLines is called"
+            }
+          ]
+        },
+        {
+          "description": "Atomically replaces all recipe lines for a product, recalculates HPP, and updates dependent product records. This is a high-complexity transactional operation.",
+          "functionName": "replaceRecipeLines",
+          "inputs": ["db: DatabaseConnection", "productId: string", "lines: HPPRecipeLine[]"],
+          "name": "replaceRecipeLines",
+          "outputs": ["updatedProduct: Product with new HPP"],
+          "scenarios": [
+            {
+              "and": [
+                "Deletes existing recipe lines via db.delete with eq filter",
+                "Inserts new lines with crypto.randomUUID for each line ID",
+                "Validates all units using isUnit against BASE_UNIT_ENUM",
+                "Fetches enriched lines via fetchRecipeLines",
+                "Computes HPP via computeHPP",
+                "Updates product HPP via db.update with eq filter",
+                "Recalculates effectiveHPP using Math.round"
+              ],
+              "given": "A product with existing recipe lines and new valid recipe data",
+              "name": "Replace recipe and recalculate HPP",
+              "then": "Old lines are deleted, new lines are inserted, HPP is recalculated and stored, and product record is updated",
+              "when": "replaceRecipeLines is called with new recipe lines"
+            },
+            {
+              "and": [
+                "Uses inArray and isNull for dependent queries",
+                "Queries products using materialMap for material references"
+              ],
+              "given": "A product whose recipe references raw materials",
+              "name": "Material reference integrity",
+              "then": "All material references are resolved and validated before insertion",
+              "when": "replaceRecipeLines processes lines with material IDs"
+            },
+            {
+              "and": ["Transactional: all operations succeed or fail together"],
+              "given": "Invalid unit in one of the recipe lines",
+              "name": "Invalid unit validation",
+              "then": "Operation fails before persisting changes due to isUnit validation",
+              "when": "replaceRecipeLines is called with malformed line data"
+            }
+          ]
+        },
+        {
+          "description": "Recalculates HPP for a single product by fetching its current recipe lines, computing new HPP, and updating the product record.",
+          "functionName": "recalculateHPP",
+          "inputs": ["db: DatabaseConnection", "productId: string"],
+          "name": "recalculateHPP",
+          "outputs": ["updatedProduct: Product with recalculated HPP"],
+          "scenarios": [
+            {
+              "and": [
+                "Fetches current recipe lines via fetchRecipeLines",
+                "Computes HPP via computeHPP",
+                "Updates product via db.update with eq filter",
+                "Uses effectiveHPP with Math.round"
+              ],
+              "given": "A product with existing recipe lines and potentially stale HPP",
+              "name": "Recalculate existing product HPP",
+              "then": "Product HPP is updated to reflect current recipe and material costs",
+              "when": "recalculateHPP is called"
+            },
+            {
+              "and": [
+                "Uses inArray for batch material queries",
+                "Resolves materials via materialMap.get"
+              ],
+              "given": "Raw material prices have changed since last HPP calculation",
+              "name": "Material price change propagation",
+              "then": "New HPP reflects updated material costs from database",
+              "when": "recalculateHPP is called after material price updates"
+            }
+          ]
+        },
+        {
+          "description": "Cascade recalculates HPP for all products whose recipes contain a specific raw material. Used when raw material prices change.",
+          "functionName": "recalculateAllProductsUsingMaterial",
+          "inputs": ["db: DatabaseConnection", "rawMaterialId: string"],
+          "name": "recalculateAllProductsUsingMaterial",
+          "outputs": ["affectedProducts: Product[] with updated HPP"],
+          "scenarios": [
+            {
+              "and": [
+                "Queries all products using the material via db.select with filters",
+                "Calls recalculateHPP for each affected product",
+                "May use inArray for batch operations"
+              ],
+              "given": "A raw material used in multiple product recipes",
+              "name": "Material price change cascade",
+              "then": "All products using that material have their HPP recalculated and updated",
+              "when": "recalculateAllProductsUsingMaterial is called after material price change"
+            },
+            {
+              "and": ["No products reference the material"],
+              "given": "A raw material not used in any product recipe",
+              "name": "Unused material",
+              "then": "No products are updated and operation completes successfully",
+              "when": "recalculateAllProductsUsingMaterial is called"
+            },
+            {
+              "and": [
+                "Efficient batch querying to find affected products",
+                "Sequential or parallel recalculation of each product"
+              ],
+              "given": "A raw material used in 50+ product recipes",
+              "name": "Bulk recalculation performance",
+              "then": "All affected products are updated without timeout or memory issues",
+              "when": "recalculateAllProductsUsingMaterial is called for widely-used material"
+            }
+          ]
+        }
+      ],
+      "purpose": "Manages Harga Pokok Produksi (HPP / Cost of Goods Sold) calculations for products based on raw material recipes. Handles unit conversion, recipe line management, and cascade recalculation when material costs change.",
+      "sideEffects": [
+        "Reads from recipe lines table",
+        "Reads from products table",
+        "Reads from raw materials table",
+        "Writes to recipe lines table (delete and insert)",
+        "Writes to products table (HPP update)",
+        "Generates UUIDs via crypto.randomUUID"
+      ],
+      "subSpecs": [
+        {
+          "callee": "db.delete",
+          "name": "dbDelete",
+          "operations": [
+            {
+              "description": "The db.delete operation SHALL remove one or more existing records from a specified database table based on the provided filter criteria.",
+              "functionName": "delete",
+              "inputs": ["table reference", "filter conditions"],
+              "name": "deleteRecords",
+              "outputs": ["deletion result or affected count"],
+              "scenarios": [
+                {
+                  "and": ["no dependent records reference the deleted rows"],
+                  "given": "a database table containing HPP recipe lines with specific product_id",
+                  "name": "deleteRecipeLinesByProduct",
+                  "then": "all matching records are permanently removed from the table",
+                  "when": "db.delete is invoked with the product_id filter"
+                }
+              ]
+            }
+          ],
+          "purpose": "Permanently removes records from database tables as part of HPP data maintenance and cleanup operations."
+        },
+        {
+          "callee": "eq",
+          "name": "equalityFilter",
+          "operations": [
+            {
+              "description": "The eq operation SHALL construct an equality comparison filter that matches records where the specified column exactly equals the provided value.",
+              "functionName": "eq",
+              "inputs": ["column reference", "comparison value"],
+              "name": "buildEqualityFilter",
+              "outputs": ["filter predicate object"],
+              "scenarios": [
+                {
+                  "and": ["the column data type is compatible with the value type"],
+                  "given": "a schema column reference for outlet_id and a valid outletId value",
+                  "name": "filterByOutletId",
+                  "then": "a filter predicate is returned that matches records with outlet_id equal to the provided value",
+                  "when": "eq(schema.consignment_cycles.outlet_id, outletId) is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Creates equality comparison predicates for filtering database queries and joining conditions in HPP calculations."
+        },
+        {
+          "callee": "db.select",
+          "name": "dbSelect",
+          "operations": [
+            {
+              "description": "The db.select operation SHALL retrieve records from a specified database table with optional column selection, filtering, and relationship joining.",
+              "functionName": "select",
+              "inputs": [
+                "table reference",
+                "column selections (optional)",
+                "filter conditions (optional)",
+                "join clauses (optional)"
+              ],
+              "name": "queryRecords",
+              "outputs": ["array of matching records"],
+              "scenarios": [
+                {
+                  "and": ["the database connection is active", "the table exists in schema"],
+                  "given": "a database table containing raw material records with cost information",
+                  "name": "selectMaterialCosts",
+                  "then": "an array of records with id, name, and unit_cost fields is returned",
+                  "when": "db.select is invoked with the materials table and appropriate column selection"
+                }
+              ]
+            }
+          ],
+          "purpose": "Retrieves data from database tables to support HPP calculations, recipe lookups, and cost dependency resolution."
+        },
+        {
+          "callee": "db.update",
+          "name": "dbUpdate",
+          "operations": [
+            {
+              "description": "The db.update operation SHALL modify existing records in a specified database table by applying the provided set of changes to all records matching the filter criteria.",
+              "functionName": "update",
+              "inputs": ["table reference", "set clause with new values", "filter conditions"],
+              "name": "updateRecords",
+              "outputs": ["update result or affected count"],
+              "scenarios": [
+                {
+                  "and": ["the new hpp_value is non-negative", "the product exists in the table"],
+                  "given": "a products table with existing HPP values and a completed HPP recalculation",
+                  "name": "updateProductHPP",
+                  "then": "the hpp field of the matching product record is updated to the new calculated value",
+                  "when": "db.update is invoked with the products table, new hpp value, and product_id filter"
+                }
+              ]
+            }
+          ],
+          "purpose": "Persists updated cost values and metadata to database records during HPP recalculation workflows."
+        },
+        {
+          "callee": "and",
+          "name": "logicalAnd",
+          "operations": [
+            {
+              "description": "The and operation SHALL combine multiple filter predicates with logical conjunction, returning a predicate that matches only records satisfying all provided conditions simultaneously.",
+              "functionName": "and",
+              "inputs": ["two or more filter predicates"],
+              "name": "combinePredicates",
+              "outputs": ["compound filter predicate"],
+              "scenarios": [
+                {
+                  "and": ["both predicates are valid filter objects"],
+                  "given": "separate equality predicates for outlet_id and status fields",
+                  "name": "filterOpenConsignmentCycles",
+                  "then": "a compound predicate is returned that matches only records with matching outlet_id AND status equal to 'open'",
+                  "when": "and(eq(schema.consignment_cycles.outlet_id, outletId), eq(schema.consignment_cycles.status, 'open')) is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Combines multiple filter conditions to create precise query constraints for HPP-related data retrieval."
+        },
+        {
+          "callee": "inArray",
+          "name": "inArrayFilter",
+          "operations": [
+            {
+              "description": "The inArray operation SHALL construct a filter predicate that matches records where the specified column's value is contained within the provided array of values.",
+              "functionName": "inArray",
+              "inputs": ["column reference", "array of values"],
+              "name": "buildInclusionFilter",
+              "outputs": ["filter predicate object"],
+              "scenarios": [
+                {
+                  "and": [
+                    "the values array is non-empty",
+                    "all values are compatible with the column type"
+                  ],
+                  "given": "a list of material IDs [1, 2, 3] and a recipe_lines table with material_id column",
+                  "name": "filterByMaterialIds",
+                  "then": "a predicate is returned matching all recipe lines where material_id is 1, 2, or 3",
+                  "when": "inArray(schema.recipe_lines.material_id, [1, 2, 3]) is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Creates set-membership filters for batch querying multiple related records in HPP calculations."
+        },
+        {
+          "callee": "isNull",
+          "name": "nullFilter",
+          "operations": [
+            {
+              "description": "The isNull operation SHALL construct a filter predicate that matches records where the specified column contains a NULL value.",
+              "functionName": "isNull",
+              "inputs": ["column reference"],
+              "name": "buildNullCheckFilter",
+              "outputs": ["filter predicate object"],
+              "scenarios": [
+                {
+                  "and": ["the column is nullable in schema definition"],
+                  "given": "a recipe_lines table with optional deleted_at timestamp column",
+                  "name": "filterActiveRecords",
+                  "then": "a predicate is returned matching only records where deleted_at is NULL",
+                  "when": "isNull(schema.recipe_lines.deleted_at) is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Identifies records with absent values, commonly used for soft-delete filtering in HPP data queries."
+        },
+        {
+          "callee": "materialMap.get",
+          "name": "materialMapGet",
+          "operations": [
+            {
+              "description": "The materialMap.get operation SHALL retrieve the value associated with the specified key from a Map data structure containing material information.",
+              "functionName": "get",
+              "inputs": ["map key (typically material identifier)"],
+              "name": "retrieveMaterialInfo",
+              "outputs": ["material value object or undefined"],
+              "scenarios": [
+                {
+                  "and": ["the map has been populated with material data"],
+                  "given": "a Map containing material records keyed by material_id with unit_cost and unit data",
+                  "name": "getMaterialCost",
+                  "then": "the material object with unit_cost 5000 and unit 'kg' is returned",
+                  "when": "materialMap.get('MAT-001') is invoked for an existing key"
+                }
+              ]
+            }
+          ],
+          "purpose": "Provides O(1) lookup of material properties during HPP computation to avoid repeated database queries."
+        },
+        {
+          "callee": "BASE_UNIT_ENUM.includes",
+          "name": "unitValidation",
+          "operations": [
+            {
+              "description": "The isUnit operation SHALL verify whether a given string value represents a valid base unit of measurement by checking membership in the predefined BASE_UNIT_ENUM.",
+              "functionName": "includes",
+              "inputs": ["unit string to validate"],
+              "name": "validateBaseUnit",
+              "outputs": ["boolean indicating membership"],
+              "scenarios": [
+                {
+                  "and": ["BASE_UNIT_ENUM contains ['kg', 'g', 'l', 'ml', 'pc', 'unit']"],
+                  "given": "a recipe line with unit field value 'kg'",
+                  "name": "validateKilogramUnit",
+                  "then": "true is returned indicating 'kg' is a valid base unit",
+                  "when": "isUnit('kg') is invoked"
+                },
+                {
+                  "and": ["BASE_UNIT_ENUM contains ['kg', 'g', 'l', 'ml', 'pc', 'unit']"],
+                  "given": "a recipe line with unit field value 'box'",
+                  "name": "rejectInvalidUnit",
+                  "then": "false is returned indicating 'box' is not a valid base unit",
+                  "when": "isUnit('box') is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Validates that material and recipe line units are from the supported base unit set for accurate HPP computation."
+        },
+        {
+          "callee": "db.insert",
+          "name": "dbInsert",
+          "operations": [
+            {
+              "description": "The db.insert operation SHALL create new records in a specified database table with the provided values, returning the inserted record or generated identifiers.",
+              "functionName": "insert",
+              "inputs": ["table reference", "values object or array of values objects"],
+              "name": "createRecords",
+              "outputs": ["inserted record(s) or generated id(s)"],
+              "scenarios": [
+                {
+                  "and": [
+                    "all required fields are provided",
+                    "no unique constraint violations exist"
+                  ],
+                  "given": "a new HPP recipe line with product_id, material_id, quantity, and unit fields",
+                  "name": "insertRecipeLine",
+                  "then": "the new record is persisted to the recipe_lines table with generated id and timestamps",
+                  "when": "db.insert is invoked with the recipe_lines table and complete values object"
+                }
+              ]
+            }
+          ],
+          "purpose": "Creates new HPP recipe lines, cost history records, and related entities in the database."
+        },
+        {
+          "callee": "crypto.randomUUID",
+          "name": "uuidGeneration",
+          "operations": [
+            {
+              "description": "The crypto.randomUUID operation SHALL generate a cryptographically secure random UUID version 4 string suitable for use as a unique identifier.",
+              "functionName": "randomUUID",
+              "inputs": [],
+              "name": "generateUniqueId",
+              "outputs": ["UUID v4 string (36 characters)"],
+              "scenarios": [
+                {
+                  "and": ["the runtime environment supports Web Crypto API"],
+                  "given": "a request to create a new HPP calculation batch record",
+                  "name": "generateBatchId",
+                  "then": "a unique string matching UUID v4 format (e.g., '550e8400-e29b-41d4-a716-446655440000') is returned",
+                  "when": "crypto.randomUUID() is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Generates unique identifiers for HPP calculation batches, audit records, and correlation tracking."
+        },
+        {
+          "callee": "fetchRecipeLines",
+          "name": "fetchRecipeLines",
+          "operations": [
+            {
+              "description": "The fetchRecipeLines operation SHALL retrieve all active recipe lines for a given product, including material details with validated base units, from the database.",
+              "functionName": "fetchRecipeLines",
+              "inputs": ["database connection instance", "product identifier"],
+              "name": "retrieveProductRecipe",
+              "outputs": ["array of HPPRecipeLine objects with material data"],
+              "scenarios": [
+                {
+                  "and": [
+                    "the product has associated recipe lines",
+                    "all materials use valid base units"
+                  ],
+                  "given": "a product with id 'PROD-001' having three recipe lines with materials in kg, g, and pc units",
+                  "name": "fetchValidRecipeLines",
+                  "then": "an array of three HPPRecipeLine objects is returned with material_id, quantity, unit, unit_cost, and isBaseUnit flag",
+                  "when": "fetchRecipeLines(db, 'PROD-001') is invoked"
+                },
+                {
+                  "and": ["the product exists but has no recipe lines"],
+                  "given": "a product with id 'PROD-002' with no associated recipe lines",
+                  "name": "fetchEmptyRecipe",
+                  "then": "an empty array is returned",
+                  "when": "fetchRecipeLines(db, 'PROD-002') is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Loads complete recipe composition with material costs for a product to enable HPP calculation."
+        },
+        {
+          "callee": "computeHPP",
+          "name": "computeHPP",
+          "operations": [
+            {
+              "description": "The computeHPP operation SHALL calculate the total Harga Pokok Produksi by summing the cost contributions of all recipe lines, where each line's contribution equals quantity multiplied by unit cost, with the final result rounded to the nearest integer.",
+              "functionName": "computeHPP",
+              "inputs": ["array of HPPRecipeLine objects"],
+              "name": "calculateTotalHPP",
+              "outputs": ["rounded integer HPP value"],
+              "scenarios": [
+                {
+                  "and": ["all quantities and unit costs are non-negative numbers"],
+                  "given": "recipe lines: [{quantity: 2, unitCost: 5000}, {quantity: 0.5, unitCost: 12000}]",
+                  "name": "computeSimpleHPP",
+                  "then": "16000 is returned (2*5000 + 0.5*12000 = 10000 + 6000 = 16000)",
+                  "when": "computeHPP(lines) is invoked"
+                },
+                {
+                  "and": ["the calculation results in fractional rupiah"],
+                  "given": "recipe lines: [{quantity: 1, unitCost: 3333.33}]",
+                  "name": "roundFractionalHPP",
+                  "then": "3333 is returned (Math.round(3333.33) = 3333)",
+                  "when": "computeHPP(lines) is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Pure function that computes the total production cost from recipe line quantities and material unit costs."
+        },
+        {
+          "callee": "effectiveHPP",
+          "name": "effectiveHPP",
+          "operations": [
+            {
+              "description": "The effectiveHPP operation SHALL compute the applicable HPP value for a product considering current material costs, applying rounding to produce a final integer value for pricing and inventory valuation.",
+              "functionName": "effectiveHPP",
+              "inputs": ["product identifier or recipe lines", "current material cost context"],
+              "name": "computeEffectiveHPP",
+              "outputs": ["rounded integer effective HPP value"],
+              "scenarios": [
+                {
+                  "and": ["material costs have been updated since last calculation"],
+                  "given": "a product whose materials have increased in cost by 10% since last HPP update",
+                  "name": "recalculateEffectiveHPP",
+                  "then": "the new effective HPP reflecting updated costs, rounded to nearest integer, is returned",
+                  "when": "effectiveHPP is invoked with current material prices"
+                }
+              ]
+            }
+          ],
+          "purpose": "Determines the current valid HPP value for a product incorporating latest material cost changes with proper rounding."
+        },
+        {
+          "callee": "Math.round",
+          "name": "roundValue",
+          "operations": [
+            {
+              "description": "The Math.round operation SHALL return the nearest integer to the provided number, rounding halves up (towards positive infinity for positive numbers, towards negative infinity for negative numbers).",
+              "functionName": "round",
+              "inputs": ["numeric value"],
+              "name": "roundToInteger",
+              "outputs": ["rounded integer"],
+              "scenarios": [
+                {
+                  "and": ["the input is a finite number"],
+                  "given": "a calculated HPP value of 15499.7",
+                  "name": "roundUpHPP",
+                  "then": "15500 is returned",
+                  "when": "Math.round(15499.7) is invoked"
+                },
+                {
+                  "and": ["the input is a finite number"],
+                  "given": "a calculated HPP value of 15499.2",
+                  "name": "roundDownHPP",
+                  "then": "15499 is returned",
+                  "when": "Math.round(15499.2) is invoked"
+                },
+                {
+                  "and": ["the input is exactly halfway between two integers"],
+                  "given": "a calculated HPP value of 15500.5",
+                  "name": "roundHalfUp",
+                  "then": "15501 is returned",
+                  "when": "Math.round(15500.5) is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Standardizes fractional HPP calculations to integer currency values for financial reporting and inventory systems."
+        }
+      ],
+      "locationFile": "src/worker/services/hpp.ts"
+    },
+    {
+      "dependencies": [
+        "db",
+        "schema.consignment_cycles",
+        "schema.products",
+        "schema.visit_submissions",
+        "schema.visit_drafts",
+        "schema.outlets",
+        "schema.app_settings",
+        "crypto"
+      ],
+      "domain": "visit",
+      "name": "VisitProcessingService",
+      "operations": [
+        {
+          "description": "Calculates the age in hours since a visit was dropped, used for visual aging indicators in visit management.",
+          "functionName": "ageHours",
+          "inputs": ["droppedAt: string"],
+          "name": "Calculate visit age in hours",
+          "outputs": ["hours: number"],
+          "scenarios": [
+            {
+              "and": ["Result is a non-negative number"],
+              "given": "A valid ISO timestamp string representing when a visit was dropped",
+              "name": "Valid timestamp provided",
+              "then": "Returns the number of hours elapsed since the dropped timestamp",
+              "when": "ageHours is called"
+            }
+          ]
+        },
+        {
+          "description": "Determines a color indicator (red/yellow/green) based on how long a visit has been in dropped state, enabling priority-based visit processing.",
+          "functionName": "ageColor",
+          "inputs": ["droppedAt: string"],
+          "name": "Determine visit age color indicator",
+          "outputs": ["color: 'red' | 'yellow' | 'green'"],
+          "scenarios": [
+            {
+              "and": ["Color thresholds are based on business-defined SLA windows"],
+              "given": "A visit dropped timestamp",
+              "name": "Visit within fresh threshold",
+              "then": "Returns 'green' indicating normal priority",
+              "when": "ageColor is called with recent timestamp"
+            },
+            {
+              "and": ["Color thresholds are based on business-defined SLA windows"],
+              "given": "A visit dropped timestamp exceeding warning threshold",
+              "name": "Visit exceeding warning threshold",
+              "then": "Returns 'yellow' indicating elevated attention needed",
+              "when": "ageColor is called with moderately aged timestamp"
+            },
+            {
+              "and": ["Color thresholds are based on business-defined SLA windows"],
+              "given": "A visit dropped timestamp exceeding critical threshold",
+              "name": "Visit exceeding critical threshold",
+              "then": "Returns 'red' indicating urgent processing required",
+              "when": "ageColor is called with significantly aged timestamp"
+            }
+          ]
+        },
+        {
+          "description": "Calculates the great-circle distance between two GPS coordinates using the haversine formula, used for geofence validation during visit processing.",
+          "functionName": "haversineM",
+          "inputs": ["lat1: number", "lng1: number", "lat2: number", "lng2: number"],
+          "name": "Calculate haversine distance in meters",
+          "outputs": ["distanceMeters: number"],
+          "scenarios": [
+            {
+              "and": ["Result is rounded to nearest meter"],
+              "given": "Two valid latitude/longitude coordinate pairs",
+              "name": "Valid coordinates provided",
+              "then": "Returns the distance between points in meters",
+              "when": "haversineM is called"
+            },
+            {
+              "and": ["Same point yields zero distance"],
+              "given": "Identical coordinates for both points",
+              "name": "Same location coordinates",
+              "then": "Returns 0 meters",
+              "when": "haversineM is called with identical coordinates"
+            }
+          ]
+        },
+        {
+          "description": "Loads all open consignment cycles for a specific outlet, filtering by outlet ID and open status to determine available cycles for visit operations.",
+          "functionName": "loadOpenCycles",
+          "inputs": ["db: database connection", "outletId: string/number"],
+          "name": "Load open consignment cycles for outlet",
+          "outputs": ["openCycles: ConsignmentCycle[]"],
+          "scenarios": [
+            {
+              "and": ["Only cycles with status 'open' are returned"],
+              "given": "An outlet with multiple consignment cycles in various states",
+              "name": "Outlet has open cycles",
+              "then": "Returns array of open cycles belonging to the outlet",
+              "when": "loadOpenCycles is called with valid outletId"
+            },
+            {
+              "and": ["Empty array indicates no actionable cycles"],
+              "given": "An outlet with no open consignment cycles",
+              "name": "No open cycles exist",
+              "then": "Returns empty array",
+              "when": "loadOpenCycles is called"
+            }
+          ]
+        },
+        {
+          "description": "Processes a complete visit submission including geofence validation, cycle pickups, product drops, inventory adjustments, and visit result recording with full idempotency support.",
+          "functionName": "processVisit",
+          "inputs": ["input: ProcessVisitInput"],
+          "name": "Process complete visit submission",
+          "outputs": ["result: VisitResult"],
+          "scenarios": [
+            {
+              "and": [
+                "Geofence check passes or valid override reason provided",
+                "All database operations succeed"
+              ],
+              "given": "Valid visit submission within geofence with pickup cycles and drop products",
+              "name": "Successful visit with pickups and drops",
+              "then": "Closes picked-up cycles, creates new open cycles for dropped products, records visit submission, and returns success result with summaries",
+              "when": "processVisit is called with valid input"
+            },
+            {
+              "and": ["Distance exceeds configured geofence radius", "No override reason provided"],
+              "given": "Visit submission from outside outlet geofence without override",
+              "name": "Geofence violation without override",
+              "then": "Returns validation error indicating geofence breach",
+              "when": "processVisit is called"
+            },
+            {
+              "and": ["Override reason is non-empty after trimming"],
+              "given": "Visit submission from outside geofence with documented override reason",
+              "name": "Geofence violation with override",
+              "then": "Proceeds with visit processing and records override reason",
+              "when": "processVisit is called with override reason"
+            },
+            {
+              "and": [
+                "Idempotency key matches existing submission",
+                "Original submission data matches"
+              ],
+              "given": "Duplicate visit submission with same idempotency key",
+              "name": "Idempotent duplicate submission",
+              "then": "Returns existing visit result without double-processing",
+              "when": "processVisit is called with previously used idempotency key"
+            },
+            {
+              "and": [
+                "Pickup cycles must be in 'closed' status",
+                "Pickup cycles must match visit submission idempotency key"
+              ],
+              "given": "Visit with pickup cycles that are not properly closed",
+              "name": "Invalid pickup cycle state",
+              "then": "Returns error indicating invalid cycle state for pickup",
+              "when": "processVisit attempts to pick up non-closed cycles"
+            },
+            {
+              "and": [
+                "Dropped products must be active",
+                "Dropped products must not be soft-deleted"
+              ],
+              "given": "Visit attempting to drop inactive or deleted products",
+              "name": "Invalid drop products",
+              "then": "Returns error filtering out invalid products from drop operation",
+              "when": "processVisit includes invalid product drops"
+            },
+            {
+              "and": [
+                "Notes are trimmed before storage",
+                "Geofence override reason is trimmed before storage"
+              ],
+              "given": "Visit submission with whitespace-padded notes and override reason",
+              "name": "Trimmed text fields",
+              "then": "Stores trimmed versions of text fields",
+              "when": "processVisit is called"
+            },
+            {
+              "and": ["All database writes are executed in batch for atomicity"],
+              "given": "Complex visit with multiple pickups and drops",
+              "name": "Batch atomic operations",
+              "then": "All cycle updates, inserts, and visit recording succeed or fail together",
+              "when": "processVisit executes database operations"
+            }
+          ]
+        }
+      ],
+      "purpose": "Orchestrates visit lifecycle processing including geofence validation, consignment cycle pickups and drops, inventory management, and visit result recording with idempotency guarantees.",
+      "sideEffects": [
+        "Reads from consignment_cycles table",
+        "Reads from products table",
+        "Reads from outlets table",
+        "Reads from app_settings table",
+        "Writes to consignment_cycles table (status updates, new cycle creation)",
+        "Writes to visit_submissions table",
+        "Writes to visit_drafts table",
+        "Executes batched database operations",
+        "Generates UUIDs for new records"
+      ],
+      "locationFile": "src/worker/services/visit.ts"
+    },
+    {
+      "dependencies": ["db", "schema"],
+      "domain": "visit",
+      "name": "VoidVisitService",
+      "operations": [
+        {
+          "description": "Reverses a committed visit submission and reverts associated consignment cycles to their previous state.",
+          "functionName": "voidVisit",
+          "inputs": [
+            "db: DatabaseConnection",
+            "actor: Actor",
+            "idempotencyKey: string",
+            "reason: string"
+          ],
+          "name": "voidVisit",
+          "outputs": ["void"],
+          "scenarios": [
+            {
+              "and": [
+                "Visit submission status updated to 'voided'",
+                "Consignment cycles linked to visit submission are reverted to 'open' or 'closed' as appropriate",
+                "Batch update is executed atomically"
+              ],
+              "given": "A committed visit submission exists with the given idempotency key, and associated consignment cycles are in 'closed' or 'open' status",
+              "name": "Successful void of committed visit",
+              "then": "Visit submission is marked voided, consignment cycles are reverted to previous state, and changes are persisted",
+              "when": "voidVisit is called with valid idempotencyKey and non-empty reason"
+            },
+            {
+              "and": ["No database state changes occur"],
+              "given": "A newer committed visit submission exists for the same outlet with a later created_at timestamp",
+              "name": "Rejection due to newer committed submission",
+              "then": "Operation is rejected with an appropriate error",
+              "when": "voidVisit is called and hasNewerCommittedSubmission returns true"
+            },
+            {
+              "and": ["No database state changes occur"],
+              "given": "No committed visit submission exists with the given idempotency key",
+              "name": "Rejection due to missing submission",
+              "then": "Operation is rejected with an appropriate error",
+              "when": "voidVisit is called with non-existent idempotencyKey"
+            },
+            {
+              "and": ["No database state changes occur"],
+              "given": "The reason provided is empty or whitespace-only after trimming",
+              "name": "Rejection due to invalid reason",
+              "then": "Operation is rejected with a validation error",
+              "when": "voidVisit is called with empty or whitespace-only reason"
+            }
+          ]
+        },
+        {
+          "description": "Determines whether a newer committed visit submission exists for the same outlet after the given submission's creation time.",
+          "functionName": "",
+          "inputs": ["db: DatabaseConnection", "outletId: string", "createdAt: string"],
+          "name": "hasNewerCommittedSubmission",
+          "outputs": ["boolean"],
+          "scenarios": [
+            {
+              "and": [],
+              "given": "The outlet has multiple committed visit submissions with different created_at timestamps",
+              "name": "Newer committed submission exists",
+              "then": "Returns true",
+              "when": "hasNewerCommittedSubmission is called and a committed submission with created_at > given createdAt exists"
+            },
+            {
+              "and": [],
+              "given": "The outlet has no committed visit submissions with created_at after the given timestamp",
+              "name": "No newer committed submission exists",
+              "then": "Returns false",
+              "when": "hasNewerCommittedSubmission is called"
+            }
+          ]
+        }
+      ],
+      "purpose": "Provides the capability to reverse (void) a committed visit submission, including validation that no newer submission exists and reverting associated consignment cycles to their appropriate prior state.",
+      "sideEffects": [
+        "Updates visit_submissions table status to 'voided'",
+        "Updates consignment_cycles table status from 'closed' to 'open' or maintains 'closed' based on prior state",
+        "Executes batched database statements atomically",
+        "Validates idempotency key and reason before mutation"
+      ],
+      "subSpecs": [
+        {
+          "callee": "reason.trim",
+          "name": "reasonTrim",
+          "operations": [
+            {
+              "description": "The reasonTrim operation SHALL remove leading and trailing whitespace from the provided void reason string.",
+              "functionName": "reason.trim",
+              "inputs": ["reason: string - the raw void reason provided by the user"],
+              "name": "trimVoidReason",
+              "outputs": [
+                "trimmedReason: string - the reason with leading and trailing whitespace removed"
+              ],
+              "scenarios": [
+                {
+                  "and": ["the trimmed reason is non-empty"],
+                  "given": "a void reason with leading spaces \"  customer cancelled\"",
+                  "name": "reasonWithLeadingWhitespace",
+                  "then": "the result shall be \"customer cancelled\" without leading spaces",
+                  "when": "reason.trim is invoked"
+                },
+                {
+                  "and": ["the trimmed reason is non-empty"],
+                  "given": "a void reason with trailing spaces \"customer cancelled  \"",
+                  "name": "reasonWithTrailingWhitespace",
+                  "then": "the result shall be \"customer cancelled\" without trailing spaces",
+                  "when": "reason.trim is invoked"
+                },
+                {
+                  "and": ["the trimmed reason may be empty"],
+                  "given": "a void reason with only whitespace \"   \"",
+                  "name": "reasonWithOnlyWhitespace",
+                  "then": "the result shall be an empty string \"\"",
+                  "when": "reason.trim is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Sanitizes the user-provided void reason by removing extraneous whitespace to ensure clean data storage and validation."
+        },
+        {
+          "callee": "db.select",
+          "name": "databaseSelect",
+          "operations": [
+            {
+              "description": "The databaseSelect operation SHALL execute a SQL SELECT query against the database and return the matching records.",
+              "functionName": "db.select",
+              "inputs": [
+                "query: SQL query object - the structured query to execute",
+                "parameters: array - query parameter values"
+              ],
+              "name": "executeSelectQuery",
+              "outputs": [
+                "records: array - the set of matching database records",
+                "emptyArray: array - when no records match the query criteria"
+              ],
+              "scenarios": [
+                {
+                  "and": ["the query parameters are properly bound"],
+                  "given": "a valid SELECT query for consignment_cycles with outlet_id = 123",
+                  "name": "selectExistingRecords",
+                  "then": "the operation shall return an array containing all matching records",
+                  "when": "db.select is executed with the query and parameters"
+                },
+                {
+                  "and": ["no parameter binding errors occur"],
+                  "given": "a SELECT query for consignment_cycles with outlet_id = 999 where no such outlet exists",
+                  "name": "selectNoMatchingRecords",
+                  "then": "the operation shall return an empty array",
+                  "when": "db.select is executed with the query and parameters"
+                }
+              ]
+            }
+          ],
+          "purpose": "Retrieves data from the database to support validation checks and state determination during the void visit process."
+        },
+        {
+          "callee": "eq",
+          "name": "equalityComparison",
+          "operations": [
+            {
+              "description": "The equalityComparison operation SHALL construct an equality condition expression for use in database queries, comparing a column to a specified value.",
+              "functionName": "eq",
+              "inputs": [
+                "column: column reference - the database column to compare",
+                "value: any - the value to compare against"
+              ],
+              "name": "buildEqualityCondition",
+              "outputs": [
+                "condition: SQL condition object - an equality expression for query composition"
+              ],
+              "scenarios": [
+                {
+                  "and": ["the condition can be combined with other conditions"],
+                  "given": "a column reference schema.consignment_cycles.outlet_id and value 123",
+                  "name": "equalityWithInteger",
+                  "then": "the operation shall return a condition object representing outlet_id = 123",
+                  "when": "eq is invoked with the column and value"
+                },
+                {
+                  "and": ["the condition can be combined with other conditions"],
+                  "given": "a column reference schema.consignment_cycles.status and value \"open\"",
+                  "name": "equalityWithString",
+                  "then": "the operation shall return a condition object representing status = 'open'",
+                  "when": "eq is invoked with the column and value"
+                }
+              ]
+            }
+          ],
+          "purpose": "Creates equality filter conditions that enable precise record targeting in database queries."
+        },
+        {
+          "callee": "hasNewerCommittedSubmission",
+          "name": "newerSubmissionCheck",
+          "operations": [
+            {
+              "description": "The newerSubmissionCheck operation SHALL determine whether any visit submission exists that is newer than the visit being voided and has a committed status, thereby preventing the void operation.",
+              "functionName": "hasNewerCommittedSubmission",
+              "inputs": [
+                "visitId: string - the identifier of the visit to be voided",
+                "outletId: string - the identifier of the outlet associated with the visit"
+              ],
+              "name": "checkForNewerCommittedSubmission",
+              "outputs": [
+                "hasNewer: boolean - true if a newer committed submission exists, false otherwise"
+              ],
+              "scenarios": [
+                {
+                  "and": ["the visit being voided is not the most recent committed submission"],
+                  "given": "visit V1 was submitted at 2024-01-10 and visit V2 was submitted at 2024-01-15, both committed",
+                  "name": "newerCommittedSubmissionExists",
+                  "then": "the operation shall return true, indicating the void is blocked",
+                  "when": "hasNewerCommittedSubmission is called for V1"
+                },
+                {
+                  "and": ["the visit being voided is the most recent committed submission"],
+                  "given": "visit V1 was submitted at 2024-01-10 and is the only committed submission for the outlet",
+                  "name": "noNewerCommittedSubmission",
+                  "then": "the operation shall return false, allowing the void to proceed",
+                  "when": "hasNewerCommittedSubmission is called for V1"
+                },
+                {
+                  "and": ["submissions with draft status are ignored"],
+                  "given": "visit V1 committed at 2024-01-10 and visit V2 in draft status at 2024-01-15",
+                  "name": "newerDraftSubmissionIgnored",
+                  "then": "the operation shall return false, as draft submissions do not block void",
+                  "when": "hasNewerCommittedSubmission is called for V1"
+                }
+              ]
+            }
+          ],
+          "purpose": "Validates that the visit being voided is the most recent committed submission to prevent data inconsistency from out-of-sequence voids."
+        },
+        {
+          "callee": "nowUtcIso",
+          "name": "utcTimestamp",
+          "operations": [
+            {
+              "description": "The utcTimestamp operation SHALL generate the current date and time in UTC formatted as an ISO 8601 string for recording the void operation timestamp.",
+              "functionName": "nowUtcIso",
+              "inputs": [],
+              "name": "generateCurrentUtcIso",
+              "outputs": [
+                "timestamp: string - ISO 8601 formatted UTC datetime (e.g., \"2024-01-15T10:30:00.000Z\")"
+              ],
+              "scenarios": [
+                {
+                  "and": [
+                    "the timestamp includes milliseconds",
+                    "the timezone indicator is 'Z' for UTC"
+                  ],
+                  "given": "the system time is 2024-01-15 10:30:00.500 UTC",
+                  "name": "generateUtcIsoTimestamp",
+                  "then": "the operation shall return \"2024-01-15T10:30:00.500Z\"",
+                  "when": "nowUtcIso is invoked"
+                },
+                {
+                  "and": ["successive calls may return different values"],
+                  "given": "two invocations separated by at least one millisecond",
+                  "name": "successiveCallsDiffer",
+                  "then": "the second timestamp shall be greater than or equal to the first timestamp",
+                  "when": "nowUtcIso is invoked twice"
+                }
+              ]
+            }
+          ],
+          "purpose": "Provides a standardized, timezone-safe timestamp for audit trail recording of when the void operation occurred."
+        },
+        {
+          "callee": "db.update",
+          "name": "databaseUpdate",
+          "operations": [
+            {
+              "description": "The databaseUpdate operation SHALL execute a SQL UPDATE statement to modify existing records in the database with specified values and conditions.",
+              "functionName": "db.update",
+              "inputs": [
+                "table: table reference - the target table for the update",
+                "values: object - the column-value pairs to set",
+                "conditions: array - the WHERE conditions to identify target records"
+              ],
+              "name": "executeUpdateStatement",
+              "outputs": [
+                "result: update result object - containing affected row count and status"
+              ],
+              "scenarios": [
+                {
+                  "and": ["the update is part of a larger transaction or batch"],
+                  "given": "a consignment_cycles record with status \"closed\" and outlet_id 123",
+                  "name": "updateExistingRecord",
+                  "then": "the operation shall modify the record's status to \"open\" and return affectedRows = 1",
+                  "when": "db.update is executed with status \"open\" and condition outlet_id = 123"
+                },
+                {
+                  "and": ["no records match the conditions"],
+                  "given": "no consignment_cycles record exists with outlet_id 999",
+                  "name": "updateNoMatchingRecords",
+                  "then": "the operation shall return affectedRows = 0",
+                  "when": "db.update is executed with condition outlet_id = 999"
+                }
+              ]
+            }
+          ],
+          "purpose": "Applies state changes to database records, specifically reverting consignment cycle statuses during the void visit process."
+        },
+        {
+          "callee": "and",
+          "name": "logicalAnd",
+          "operations": [
+            {
+              "description": "The logicalAnd operation SHALL combine multiple equality conditions using logical AND to create a compound WHERE clause for database queries.",
+              "functionName": "and",
+              "inputs": [
+                "conditions: array of condition objects - the equality conditions to combine"
+              ],
+              "name": "combineConditionsWithAnd",
+              "outputs": [
+                "compoundCondition: condition object - representing the logical AND of all input conditions"
+              ],
+              "scenarios": [
+                {
+                  "and": [
+                    "the resulting condition matches records where both criteria are satisfied"
+                  ],
+                  "given": "condition1: outlet_id = 123, condition2: status = \"open\"",
+                  "name": "combineTwoEqualityConditions",
+                  "then": "the operation shall return a compound condition representing outlet_id = 123 AND status = \"open\"",
+                  "when": "and is invoked with both conditions"
+                },
+                {
+                  "and": ["the order of conditions does not affect the logical result"],
+                  "given": "multiple conditions evaluating outlet_id, status, and cycle_date",
+                  "name": "combineMultipleConditions",
+                  "then": "the operation shall return a compound condition requiring all conditions to be true",
+                  "when": "and is invoked with three or more conditions"
+                }
+              ]
+            }
+          ],
+          "purpose": "Constructs compound query filters that require all specified criteria to be simultaneously satisfied for record selection."
+        },
+        {
+          "callee": "statements.push",
+          "name": "statementCollection",
+          "operations": [
+            {
+              "description": "The statementCollection operation SHALL append a database operation statement to an ordered collection for subsequent batch execution.",
+              "functionName": "statements.push",
+              "inputs": [
+                "statement: database operation object - the update or other DML statement to queue"
+              ],
+              "name": "queueDatabaseStatement",
+              "outputs": [
+                "updatedCollection: array - the statements array with the new statement appended"
+              ],
+              "scenarios": [
+                {
+                  "and": ["the collection maintains insertion order"],
+                  "given": "an empty statements array and a valid db.update statement for consignment_cycles",
+                  "name": "pushFirstStatement",
+                  "then": "the statements array shall contain exactly one element, the pushed update statement",
+                  "when": "statements.push is called with the update statement"
+                },
+                {
+                  "and": ["multiple statements are queued for the same outlet"],
+                  "given": "a statements array containing one update statement and a second update statement to append",
+                  "name": "pushAdditionalStatement",
+                  "then": "the statements array shall contain two elements in the order they were pushed",
+                  "when": "statements.push is called with the second update statement"
+                }
+              ]
+            }
+          ],
+          "purpose": "Accumulates individual database operations into a sequential collection for atomic batch processing."
+        },
+        {
+          "callee": "db.batch",
+          "name": "batchExecution",
+          "operations": [
+            {
+              "description": "The batchExecution operation SHALL execute all queued database statements as a single atomic batch, ensuring either all operations succeed or all are rolled back.",
+              "functionName": "db.batch",
+              "inputs": [
+                "statements: array - the ordered collection of database operation statements to execute"
+              ],
+              "name": "executeStatementBatch",
+              "outputs": [
+                "results: array - the result of each statement execution",
+                "error: batch error - if any statement fails, indicating rollback occurred"
+              ],
+              "scenarios": [
+                {
+                  "and": ["all individual statements execute without error"],
+                  "given": "a statements array containing two valid db.update operations for consignment_cycles",
+                  "name": "successfulBatchExecution",
+                  "then": "the operation shall execute both updates and return success results for all statements",
+                  "when": "db.batch is invoked with the statements array"
+                },
+                {
+                  "and": ["partial updates must not leave data in inconsistent state"],
+                  "given": "a statements array where the second update violates a database constraint",
+                  "name": "failedBatchRollback",
+                  "then": "the operation shall fail with an error and neither update shall be persisted to the database",
+                  "when": "db.batch is invoked with the statements array"
+                },
+                {
+                  "and": ["an empty batch is a valid invocation"],
+                  "given": "an empty statements array",
+                  "name": "emptyBatchExecution",
+                  "then": "the operation shall complete successfully with no database changes",
+                  "when": "db.batch is invoked with the empty array"
+                }
+              ]
+            }
+          ],
+          "purpose": "Ensures atomic execution of all database state changes, maintaining data integrity by preventing partial updates during the void visit operation."
+        }
+      ],
+      "locationFile": "src/worker/services/voidVisit.ts"
+    },
+    {
+      "dependencies": ["Database"],
+      "domain": "session",
+      "name": "SessionService",
+      "operations": [
+        {
+          "description": "Generates a cryptographically secure unique session identifier.",
+          "functionName": "createSessionId",
+          "inputs": [],
+          "name": "createSessionId",
+          "outputs": ["sessionId: string"],
+          "scenarios": [
+            {
+              "and": [
+                "Session ID is cryptographically random",
+                "Session ID has sufficient entropy to prevent guessing attacks"
+              ],
+              "given": "No existing session context",
+              "name": "Generate unique session identifier",
+              "then": "A new unique session ID string is returned",
+              "when": "createSessionId is called"
+            }
+          ]
+        },
+        {
+          "description": "Creates a new session record in the database for the authenticated user and returns the session ID.",
+          "functionName": "createSession",
+          "inputs": ["db: Database", "userId: string"],
+          "name": "createSession",
+          "outputs": ["sessionId: string"],
+          "scenarios": [
+            {
+              "and": [
+                "Session expiration is set to a future timestamp",
+                "Session is associated with the provided userId"
+              ],
+              "given": "Valid userId and database connection",
+              "name": "Create new user session",
+              "then": "A new session record is persisted and the session ID is returned",
+              "when": "createSession is called"
+            }
+          ]
+        },
+        {
+          "description": "Permanently removes a session record from the database, effectively logging out the user.",
+          "functionName": "deleteSession",
+          "inputs": ["db: Database", "sessionId: string"],
+          "name": "deleteSession",
+          "outputs": [],
+          "scenarios": [
+            {
+              "and": ["Any associated session cookies become invalid"],
+              "given": "Existing sessionId in database",
+              "name": "Delete existing session",
+              "then": "The session record is removed from the database",
+              "when": "deleteSession is called"
+            },
+            {
+              "and": ["No error is thrown for idempotent operation"],
+              "given": "Non-existent or already deleted sessionId",
+              "name": "Delete non-existent session",
+              "then": "Operation completes without side effects",
+              "when": "deleteSession is called"
+            }
+          ]
+        },
+        {
+          "description": "Retrieves the user associated with a valid, non-expired session ID.",
+          "functionName": "getSessionUser",
+          "inputs": ["db: Database", "sessionId: string"],
+          "name": "getSessionUser",
+          "outputs": ["user: User | null"],
+          "scenarios": [
+            {
+              "and": ["Session last activity timestamp is updated"],
+              "given": "Valid non-expired sessionId",
+              "name": "Retrieve user for valid session",
+              "then": "The associated user entity is returned",
+              "when": "getSessionUser is called"
+            },
+            {
+              "and": ["Expired sessions are cleaned up"],
+              "given": "Expired or invalid sessionId",
+              "name": "Reject expired session",
+              "then": "Null is returned and session is invalidated",
+              "when": "getSessionUser is called"
+            }
+          ]
+        },
+        {
+          "description": "Sets the session cookie on the HTTP response with appropriate security attributes.",
+          "functionName": "setSessionCookie",
+          "inputs": ["c: Context", "sessionId: string"],
+          "name": "setSessionCookie",
+          "outputs": [],
+          "scenarios": [
+            {
+              "and": [
+                "Cookie has HttpOnly flag",
+                "Cookie has Secure flag in production",
+                "Cookie has SameSite attribute",
+                "Cookie expiration matches session lifetime"
+              ],
+              "given": "Valid sessionId and HTTP response context",
+              "name": "Set secure session cookie",
+              "then": "Session cookie is attached to the HTTP response",
+              "when": "setSessionCookie is called"
+            }
+          ]
+        },
+        {
+          "description": "Clears the session cookie from the HTTP response to effect client-side logout.",
+          "functionName": "clearSessionCookie",
+          "inputs": ["c: Context"],
+          "name": "clearSessionCookie",
+          "outputs": [],
+          "scenarios": [
+            {
+              "and": ["Cookie expiration is set to past date", "Cookie value is cleared"],
+              "given": "Active HTTP response context",
+              "name": "Clear session cookie",
+              "then": "Session cookie is removed from client browser",
+              "when": "clearSessionCookie is called"
+            }
+          ]
+        },
+        {
+          "description": "Middleware that enforces authentication by requiring a valid session, rejecting unauthorized requests.",
+          "functionName": "requireAuth",
+          "inputs": ["c: Context", "next: NextFunction"],
+          "name": "requireAuth",
+          "outputs": ["Context with authenticated user"],
+          "scenarios": [
+            {
+              "and": [
+                "Session expiration is extended on activity",
+                "User context is attached to request for downstream handlers"
+              ],
+              "given": "Request with valid session cookie",
+              "name": "Allow authenticated request",
+              "then": "Request proceeds to next middleware/handler with user context",
+              "when": "requireAuth middleware processes the request"
+            },
+            {
+              "and": ["Appropriate HTTP 401/403 error is returned"],
+              "given": "Request with missing, invalid, or expired session cookie",
+              "name": "Reject unauthenticated request",
+              "then": "Request is aborted with authentication error",
+              "when": "requireAuth middleware processes the request"
+            }
+          ]
+        },
+        {
+          "description": "Middleware that optionally attaches user context if a valid session exists, allowing anonymous access.",
+          "functionName": "optionalAuth",
+          "inputs": ["c: Context", "next: NextFunction"],
+          "name": "optionalAuth",
+          "outputs": ["Context with user or anonymous context"],
+          "scenarios": [
+            {
+              "and": [
+                "User context is attached if session is valid",
+                "Session expiration is extended on activity"
+              ],
+              "given": "Request with valid session cookie",
+              "name": "Attach user context for authenticated request",
+              "then": "Request proceeds with authenticated user context",
+              "when": "optionalAuth middleware processes the request"
+            },
+            {
+              "and": ["No authentication error is thrown"],
+              "given": "Request with missing or invalid session cookie",
+              "name": "Allow anonymous request",
+              "then": "Request proceeds without user context",
+              "when": "optionalAuth middleware processes the request"
+            }
+          ]
+        }
+      ],
+      "purpose": "Manages user session lifecycle including creation, validation, retrieval, and termination of authenticated sessions. Provides middleware for enforcing and optional authentication in HTTP request pipelines.",
+      "sideEffects": [
+        "Writes to sessions table in database",
+        "Updates session expiration timestamps",
+        "Sets HTTP cookies on response",
+        "Clears HTTP cookies on response",
+        "Reads session cookies from HTTP request"
+      ],
+      "subSpecs": [
+        {
+          "callee": "getCookie",
+          "name": "cookieRetrieval",
+          "operations": [
+            {
+              "description": "The getCookie operation SHALL extract the session identifier from the named HTTP cookie present in the incoming request headers.",
+              "functionName": "getCookie",
+              "inputs": ["request context", "cookie name"],
+              "name": "extractSessionCookie",
+              "outputs": ["session identifier string or undefined"],
+              "scenarios": [
+                {
+                  "and": ["the cookie value is returned as a string"],
+                  "given": "an incoming HTTP request containing a valid session cookie named 'session'",
+                  "name": "validSessionCookiePresent",
+                  "then": "the operation SHALL return the session identifier value",
+                  "when": "getCookie is invoked with the cookie name 'session'"
+                },
+                {
+                  "and": ["the return value is undefined"],
+                  "given": "an incoming HTTP request with no cookies present",
+                  "name": "noCookiesPresent",
+                  "then": "the operation SHALL return undefined",
+                  "when": "getCookie is invoked with any cookie name"
+                },
+                {
+                  "and": ["the return value is undefined"],
+                  "given": "an incoming HTTP request containing cookies but not the requested cookie name",
+                  "name": "missingNamedCookie",
+                  "then": "the operation SHALL return undefined",
+                  "when": "getCookie is invoked with the missing cookie name"
+                }
+              ]
+            }
+          ],
+          "purpose": "Extracts the session token from HTTP request cookies for subsequent session validation."
+        },
+        {
+          "callee": "createClient",
+          "name": "databaseClientCreation",
+          "operations": [
+            {
+              "description": "The createClient operation SHALL instantiate a database client configured with the provided D1 database binding for executing SQL operations.",
+              "functionName": "createClient",
+              "inputs": ["environment object containing DB: D1Database"],
+              "name": "initializeDrizzleClient",
+              "outputs": ["configured database client instance"],
+              "scenarios": [
+                {
+                  "and": ["the returned client exposes query methods"],
+                  "given": "a valid environment object with a D1Database binding named 'DB'",
+                  "name": "validDatabaseBinding",
+                  "then": "the operation SHALL return a functional Drizzle ORM client instance",
+                  "when": "createClient is called with the environment object"
+                },
+                {
+                  "and": ["an error is thrown or client creation fails"],
+                  "given": "an environment object with missing or invalid DB binding",
+                  "name": "invalidDatabaseBinding",
+                  "then": "the operation SHALL fail to create a client",
+                  "when": "createClient is called with the malformed environment"
+                }
+              ]
+            }
+          ],
+          "purpose": "Creates a Drizzle ORM database client bound to the Cloudflare D1 database instance."
+        },
+        {
+          "callee": "getSessionUser",
+          "name": "sessionUserLookup",
+          "operations": [
+            {
+              "description": "The getSessionUser operation SHALL query the database for an active session and its associated user using the provided session identifier.",
+              "functionName": "getSessionUser",
+              "inputs": ["database client instance", "session identifier string"],
+              "name": "fetchActiveSessionWithUser",
+              "outputs": ["session and user record object or null"],
+              "scenarios": [
+                {
+                  "and": ["the returned object contains session fields and nested user fields"],
+                  "given": "a valid session identifier exists in the database with an associated user and non-expired session",
+                  "name": "validActiveSession",
+                  "then": "the operation SHALL return the session record joined with user data",
+                  "when": "getSessionUser is called with the valid session ID"
+                },
+                {
+                  "and": ["the return value is null"],
+                  "given": "a session identifier that does not exist in the database",
+                  "name": "nonExistentSession",
+                  "then": "the operation SHALL return null",
+                  "when": "getSessionUser is called with the unknown session ID"
+                },
+                {
+                  "and": ["the return value is null"],
+                  "given": "an expired session record exists for the provided identifier",
+                  "name": "expiredSession",
+                  "then": "the operation SHALL return null",
+                  "when": "getSessionUser is called with the expired session ID"
+                }
+              ]
+            }
+          ],
+          "purpose": "Retrieves the complete session and associated user record from persistent storage by session identifier."
+        },
+        {
+          "callee": "now.getTime",
+          "name": "timestampGeneration",
+          "operations": [
+            {
+              "description": "The now.getTime operation SHALL return the current system time as milliseconds since the Unix epoch for temporal comparisons.",
+              "functionName": "now.getTime",
+              "inputs": ["Date object instance"],
+              "name": "getCurrentTimestamp",
+              "outputs": ["integer milliseconds since Unix epoch"],
+              "scenarios": [
+                {
+                  "and": ["the returned value is a positive integer"],
+                  "given": "a valid Date object representing the current time",
+                  "name": "currentTimeRetrieval",
+                  "then": "the operation SHALL return the epoch timestamp in milliseconds",
+                  "when": "now.getTime is invoked"
+                },
+                {
+                  "and": ["the returned value is less than the subsequent call's value"],
+                  "given": "two sequential invocations during normal system operation",
+                  "name": "monotonicTimeProgression",
+                  "then": "the second invocation SHALL return a greater or equal timestamp",
+                  "when": "now.getTime is invoked twice in succession"
+                }
+              ]
+            }
+          ],
+          "purpose": "Provides the current timestamp in milliseconds for session expiration calculations and temporal logic."
+        },
+        {
+          "callee": "db.update",
+          "name": "sessionRecordUpdate",
+          "operations": [
+            {
+              "description": "The db.update operation SHALL modify existing session records in the database with new field values matching the specified filter conditions.",
+              "functionName": "db.update",
+              "inputs": ["table reference", "set values object", "where conditions"],
+              "name": "updateSessionFields",
+              "outputs": ["query builder or execution result"],
+              "scenarios": [
+                {
+                  "and": ["the session record's expiresAt field is updated to the new value"],
+                  "given": "an existing session record with a known identifier",
+                  "name": "updateSessionExpiration",
+                  "then": "the operation SHALL generate an UPDATE statement setting the specified fields",
+                  "when": "db.update is called with the sessions table, new expiresAt value, and matching session ID condition"
+                },
+                {
+                  "and": ["no rows are affected"],
+                  "given": "a session identifier that does not match any database record",
+                  "name": "updateNonExistentSession",
+                  "then": "the operation SHALL complete without error and affect zero rows",
+                  "when": "db.update is executed with a non-matching filter condition"
+                }
+              ]
+            }
+          ],
+          "purpose": "Persists modifications to session records, particularly for extending expiration timestamps during active use."
+        },
+        {
+          "callee": "newExpiresAt.toISOString",
+          "name": "expirationTimestampFormatting",
+          "operations": [
+            {
+              "description": "The newExpiresAt.toISOString operation SHALL convert the calculated future expiration Date object into an ISO 8601 formatted string for database storage.",
+              "functionName": "newExpiresAt.toISOString",
+              "inputs": ["Date object representing new expiration time"],
+              "name": "formatExpirationTimestamp",
+              "outputs": ["ISO 8601 formatted string (e.g., '2024-01-15T10:30:00.000Z')"],
+              "scenarios": [
+                {
+                  "and": ["the output matches ISO 8601 format with Z suffix"],
+                  "given": "a Date object representing a future timestamp",
+                  "name": "futureDateFormatting",
+                  "then": "the operation SHALL return a valid ISO 8601 string",
+                  "when": "newExpiresAt.toISOString is called"
+                },
+                {
+                  "and": ["the output contains the correct date and time components"],
+                  "given": "a Date object set to a specific known future time",
+                  "name": "preciseTimeConversion",
+                  "then": "the operation SHALL return the exact ISO string for that instant",
+                  "when": "newExpiresAt.toISOString is invoked on the predetermined Date"
+                }
+              ]
+            }
+          ],
+          "purpose": "Serializes the computed session expiration time into a standard string format for database persistence and cookie attributes."
+        },
+        {
+          "callee": "now.toISOString",
+          "name": "currentTimestampFormatting",
+          "operations": [
+            {
+              "description": "The now.toISOString operation SHALL convert the current Date object into an ISO 8601 formatted string for recording operation timestamps.",
+              "functionName": "now.toISOString",
+              "inputs": ["Date object representing current time"],
+              "name": "formatCurrentTimestamp",
+              "outputs": ["ISO 8601 formatted string"],
+              "scenarios": [
+                {
+                  "and": ["the output is a valid ISO 8601 string ending with Z"],
+                  "given": "a Date object initialized to the current system time",
+                  "name": "currentTimeIsoFormat",
+                  "then": "the operation SHALL return the ISO 8601 representation",
+                  "when": "now.toISOString is invoked"
+                },
+                {
+                  "and": [
+                    "the output reflects the actual current time within acceptable clock skew"
+                  ],
+                  "given": "system clock is properly synchronized",
+                  "name": "accurateTimeRepresentation",
+                  "then": "the operation SHALL produce a timestamp accurate to the current moment",
+                  "when": "now.toISOString is called during normal operation"
+                }
+              ]
+            }
+          ],
+          "purpose": "Generates ISO 8601 formatted current timestamps for audit fields or temporal logging within session operations."
+        },
+        {
+          "callee": "eq",
+          "name": "equalityCondition",
+          "operations": [
+            {
+              "description": "The eq operation SHALL construct a SQL equality comparison condition for filtering database queries to match exact values.",
+              "functionName": "eq",
+              "inputs": ["column reference", "comparison value"],
+              "name": "buildEqualityFilter",
+              "outputs": ["SQL condition object for query builder"],
+              "scenarios": [
+                {
+                  "and": [
+                    "the generated condition matches rows where session.id equals the provided UUID"
+                  ],
+                  "given": "a sessions table with an id column and a specific session identifier",
+                  "name": "sessionIdEquality",
+                  "then": "the operation SHALL produce an equality condition for that column and value",
+                  "when": "eq is called with sessions.id and the target session UUID"
+                },
+                {
+                  "and": ["the condition is injectable into WHERE clauses"],
+                  "given": "a column reference and a string value to match",
+                  "name": "stringColumnEquality",
+                  "then": "the operation SHALL return a properly parameterized equality condition",
+                  "when": "eq is invoked with the column and value arguments"
+                }
+              ]
+            }
+          ],
+          "purpose": "Creates parameterized equality predicates for secure and precise database record filtering."
+        },
+        {
+          "callee": "c.set",
+          "name": "contextPropertyAssignment",
+          "operations": [
+            {
+              "description": "The c.set operation SHALL store a named value in the request context for downstream middleware and handlers to access.",
+              "functionName": "c.set",
+              "inputs": ["context object", "property name string", "value to store"],
+              "name": "setContextProperty",
+              "outputs": ["modified context with stored property"],
+              "scenarios": [
+                {
+                  "and": ["the user object is retrievable via c.get with the same key"],
+                  "given": "a valid user object retrieved from session lookup",
+                  "name": "storeAuthenticatedUser",
+                  "then": "the operation SHALL store the user object in context under the specified key",
+                  "when": "c.set is called with 'user' key and the user object"
+                },
+                {
+                  "and": ["subsequent middleware can access the stored value"],
+                  "given": "a context object and a session metadata object",
+                  "name": "storeSessionMetadata",
+                  "then": "the operation SHALL attach the metadata to the context",
+                  "when": "c.set is invoked with the metadata key and value"
+                }
+              ]
+            }
+          ],
+          "purpose": "Attaches resolved session data to the HTTP context for access by subsequent request processing stages."
+        },
+        {
+          "callee": "next",
+          "name": "middlewareContinuation",
+          "operations": [
+            {
+              "description": "The next operation SHALL pass control to the subsequent middleware or route handler in the HTTP processing pipeline.",
+              "functionName": "next",
+              "inputs": ["middleware context"],
+              "name": "proceedToNextHandler",
+              "outputs": ["Promise resolving to response or void"],
+              "scenarios": [
+                {
+                  "and": ["the response from downstream handlers is returned through the chain"],
+                  "given": "a middleware chain with registered subsequent handlers",
+                  "name": "normalPipelineContinuation",
+                  "then": "the operation SHALL invoke the next handler in sequence",
+                  "when": "next is called after successful session validation"
+                },
+                {
+                  "and": ["the middleware chain terminates if next is not called"],
+                  "given": "a middleware that fails authentication",
+                  "name": "conditionalContinuation",
+                  "then": "the operation SHALL NOT be invoked and the request is blocked",
+                  "when": "session validation fails and an error response is returned instead"
+                }
+              ]
+            }
+          ],
+          "purpose": "Continues request processing to the next stage in the middleware chain after session operations complete successfully."
+        },
+        {
+          "callee": "update",
+          "name": "sessionExpirationRefresh",
+          "operations": [
+            {
+              "description": "The update operation SHALL extend the active session's expiration timestamp in the database and corresponding cookie to maintain authenticated state.",
+              "functionName": "update",
+              "inputs": [
+                "database client",
+                "session identifier",
+                "new expiration Date",
+                "cookie settings"
+              ],
+              "name": "refreshSessionExpiration",
+              "outputs": ["updated session record or void"],
+              "scenarios": [
+                {
+                  "and": ["the session cookie is updated with the new expiration"],
+                  "given": "an active session with a valid session ID and sliding expiration policy",
+                  "name": "successfulExpirationExtension",
+                  "then": "the operation SHALL persist the new expiresAt to the database and set the updated cookie",
+                  "when": "update is called during an authenticated request"
+                },
+                {
+                  "and": ["no update occurs and no error is thrown"],
+                  "given": "a session that has been revoked or deleted since retrieval",
+                  "name": "staleSessionUpdate",
+                  "then": "the operation SHALL handle the missing record gracefully",
+                  "when": "update is attempted with a no-longer-existent session ID"
+                }
+              ]
+            }
+          ],
+          "purpose": "Implements sliding session expiration by atomically updating database records and client cookies during active use."
+        }
+      ],
+      "locationFile": "src/worker/lib/session.ts"
+    },
+    {
+      "dependencies": [],
+      "domain": "auth",
+      "name": "PasswordService",
+      "operations": [
+        {
+          "description": "SHALL derive a PBKDF2 key from the provided password with a random salt and return a formatted hash string containing iteration count, salt, and derived key.",
+          "functionName": "hashPassword",
+          "inputs": ["password: string"],
+          "name": "hashPassword",
+          "outputs": ["hash: string"],
+          "scenarios": [
+            {
+              "and": [
+                "A random 16-byte salt is generated",
+                "PBKDF2-SHA-256 is used with 100,000 iterations",
+                "The output format is '{iterations}${base64(salt)}${base64(key)}'"
+              ],
+              "given": "A plaintext password of at least 6 characters",
+              "name": "Valid password hashing",
+              "then": "A formatted hash string is returned",
+              "when": "hashPassword is called"
+            },
+            {
+              "and": ["No hashing operation is performed"],
+              "given": "A plaintext password with fewer than 6 characters",
+              "name": "Password too short",
+              "then": "A ValidationError is thrown with message indicating minimum length requirement",
+              "when": "hashPassword is called"
+            }
+          ]
+        },
+        {
+          "description": "SHALL parse a previously generated hash string, re-derive the key from the provided password using the stored parameters, and perform a timing-safe comparison against the stored key.",
+          "functionName": "verifyPassword",
+          "inputs": ["password: string", "hash: string"],
+          "name": "verifyPassword",
+          "outputs": ["isValid: boolean"],
+          "scenarios": [
+            {
+              "and": [
+                "The stored iteration count, salt, and expected key are extracted",
+                "The password is re-derived with the same parameters",
+                "Timing-safe comparison is used"
+              ],
+              "given": "A plaintext password and a valid hash string generated by hashPassword",
+              "name": "Correct password verification",
+              "then": "True is returned",
+              "when": "verifyPassword is called"
+            },
+            {
+              "and": [
+                "The stored parameters are used for derivation",
+                "Timing-safe comparison fails"
+              ],
+              "given": "A plaintext password and a valid hash string for a different password",
+              "name": "Incorrect password verification",
+              "then": "False is returned",
+              "when": "verifyPassword is called"
+            },
+            {
+              "and": ["No derivation is performed"],
+              "given": "A plaintext password with fewer than 6 characters",
+              "name": "Password too short on verify",
+              "then": "A ValidationError is thrown",
+              "when": "verifyPassword is called"
+            },
+            {
+              "and": ["No derivation is performed"],
+              "given": "A malformed hash string not containing exactly two '$' delimiters",
+              "name": "Malformed hash string",
+              "then": "False is returned",
+              "when": "verifyPassword is called"
+            },
+            {
+              "and": ["No derivation is performed"],
+              "given": "A hash string with non-finite iterations, zero-length salt, or zero-length expected key",
+              "name": "Invalid hash parameters",
+              "then": "False is returned",
+              "when": "verifyPassword is called"
+            }
+          ]
+        }
+      ],
+      "purpose": "Encapsulates secure password hashing and verification using PBKDF2-SHA-256 with random salts, iteration-based key derivation, and timing-safe comparison to prevent timing attacks.",
+      "sideEffects": [
+        "Uses Web Crypto API for random salt generation",
+        "Uses Web Crypto API for PBKDF2 key derivation",
+        "Performs computational work (100,000 iterations by default)"
+      ],
+      "locationFile": "src/worker/lib/password.ts"
+    },
+    {
+      "dependencies": ["SessionService", "ErrorModule"],
+      "domain": "auth",
+      "name": "RbacService",
+      "operations": [
+        {
+          "description": "Evaluates whether a given role possesses a specified capability by checking against the static ROLE_PERMISSIONS matrix.",
+          "functionName": "can",
+          "inputs": ["role: string | undefined", "capability: Capability"],
+          "name": "Check Role Capability",
+          "outputs": ["boolean"],
+          "scenarios": [
+            {
+              "and": ["No side effects occur"],
+              "given": "A valid role 'owner' and capability 'users:manage'",
+              "name": "Authorized role with valid capability",
+              "then": "Returns true",
+              "when": "can is invoked"
+            },
+            {
+              "and": ["No side effects occur"],
+              "given": "A valid role 'staff' and capability 'users:manage'",
+              "name": "Unauthorized role with disallowed capability",
+              "then": "Returns false",
+              "when": "can is invoked"
+            },
+            {
+              "and": ["No side effects occur"],
+              "given": "An undefined role and any capability",
+              "name": "Undefined role",
+              "then": "Returns false",
+              "when": "can is invoked"
+            },
+            {
+              "and": ["No side effects occur"],
+              "given": "An unknown role string and any capability",
+              "name": "Unknown role not in ROLE_PERMISSIONS",
+              "then": "Returns false",
+              "when": "can is invoked"
+            }
+          ]
+        },
+        {
+          "description": "Creates a Hono middleware handler that enforces authentication and authorization for a specific capability, throwing ForbiddenError if the authenticated user lacks the required permission.",
+          "functionName": "requirePermission",
+          "inputs": ["capability: Capability"],
+          "name": "Require Permission Middleware",
+          "outputs": ["MiddlewareHandler"],
+          "scenarios": [
+            {
+              "and": [
+                "Calls requireAuth to validate session",
+                "Retrieves user from context",
+                "Invokes next() on success"
+              ],
+              "given": "An authenticated user with role 'owner' requesting a permitted capability",
+              "name": "Authorized access",
+              "then": "Middleware allows request to proceed",
+              "when": "requirePermission middleware executes"
+            },
+            {
+              "and": ["Calls requireAuth to validate session", "Retrieves user from context"],
+              "given": "An authenticated user with role 'staff' requesting a capability not in their permissions",
+              "name": "Forbidden access due to insufficient permissions",
+              "then": "Throws ForbiddenError with message 'Insufficient permissions'",
+              "when": "requirePermission middleware executes"
+            },
+            {
+              "and": ["Calls requireAuth which may throw AuthError"],
+              "given": "An unauthenticated request",
+              "name": "Unauthenticated request",
+              "then": "Throws error from requireAuth before permission check",
+              "when": "requirePermission middleware executes"
+            },
+            {
+              "and": ["Calls requireAuth to validate session", "Retrieves user from context"],
+              "given": "An authenticated user with missing or undefined role",
+              "name": "User with undefined role",
+              "then": "Throws ForbiddenError with message 'Insufficient permissions'",
+              "when": "requirePermission middleware executes"
+            }
+          ]
+        }
+      ],
+      "purpose": "Encapsulates role-based access control (RBAC) authorization logic, providing capability checking against a static role-permission matrix and Hono middleware for route-level permission enforcement.",
+      "sideEffects": [
+        "Throws ForbiddenError on authorization failure",
+        "Delegates to requireAuth which may interact with session store"
+      ],
+      "locationFile": "src/worker/lib/rbac.ts"
+    },
+    {
+      "dependencies": [],
+      "domain": "auth",
+      "name": "ErrorModule",
+      "operations": [
+        {
+          "description": "Constructs a base application error with HTTP status, error code, and message.",
+          "functionName": "constructor",
+          "inputs": ["status: number", "code: string", "message: string"],
+          "name": "createAppError",
+          "outputs": ["AppError instance"],
+          "scenarios": [
+            {
+              "and": ["Error name is set to 'AppError'"],
+              "given": "A status code, error code, and message are provided",
+              "name": "Base error creation",
+              "then": "An AppError is instantiated with the given properties",
+              "when": "AppError constructor is called"
+            }
+          ]
+        },
+        {
+          "description": "Constructs an authentication error indicating the request lacks valid credentials.",
+          "functionName": "constructor",
+          "inputs": ["message?: string"],
+          "name": "createAuthError",
+          "outputs": ["AuthError instance"],
+          "scenarios": [
+            {
+              "and": [
+                "Status is 401",
+                "Error code is 'AUTH_REQUIRED'",
+                "Error name is 'AuthError'"
+              ],
+              "given": "No message or a custom message is provided",
+              "name": "Authentication error with default message",
+              "then": "An AuthError is instantiated with status 401 and code AUTH_REQUIRED",
+              "when": "AuthError constructor is called with no arguments"
+            },
+            {
+              "and": [
+                "Status is 401",
+                "Error code is 'AUTH_REQUIRED'",
+                "Error name is 'AuthError'"
+              ],
+              "given": "A custom message is provided",
+              "name": "Authentication error with custom message",
+              "then": "An AuthError is instantiated with the custom message",
+              "when": "AuthError constructor is called with a custom message"
+            }
+          ]
+        },
+        {
+          "description": "Constructs a forbidden error indicating the authenticated user lacks permission.",
+          "functionName": "constructor",
+          "inputs": ["message?: string"],
+          "name": "createForbiddenError",
+          "outputs": ["ForbiddenError instance"],
+          "scenarios": [
+            {
+              "and": [
+                "Status is 403",
+                "Error code is 'FORBIDDEN'",
+                "Error name is 'ForbiddenError'"
+              ],
+              "given": "No message or a custom message is provided",
+              "name": "Forbidden error with default message",
+              "then": "A ForbiddenError is instantiated with status 403 and code FORBIDDEN",
+              "when": "ForbiddenError constructor is called with no arguments"
+            },
+            {
+              "and": [
+                "Status is 403",
+                "Error code is 'FORBIDDEN'",
+                "Error name is 'ForbiddenError'"
+              ],
+              "given": "A custom message is provided",
+              "name": "Forbidden error with custom message",
+              "then": "A ForbiddenError is instantiated with the custom message",
+              "when": "ForbiddenError constructor is called with a custom message"
+            }
+          ]
+        },
+        {
+          "description": "Constructs a validation error indicating the request contains invalid data.",
+          "functionName": "constructor",
+          "inputs": ["message?: string"],
+          "name": "createValidationError",
+          "outputs": ["ValidationError instance"],
+          "scenarios": [
+            {
+              "and": [
+                "Status is 400",
+                "Error code is 'VALIDATION_ERROR'",
+                "Error name is 'ValidationError'"
+              ],
+              "given": "No message or a custom message is provided",
+              "name": "Validation error with default message",
+              "then": "A ValidationError is instantiated with status 400 and code VALIDATION_ERROR",
+              "when": "ValidationError constructor is called with no arguments"
+            },
+            {
+              "and": [
+                "Status is 400",
+                "Error code is 'VALIDATION_ERROR'",
+                "Error name is 'ValidationError'"
+              ],
+              "given": "A custom message is provided",
+              "name": "Validation error with custom message",
+              "then": "A ValidationError is instantiated with the custom message",
+              "when": "ValidationError constructor is called with a custom message"
+            }
+          ]
+        },
+        {
+          "description": "Constructs a conflict error indicating a resource conflict occurred.",
+          "functionName": "constructor",
+          "inputs": ["message?: string"],
+          "name": "createConflictError",
+          "outputs": ["ConflictError instance"],
+          "scenarios": [
+            {
+              "and": ["Status is 409", "Error code is 'CONFLICT'", "Error name is 'ConflictError'"],
+              "given": "No message or a custom message is provided",
+              "name": "Conflict error with default message",
+              "then": "A ConflictError is instantiated with status 409 and code CONFLICT",
+              "when": "ConflictError constructor is called with no arguments"
+            },
+            {
+              "and": ["Status is 409", "Error code is 'CONFLICT'", "Error name is 'ConflictError'"],
+              "given": "A custom message is provided",
+              "name": "Conflict error with custom message",
+              "then": "A ConflictError is instantiated with the custom message",
+              "when": "ConflictError constructor is called with a custom message"
+            }
+          ]
+        }
+      ],
+      "purpose": "Defines the application's error class hierarchy, providing typed HTTP errors for authentication failures, authorization denials, validation failures, and resource conflicts.",
+      "sideEffects": [],
+      "locationFile": "src/worker/lib/errors.ts"
+    },
+    {
+      "dependencies": ["localStorage"],
+      "domain": "visit",
+      "name": "VisitDraftService",
+      "operations": [
+        {
+          "description": "SHALL persist a visit draft to localStorage keyed by outletId.",
+          "functionName": "saveVisitDraft",
+          "inputs": ["outletId: string", "draft: Omit<VisitDraft, 'outlet_id'>"],
+          "name": "saveVisitDraft",
+          "outputs": [],
+          "scenarios": [
+            {
+              "and": [
+                "localStorage contains the serialized draft under key konsi_visit_draft_{outletId}"
+              ],
+              "given": "A valid outletId and a draft payload with idempotency_key, pickups, drops, override, overrideReason, visitNotes, and savedAt",
+              "name": "Persist draft successfully",
+              "then": "The draft is stored in localStorage with outlet_id injected",
+              "when": "saveVisitDraft is called"
+            }
+          ]
+        },
+        {
+          "description": "SHALL retrieve and validate a visit draft from localStorage for a given outletId.",
+          "functionName": "loadVisitDraft",
+          "inputs": ["outletId: string"],
+          "name": "loadVisitDraft",
+          "outputs": ["VisitDraft | null"],
+          "scenarios": [
+            {
+              "and": [
+                "All required fields (idempotency_key, savedAt, pickups, drops, override, overrideReason, visitNotes) are present and of correct type"
+              ],
+              "given": "A valid outletId with a stored draft in localStorage",
+              "name": "Load valid draft",
+              "then": "The VisitDraft object is returned",
+              "when": "loadVisitDraft is called"
+            },
+            {
+              "and": [],
+              "given": "No draft exists for the outletId in localStorage",
+              "name": "No draft found",
+              "then": "null is returned",
+              "when": "loadVisitDraft is called"
+            },
+            {
+              "and": [],
+              "given": "A draft exists but is malformed or missing required fields",
+              "name": "Invalid draft data",
+              "then": "null is returned",
+              "when": "loadVisitDraft is called"
+            },
+            {
+              "and": [],
+              "given": "Stored data is not valid JSON",
+              "name": "Corrupted draft data",
+              "then": "null is returned",
+              "when": "loadVisitDraft is called"
+            }
+          ]
+        },
+        {
+          "description": "SHALL remove a visit draft from localStorage for a given outletId.",
+          "functionName": "clearVisitDraft",
+          "inputs": ["outletId: string"],
+          "name": "clearVisitDraft",
+          "outputs": [],
+          "scenarios": [
+            {
+              "and": ["The key konsi_visit_draft_{outletId} no longer exists in localStorage"],
+              "given": "A valid outletId with or without a stored draft",
+              "name": "Clear draft successfully",
+              "then": "Any existing draft for the outletId is removed from localStorage",
+              "when": "clearVisitDraft is called"
+            }
+          ]
+        }
+      ],
+      "purpose": "Manages visit draft persistence in browser localStorage, including save, load with validation, and clear operations.",
+      "sideEffects": [
+        "Reads from localStorage",
+        "Writes to localStorage",
+        "Removes items from localStorage"
+      ],
+      "locationFile": "src/web/lib/visit.ts"
+    },
+    {
+      "dependencies": ["navigator.geolocation"],
+      "domain": "visit",
+      "name": "GpsTrackingService",
+      "operations": [
+        {
+          "description": "SHALL initiate continuous GPS position monitoring using the browser geolocation API.",
+          "functionName": "watchGps",
+          "inputs": ["onUpdate: (pos: GpsPosition) => void", "onError: (message: string) => void"],
+          "name": "watchGps",
+          "outputs": ["number | null"],
+          "scenarios": [
+            {
+              "and": ["Position updates include latitude, longitude, and accuracy"],
+              "given": "The browser supports geolocation and grants permission",
+              "name": "Start GPS watch successfully",
+              "then": "A watch ID is returned and onUpdate is called with GpsPosition when position changes",
+              "when": "watchGps is called with valid callbacks"
+            },
+            {
+              "and": [],
+              "given": "The browser does not support geolocation",
+              "name": "GPS not supported",
+              "then": "onError is called with 'Perangkat tidak mendukung GPS' and null is returned",
+              "when": "watchGps is called"
+            },
+            {
+              "and": [],
+              "given": "Geolocation permission is denied or position acquisition fails",
+              "name": "GPS error",
+              "then": "onError is called with the error message",
+              "when": "watchGps is called and geolocation encounters an error"
+            }
+          ]
+        },
+        {
+          "description": "SHALL terminate an active GPS watch using the provided watch ID.",
+          "functionName": "clearGpsWatch",
+          "inputs": ["id: number | null"],
+          "name": "clearGpsWatch",
+          "outputs": [],
+          "scenarios": [
+            {
+              "and": [],
+              "given": "A valid watch ID from a previous watchGps call",
+              "name": "Clear active watch",
+              "then": "The geolocation watch is terminated",
+              "when": "clearGpsWatch is called with a non-null id"
+            },
+            {
+              "and": [],
+              "given": "A null watch ID",
+              "name": "No-op for null id",
+              "then": "No action is taken",
+              "when": "clearGpsWatch is called with null"
+            }
+          ]
+        }
+      ],
+      "purpose": "Provides GPS position tracking capabilities for visit location capture using browser geolocation API.",
+      "sideEffects": [
+        "Accesses device GPS via navigator.geolocation",
+        "Registers geolocation watch callbacks"
+      ],
+      "locationFile": "src/web/lib/visit.ts"
+    },
+    {
+      "dependencies": [],
+      "domain": "visit",
+      "name": "VisitUtilityService",
+      "operations": [
+        {
+          "description": "SHALL calculate the great-circle distance in meters between two geographic coordinates using the haversine formula.",
+          "functionName": "haversineM",
+          "inputs": ["lat1: number", "lng1: number", "lat2: number", "lng2: number"],
+          "name": "haversineM",
+          "outputs": ["number"],
+          "scenarios": [
+            {
+              "and": [],
+              "given": "Two valid geographic coordinates",
+              "name": "Calculate distance",
+              "then": "The distance in meters is returned, rounded to nearest integer",
+              "when": "haversineM is called"
+            },
+            {
+              "and": [],
+              "given": "Identical coordinates",
+              "name": "Zero distance",
+              "then": "0 is returned",
+              "when": "haversineM is called with the same lat/lng for both points"
+            }
+          ]
+        },
+        {
+          "description": "SHALL generate a cryptographically secure UUID to serve as an idempotency key for visit operations.",
+          "functionName": "generateIdempotencyKey",
+          "inputs": [],
+          "name": "generateIdempotencyKey",
+          "outputs": ["string"],
+          "scenarios": [
+            {
+              "and": [],
+              "given": "The crypto API is available in the browser",
+              "name": "Generate unique key",
+              "then": "A unique UUID string is returned",
+              "when": "generateIdempotencyKey is called"
+            }
+          ]
+        }
+      ],
+      "purpose": "Provides utility functions for visit-related calculations and identifier generation, including distance computation and idempotency key creation.",
+      "sideEffects": ["Uses browser crypto API for UUID generation"],
+      "locationFile": "src/web/lib/visit.ts"
+    },
+    {
+      "dependencies": [],
+      "domain": "auth",
+      "name": "ApiClient",
+      "operations": [
+        {
+          "description": "MUST execute HTTP requests to backend API endpoints with automatic JSON content-type detection and credential inclusion.",
+          "functionName": "api",
+          "inputs": ["path: string", "options?: RequestInit"],
+          "name": "executeApiRequest",
+          "outputs": ["Response"],
+          "scenarios": [
+            {
+              "and": ["Content-Type header set to application/json"],
+              "given": "A POST request with a plain object body",
+              "name": "JSON body auto-detection",
+              "then": "Request succeeds with proper JSON headers",
+              "when": "api is called with JSON body"
+            },
+            {
+              "and": ["No Content-Type header modified"],
+              "given": "A request with FormData body",
+              "name": "FormData body passthrough",
+              "then": "Request succeeds without JSON content-type",
+              "when": "api is called with FormData"
+            },
+            {
+              "and": ["No Content-Type header modified"],
+              "given": "A request with URLSearchParams body",
+              "name": "URLSearchParams body passthrough",
+              "then": "Request succeeds without JSON content-type",
+              "when": "api is called with URLSearchParams"
+            },
+            {
+              "and": ["Cookies included in request"],
+              "given": "Any API request",
+              "name": "Credential inclusion",
+              "then": "Request includes session cookies",
+              "when": "api is called"
+            }
+          ]
+        }
+      ],
+      "purpose": "Provides low-level HTTP client functionality for backend API communication with automatic content-type handling and authentication credential forwarding.",
+      "sideEffects": ["Sends HTTP requests to backend server"],
+      "locationFile": "src/web/lib/api.ts"
+    },
+    {
+      "dependencies": ["ApiClient"],
+      "domain": "auth",
+      "name": "CurrentUserService",
+      "operations": [
+        {
+          "description": "MUST retrieve the currently authenticated user from /api/auth/me with short-term promise caching to prevent server flooding from concurrent component requests.",
+          "functionName": "getCurrentUser",
+          "inputs": [],
+          "name": "getCurrentUser",
+          "outputs": ["User | null"],
+          "scenarios": [
+            {
+              "and": ["Promise is cached for 2000ms"],
+              "given": "No active cache or cache expired",
+              "name": "Fresh fetch",
+              "then": "New request to /api/auth/me is made",
+              "when": "getCurrentUser is called"
+            },
+            {
+              "and": ["No additional HTTP request made"],
+              "given": "Cache exists and is within 2000ms TTL",
+              "name": "Cache hit",
+              "then": "Same promise returned without server call",
+              "when": "getCurrentUser is called again"
+            },
+            {
+              "and": ["Cache entry discarded"],
+              "given": "Cache exists but exceeds 2000ms TTL",
+              "name": "Cache expiration",
+              "then": "New request to /api/auth/me is made",
+              "when": "getCurrentUser is called"
+            },
+            {
+              "and": ["Null returned"],
+              "given": "Server returns non-OK response",
+              "name": "Server error handling",
+              "then": "Gracefully returns null",
+              "when": "getCurrentUser processes response"
+            },
+            {
+              "and": ["Null returned"],
+              "given": "Response body contains invalid JSON",
+              "name": "Invalid JSON handling",
+              "then": "Gracefully returns null",
+              "when": "getCurrentUser parses response"
+            },
+            {
+              "and": ["Null returned"],
+              "given": "Network failure occurs",
+              "name": "Network error handling",
+              "then": "Gracefully returns null",
+              "when": "getCurrentUser fetch fails"
+            }
+          ]
+        }
+      ],
+      "purpose": "Manages retrieval and short-term caching of the current authenticated user identity to prevent redundant auth verification requests across multiple components.",
+      "sideEffects": [
+        "Reads from in-memory cache",
+        "Writes to in-memory cache",
+        "Sends HTTP GET request to /api/auth/me"
+      ],
+      "locationFile": "src/web/lib/api.ts"
+    },
+    {
+      "dependencies": [],
+      "domain": "visit",
+      "name": "PhotoService",
+      "operations": [
+        {
+          "description": "Compresses an image file to reduce file size while maintaining visual quality by resizing to a maximum edge dimension and applying configurable compression quality.",
+          "functionName": "compressPhoto",
+          "inputs": [
+            "file: File",
+            "options: { maxEdge?: number, quality?: number, type?: string }"
+          ],
+          "name": "compressPhoto",
+          "outputs": ["Promise<Blob>"],
+          "scenarios": [
+            {
+              "and": [
+                "Image dimensions exceed maxEdge",
+                "Canvas context is available",
+                "toBlob produces compressed output"
+              ],
+              "given": "A valid image file larger than maxEdge dimensions with default options",
+              "name": "Large image compression",
+              "then": "Returns a compressed Blob with dimensions scaled to fit within maxEdge while preserving aspect ratio",
+              "when": "compressPhoto is called"
+            },
+            {
+              "and": ["Image dimensions are within maxEdge bounds", "Quality parameter is applied"],
+              "given": "A valid image file with dimensions smaller than maxEdge",
+              "name": "Small image quality compression only",
+              "then": "Returns a Blob with original dimensions but reduced quality",
+              "when": "compressPhoto is called with quality less than 1.0"
+            },
+            {
+              "and": ["Custom maxEdge, quality, and type parameters provided"],
+              "given": "A valid image file with custom compression options",
+              "name": "Custom compression parameters",
+              "then": "Returns a Blob formatted according to specified type with custom dimensions and quality",
+              "when": "compressPhoto is called with custom options"
+            },
+            {
+              "and": ["createImageBitmap fails or canvas operations fail"],
+              "given": "An invalid or corrupted image file",
+              "name": "Invalid image handling",
+              "then": "Rejects with error indicating image processing failure",
+              "when": "compressPhoto is called"
+            }
+          ]
+        },
+        {
+          "description": "Converts a byte count into a human-readable string representation with appropriate units (B, KB, MB, GB).",
+          "functionName": "formatBytes",
+          "inputs": ["bytes: number"],
+          "name": "formatBytes",
+          "outputs": ["string"],
+          "scenarios": [
+            {
+              "and": ["Value is less than 1024"],
+              "given": "A byte count of 512",
+              "name": "Bytes only",
+              "then": "Returns '512 B'",
+              "when": "formatBytes is called"
+            },
+            {
+              "and": ["Value converts to whole number in KB"],
+              "given": "A byte count of 2048",
+              "name": "Exact kilobytes",
+              "then": "Returns '2 KB'",
+              "when": "formatBytes is called"
+            },
+            {
+              "and": ["Value requires decimal precision in MB"],
+              "given": "A byte count of 1572864 (1.5 MB)",
+              "name": "Megabytes with decimals",
+              "then": "Returns '1.5 MB'",
+              "when": "formatBytes is called"
+            },
+            {
+              "and": ["Value is zero"],
+              "given": "A byte count of 0",
+              "name": "Zero bytes",
+              "then": "Returns '0 B'",
+              "when": "formatBytes is called"
+            },
+            {
+              "and": ["Value is negative"],
+              "given": "A byte count of -1024",
+              "name": "Negative bytes",
+              "then": "Returns '0 B' or handles gracefully",
+              "when": "formatBytes is called"
+            }
+          ]
+        }
+      ],
+      "purpose": "Provides client-side image compression and file size formatting utilities for photo handling in visit submissions and other photo-capturing workflows.",
+      "sideEffects": [
+        "Creates and manipulates HTMLCanvasElement in DOM",
+        "Creates ImageBitmap from file data",
+        "Invokes canvas.toBlob for binary output generation",
+        "Memory allocation for bitmap and canvas operations"
+      ],
+      "subSpecs": [
+        {
+          "callee": "createImageBitmap",
+          "name": "imageBitmapCreation",
+          "operations": [
+            {
+              "description": "The createImageBitmap operation SHALL decode a source image into an ImageBitmap object suitable for canvas rendering.",
+              "functionName": "createImageBitmap",
+              "inputs": ["sourceImage", "options"],
+              "name": "decodeImageToBitmap",
+              "outputs": ["imageBitmap"],
+              "scenarios": [
+                {
+                  "and": [
+                    "the resulting ImageBitmap SHALL have width and height properties reflecting the decoded image dimensions"
+                  ],
+                  "given": "a valid image file or blob source",
+                  "name": "successfulImageDecoding",
+                  "then": "an ImageBitmap object SHALL be returned",
+                  "when": "createImageBitmap is called with the source"
+                },
+                {
+                  "and": ["the error SHALL be catchable via promise rejection"],
+                  "given": "an invalid or corrupted image source",
+                  "name": "invalidImageRejection",
+                  "then": "the operation SHALL reject with a DOMException",
+                  "when": "createImageBitmap is invoked"
+                }
+              ]
+            }
+          ],
+          "purpose": "Decodes image sources into hardware-accelerated ImageBitmap objects for efficient canvas manipulation."
+        },
+        {
+          "callee": "Math.max",
+          "name": "dimensionScaling",
+          "operations": [
+            {
+              "description": "The Math.max operation SHALL determine the larger of two numeric dimension values to establish the dominant scaling axis.",
+              "functionName": "Math.max",
+              "inputs": ["width", "height"],
+              "name": "determineDominantDimension",
+              "outputs": ["largerDimension"],
+              "scenarios": [
+                {
+                  "and": ["the result SHALL be used to calculate the uniform scale factor"],
+                  "given": "an image with width 1920 and height 1080",
+                  "name": "widthDominant",
+                  "then": "Math.max SHALL return 1920",
+                  "when": "comparing dimensions for scale calculation"
+                },
+                {
+                  "and": ["the result SHALL preserve aspect ratio in subsequent calculations"],
+                  "given": "an image with width 800 and height 1200",
+                  "name": "heightDominant",
+                  "then": "Math.max SHALL return 1200",
+                  "when": "comparing dimensions for scale calculation"
+                }
+              ]
+            }
+          ],
+          "purpose": "Identifies the larger image dimension to calculate proportional scaling factors for compression."
+        },
+        {
+          "callee": "Math.round",
+          "name": "pixelRounding",
+          "operations": [
+            {
+              "description": "The Math.round operation SHALL convert calculated floating-point canvas dimensions to integer pixel values.",
+              "functionName": "Math.round",
+              "inputs": ["scaledDimension"],
+              "name": "roundToIntegerPixels",
+              "outputs": ["integerDimension"],
+              "scenarios": [
+                {
+                  "and": [
+                    "the rounded value SHALL be assignable to canvas width/height properties"
+                  ],
+                  "given": "a calculated canvas width of 639.7 pixels",
+                  "name": "roundUp",
+                  "then": "Math.round SHALL return 640",
+                  "when": "rounding the dimension for canvas sizing"
+                },
+                {
+                  "and": ["the rounded value SHALL prevent sub-pixel rendering artifacts"],
+                  "given": "a calculated canvas height of 479.2 pixels",
+                  "name": "roundDown",
+                  "then": "Math.round SHALL return 479",
+                  "when": "rounding the dimension for canvas sizing"
+                }
+              ]
+            }
+          ],
+          "purpose": "Ensures computed dimension values are valid integers for canvas element sizing."
+        },
+        {
+          "callee": "document.createElement",
+          "name": "canvasElementCreation",
+          "operations": [
+            {
+              "description": "The document.createElement operation SHALL instantiate a new HTMLCanvasElement in memory for offscreen image processing.",
+              "functionName": "document.createElement",
+              "inputs": ["tagName"],
+              "name": "createOffscreenCanvas",
+              "outputs": ["canvasElement"],
+              "scenarios": [
+                {
+                  "and": [
+                    "the element SHALL NOT be appended to the DOM",
+                    "the element SHALL expose width and height properties"
+                  ],
+                  "given": "a document context with standard DOM APIs available",
+                  "name": "canvasInstantiation",
+                  "then": "an HTMLCanvasElement instance SHALL be returned",
+                  "when": "createElement is called with 'canvas'"
+                },
+                {
+                  "and": ["the element SHALL support the getContext method"],
+                  "given": "a newly created canvas element",
+                  "name": "canvasApiAvailability",
+                  "then": "the element SHALL be a valid instance of HTMLCanvasElement",
+                  "when": "verifying the created element type"
+                }
+              ]
+            }
+          ],
+          "purpose": "Creates an offscreen canvas element for non-destructive image resizing and compression operations."
+        },
+        {
+          "callee": "canvas.getContext",
+          "name": "renderingContextAcquisition",
+          "operations": [
+            {
+              "description": "The canvas.getContext operation SHALL obtain a 2D rendering context for drawing operations on the canvas surface.",
+              "functionName": "canvas.getContext",
+              "inputs": ["contextType", "contextAttributes"],
+              "name": "acquire2dContext",
+              "outputs": ["canvasRenderingContext2D"],
+              "scenarios": [
+                {
+                  "and": [
+                    "the context SHALL expose drawImage method",
+                    "the context SHALL expose toBlob method"
+                  ],
+                  "given": "a valid HTMLCanvasElement and supported browser environment",
+                  "name": "successfulContextCreation",
+                  "then": "a CanvasRenderingContext2D object SHALL be returned",
+                  "when": "getContext is called with '2d'"
+                },
+                {
+                  "and": ["subsequent calls with '2d' SHALL return the same context instance"],
+                  "given": "a canvas element that already has a 2D context",
+                  "name": "contextReuse",
+                  "then": "the existing context SHALL be returned",
+                  "when": "getContext('2d') is called again"
+                }
+              ]
+            }
+          ],
+          "purpose": "Acquires the 2D rendering interface required to draw and export compressed image data."
+        },
+        {
+          "callee": "ctx.drawImage",
+          "name": "imageDrawing",
+          "operations": [
+            {
+              "description": "The ctx.drawImage operation SHALL render the source ImageBitmap onto the canvas with specified dimensions.",
+              "functionName": "ctx.drawImage",
+              "inputs": ["imageBitmap", "dx", "dy", "dWidth", "dHeight"],
+              "name": "drawScaledImage",
+              "outputs": ["renderedCanvasPixels"],
+              "scenarios": [
+                {
+                  "and": [
+                    "the source image SHALL be proportionally scaled to fit the destination dimensions",
+                    "the canvas pixel data SHALL be updated"
+                  ],
+                  "given": "a valid ImageBitmap and 2D context with set canvas dimensions",
+                  "name": "successfulDrawOperation",
+                  "then": "the image SHALL be drawn to the canvas",
+                  "when": "drawImage is called with the bitmap and target dimensions"
+                },
+                {
+                  "and": ["the drawn image SHALL occupy the full canvas area"],
+                  "given": "a canvas sized to 800x600 and an ImageBitmap of any source size",
+                  "name": "dimensionConstrainedDraw",
+                  "then": "the output SHALL fill exactly 800x600 pixels",
+                  "when": "drawImage specifies dWidth=800 and dHeight=600"
+                }
+              ]
+            }
+          ],
+          "purpose": "Renders the decoded image onto the canvas at the computed compression dimensions."
+        },
+        {
+          "callee": "bitmap.close",
+          "name": "bitmapDisposal",
+          "operations": [
+            {
+              "description": "The bitmap.close operation SHALL release underlying graphics resources associated with the ImageBitmap.",
+              "functionName": "bitmap.close",
+              "inputs": ["imageBitmap"],
+              "name": "releaseBitmapResources",
+              "outputs": [],
+              "scenarios": [
+                {
+                  "and": [
+                    "subsequent use of the bitmap SHALL throw an InvalidStateError",
+                    "memory pressure from large decoded images SHALL be reduced"
+                  ],
+                  "given": "an ImageBitmap that has been successfully drawn to canvas",
+                  "name": "resourceCleanup",
+                  "then": "the bitmap's graphics resources SHALL be freed",
+                  "when": "close is called on the bitmap"
+                },
+                {
+                  "and": ["the operation SHALL complete without error"],
+                  "given": "an ImageBitmap that is already closed",
+                  "name": "idempotentClose",
+                  "then": "no operation SHALL be performed",
+                  "when": "close is called again"
+                }
+              ]
+            }
+          ],
+          "purpose": "Explicitly frees ImageBitmap memory to prevent resource leaks during batch photo processing."
+        },
+        {
+          "callee": "canvas.toBlob",
+          "name": "blobExport",
+          "operations": [
+            {
+              "description": "The canvas.toBlob operation SHALL encode the canvas pixel data as a compressed image file in the specified format.",
+              "functionName": "canvas.toBlob",
+              "inputs": ["callback", "mimeType", "qualityArgument"],
+              "name": "exportCompressedBlob",
+              "outputs": ["blob"],
+              "scenarios": [
+                {
+                  "and": [
+                    "the blob type SHALL match the specified MIME type",
+                    "the blob size SHALL reflect quality parameter compression"
+                  ],
+                  "given": "a canvas with rendered image data and a valid callback",
+                  "name": "jpegExportWithQuality",
+                  "then": "a Blob SHALL be provided to the callback",
+                  "when": "toBlob is called with 'image/jpeg' and quality 0.8"
+                },
+                {
+                  "and": ["the blob SHALL be suitable for File construction or upload"],
+                  "given": "a canvas containing any valid pixel data",
+                  "name": "blobTypeValidation",
+                  "then": "the resulting blob SHALL have size greater than 0 bytes",
+                  "when": "toBlob callback receives the blob parameter"
+                }
+              ]
+            }
+          ],
+          "purpose": "Exports the resized canvas content as a compressed image Blob for file upload or storage."
+        }
+      ],
+      "locationFile": "src/web/lib/photo.ts"
+    },
+    {
+      "dependencies": [],
+      "domain": "session",
+      "name": "DatabaseClientFactory",
+      "operations": [
+        {
+          "description": "Creates a Drizzle ORM client instance configured with the D1 database and schema bindings.",
+          "functionName": "createClient",
+          "inputs": ["env: { DB: D1Database }"],
+          "name": "createClient",
+          "outputs": ["DrizzleDatabaseClient"],
+          "scenarios": [
+            {
+              "and": ["Schema bindings are loaded from schema.js"],
+              "given": "A valid D1Database binding is provided in the environment",
+              "name": "Successful client creation",
+              "then": "A Drizzle ORM client is returned with schema and database configured",
+              "when": "createClient is called with the environment object"
+            },
+            {
+              "and": [],
+              "given": "The environment object is missing the DB binding",
+              "name": "Missing database binding",
+              "then": "An error is thrown indicating the DB binding is required",
+              "when": "createClient is called"
+            }
+          ]
+        }
+      ],
+      "purpose": "Factory for creating database client instances bound to Cloudflare D1, enabling type-safe database operations through Drizzle ORM with the application's schema definitions.",
+      "sideEffects": ["Initializes database connection to Cloudflare D1"],
+      "locationFile": "src/worker/db/client.ts"
+    }
+  ],
+  "tokens": 91721,
+  "duration": 635163
+}

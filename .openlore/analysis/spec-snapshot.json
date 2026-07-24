@@ -1,0 +1,182 @@
+{
+  "version": "1",
+  "generatedAt": "2026-07-24T06:20:58.931Z",
+  "git": {
+    "commit": "35b0b28",
+    "branch": "rewrite/ultracode-frontend",
+    "dirty": true
+  },
+  "coverage": {
+    "totalFunctions": 498,
+    "coveredFunctions": 41,
+    "orphanFunctions": 36,
+    "coveragePct": 8
+  },
+  "domains": [
+    {
+      "name": "api",
+      "specFile": "openspec/specs/api/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 56,
+      "mappedFunctionCount": 0,
+      "coveragePct": 0,
+      "specModifiedAt": "2026-07-23T20:50:54.904Z",
+      "sourcesModifiedAt": "1970-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "architecture",
+      "specFile": "openspec/specs/architecture/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 15,
+      "mappedFunctionCount": 0,
+      "coveragePct": 0,
+      "specModifiedAt": "2026-07-23T20:50:54.927Z",
+      "sourcesModifiedAt": "1970-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "auth",
+      "specFile": "openspec/specs/auth/spec.md",
+      "sourceFiles": [
+        "src/worker/lib/password.ts",
+        "src/worker/lib/rbac.ts",
+        "src/worker/lib/errors.ts",
+        "src/worker/index.ts",
+        "src/worker/routes/auth.ts",
+        "src/web/lib/api.ts"
+      ],
+      "requirementCount": 17,
+      "mappedFunctionCount": 13,
+      "coveragePct": 76,
+      "specModifiedAt": "2026-07-23T20:50:55.044Z",
+      "sourcesModifiedAt": "2026-07-24T06:12:01.432Z"
+    },
+    {
+      "name": "consignment",
+      "specFile": "openspec/specs/consignment/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 5,
+      "mappedFunctionCount": 0,
+      "coveragePct": 0,
+      "specModifiedAt": "2026-07-23T20:50:55.085Z",
+      "sourcesModifiedAt": "1970-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "hpp",
+      "specFile": "openspec/specs/hpp/spec.md",
+      "sourceFiles": [
+        "src/worker/services/hpp.ts"
+      ],
+      "requirementCount": 31,
+      "mappedFunctionCount": 5,
+      "coveragePct": 16,
+      "specModifiedAt": "2026-07-23T20:50:55.238Z",
+      "sourcesModifiedAt": "2026-07-23T20:50:57.111Z"
+    },
+    {
+      "name": "outlet",
+      "specFile": "openspec/specs/outlet/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 5,
+      "mappedFunctionCount": 0,
+      "coveragePct": 0,
+      "specModifiedAt": "2026-07-23T20:50:55.253Z",
+      "sourcesModifiedAt": "1970-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "overview",
+      "specFile": "openspec/specs/overview/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 7,
+      "mappedFunctionCount": 0,
+      "coveragePct": 0,
+      "specModifiedAt": "2026-07-23T20:50:55.279Z",
+      "sourcesModifiedAt": "1970-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "product",
+      "specFile": "openspec/specs/product/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 7,
+      "mappedFunctionCount": 0,
+      "coveragePct": 0,
+      "specModifiedAt": "2026-07-23T20:50:55.303Z",
+      "sourcesModifiedAt": "1970-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "raw-material",
+      "specFile": "openspec/specs/raw-material/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 9,
+      "mappedFunctionCount": 0,
+      "coveragePct": 0,
+      "specModifiedAt": "2026-07-23T20:50:55.319Z",
+      "sourcesModifiedAt": "1970-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "session",
+      "specFile": "openspec/specs/session/spec.md",
+      "sourceFiles": [
+        "src/worker/lib/session.ts",
+        "src/worker/db/client.ts"
+      ],
+      "requirementCount": 27,
+      "mappedFunctionCount": 9,
+      "coveragePct": 33,
+      "specModifiedAt": "2026-07-23T20:50:55.410Z",
+      "sourcesModifiedAt": "2026-07-23T20:50:56.672Z"
+    },
+    {
+      "name": "user",
+      "specFile": "openspec/specs/user/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 5,
+      "mappedFunctionCount": 0,
+      "coveragePct": 0,
+      "specModifiedAt": "2026-07-23T20:50:55.423Z",
+      "sourcesModifiedAt": "1970-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "visit",
+      "specFile": "openspec/specs/visit/spec.md",
+      "sourceFiles": [
+        "src/worker/services/visit.ts",
+        "src/web/lib/visit.ts",
+        "src/worker/services/voidVisit.ts",
+        "src/web/lib/photo.ts",
+        "src/worker/services/hpp.ts",
+        "src/worker/lib/rbac.ts"
+      ],
+      "requirementCount": 77,
+      "mappedFunctionCount": 16,
+      "coveragePct": 21,
+      "specModifiedAt": "2026-07-23T20:50:55.725Z",
+      "sourcesModifiedAt": "2026-07-23T23:29:16.010Z"
+    }
+  ],
+  "hubs": [
+    {
+      "name": "get",
+      "file": "src/web/lib/api/client.ts",
+      "fanIn": 14,
+      "covered": false
+    },
+    {
+      "name": "post",
+      "file": "src/web/lib/api/client.ts",
+      "fanIn": 10,
+      "covered": false
+    },
+    {
+      "name": "prefersReducedMotion",
+      "file": "src/web/lib/utils/animations.ts",
+      "fanIn": 8,
+      "covered": false
+    },
+    {
+      "name": "requestJson",
+      "file": "src/web/lib/api/client.ts",
+      "fanIn": 5,
+      "covered": false
+    }
+  ]
+}

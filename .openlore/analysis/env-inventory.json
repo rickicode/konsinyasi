@@ -1,0 +1,20 @@
+[
+  {
+    "name": "CI",
+    "files": ["playwright.config.ts"],
+    "hasDefault": false,
+    "required": true
+  },
+  {
+    "name": "SEED_OWNER_EMAIL",
+    "files": ["scripts/seed-owner.ts"],
+    "hasDefault": false,
+    "required": true
+  },
+  {
+    "name": "SEED_OWNER_PASSWORD",
+    "files": ["scripts/seed-owner.ts"],
+    "hasDefault": false,
+    "required": true
+  }
+]

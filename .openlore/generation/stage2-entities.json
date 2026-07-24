@@ -1,0 +1,2032 @@
+{
+  "stage": "entities",
+  "success": true,
+  "data": [
+    {
+      "description": "Represents a registered system user with authentication credentials and role-based access. *(analyzed in 2 chunks)*",
+      "location": "src/worker/db/schema.ts",
+      "name": "User",
+      "properties": [
+        {
+          "description": "Unique identifier",
+          "name": "id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Unique email address used for login",
+          "name": "email",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Display name of the user",
+          "name": "name",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Bcrypt or similar password hash",
+          "name": "password_hash",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Role in the system: owner or staff",
+          "name": "role",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Account status: active or inactive",
+          "name": "status",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of record creation",
+          "name": "created_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of last update",
+          "name": "updated_at",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "relationships": [],
+      "scenarios": [
+        {
+          "and": ["Role defaults to staff", "Status defaults to active"],
+          "given": "New user registration data",
+          "name": "Create user",
+          "then": "User is persisted with hashed password, default role 'staff', and status 'active'",
+          "when": "register() is called"
+        },
+        {
+          "and": ["Cannot log in when inactive"],
+          "given": "User with status 'inactive'",
+          "name": "Deactivate user",
+          "then": "User status is set to 'inactive'",
+          "when": "deactivate() is called"
+        }
+      ],
+      "validations": [
+        "Email must be unique",
+        "Role must be 'owner' or 'staff'",
+        "Status must be 'active' or 'inactive'"
+      ]
+    },
+    {
+      "description": "Represents an authenticated user session for stateless authentication. *(analyzed in 2 chunks)*",
+      "location": "src/worker/db/schema.ts",
+      "name": "Session",
+      "properties": [
+        {
+          "description": "Unique session identifier",
+          "name": "id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Reference to the authenticated user",
+          "name": "user_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "ISO timestamp when session expires",
+          "name": "expires_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "ISO timestamp of last activity",
+          "name": "last_seen_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of record creation",
+          "name": "created_at",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Session belongs to exactly one user",
+          "targetEntity": "User",
+          "type": "belongs-to"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Expires at is set explicitly"],
+          "given": "Valid user credentials",
+          "name": "Create session",
+          "then": "Session is created with user reference and expiration timestamp",
+          "when": "login() is called"
+        },
+        {
+          "and": ["Session is deleted via cascade when user is deleted"],
+          "given": "Active session exists",
+          "name": "Expire session",
+          "then": "Session is removed from database",
+          "when": "logout() or user deletion occurs"
+        }
+      ],
+      "validations": [
+        "User must exist",
+        "Expires at must be in the future",
+        "Session is deleted when user is deleted (cascade)"
+      ]
+    },
+    {
+      "description": "Represents a key-value store for application-wide configuration settings. *(analyzed in 2 chunks)*",
+      "location": "src/worker/db/schema.ts",
+      "name": "AppSetting",
+      "properties": [
+        {
+          "description": "Unique setting identifier/key",
+          "name": "key",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Serialized setting value",
+          "name": "value",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of last update",
+          "name": "updated_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Reference to user who last modified the setting",
+          "name": "updated_by",
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Setting may track who last updated it",
+          "targetEntity": "User",
+          "type": "belongs-to"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Updated by tracks the modifying user optionally"],
+          "given": "Application needs configuration change",
+          "name": "Update setting",
+          "then": "Setting value is updated with new timestamp and optional user reference",
+          "when": "setSetting() is called"
+        }
+      ],
+      "validations": ["Key must be unique", "Value cannot be null"]
+    },
+    {
+      "description": "Represents a raw material or ingredient used in product manufacturing with pricing per unit. *(analyzed in 2 chunks)*",
+      "location": "src/worker/db/schema.ts",
+      "name": "RawMaterial",
+      "properties": [
+        {
+          "description": "Unique identifier",
+          "name": "id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Material name",
+          "name": "name",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Base unit of measurement: ml, l, cl, gr, kg, or pcs",
+          "name": "base_unit",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Price per base unit in smallest currency unit",
+          "name": "price_per_base_unit",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "Soft deletion timestamp",
+          "name": "deleted_at",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of record creation",
+          "name": "created_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of last update",
+          "name": "updated_at",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Material can be used in multiple product recipes",
+          "targetEntity": "ProductRecipe",
+          "type": "has-many"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Price must be non-negative"],
+          "given": "New material data",
+          "name": "Create raw material",
+          "then": "Raw material is persisted with valid base unit and non-negative price",
+          "when": "createRawMaterial() is called"
+        },
+        {
+          "and": ["Soft delete preserves historical recipe data"],
+          "given": "Material exists in product recipes",
+          "name": "Soft delete material",
+          "then": "Material is marked deleted but not removed, preventing new recipes",
+          "when": "deleteRawMaterial() is called"
+        }
+      ],
+      "validations": [
+        "Price per base unit must be >= 0",
+        "Base unit must be one of: ml, l, cl, gr, kg, pcs",
+        "Soft deleted materials cannot be used in new recipes"
+      ]
+    },
+    {
+      "description": "Represents a finished good sold to outlets with calculated or overridden production cost. *(analyzed in 2 chunks)*",
+      "location": "src/worker/db/schema.ts",
+      "name": "Product",
+      "properties": [
+        {
+          "description": "Unique identifier",
+          "name": "id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Product name",
+          "name": "name",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Calculated production cost from recipes",
+          "name": "hpp",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "Manual cost override, takes precedence over calculated hpp",
+          "name": "hpp_override",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "description": "Selling price to outlet in smallest currency unit",
+          "name": "price_to_outlet",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "Product status: active or inactive",
+          "name": "status",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Soft deletion timestamp",
+          "name": "deleted_at",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of record creation",
+          "name": "created_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of last update",
+          "name": "updated_at",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Product has one or more recipe line items",
+          "targetEntity": "ProductRecipe",
+          "type": "has-many"
+        },
+        {
+          "description": "Product can be in multiple consignment cycles",
+          "targetEntity": "ConsignmentCycle",
+          "type": "has-many"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["HPP defaults to 0", "Status defaults to active"],
+          "given": "New product data with recipe components",
+          "name": "Create product",
+          "then": "Product is created with calculated HPP from recipes or override if set",
+          "when": "createProduct() is called"
+        },
+        {
+          "and": ["HPP override takes precedence when present"],
+          "given": "Product with hpp_override set",
+          "name": "Use override cost",
+          "then": "HPP override is used instead of calculated recipe cost for pricing decisions",
+          "when": "getEffectiveHpp() is called"
+        }
+      ],
+      "validations": [
+        "HPP must be >= 0",
+        "Price to outlet must be >= 0",
+        "HPP override if present must be >= 0",
+        "Status must be 'active' or 'inactive'"
+      ]
+    },
+    {
+      "description": "Represents a bill of materials line item linking a product to its raw material components. *(analyzed in 2 chunks)*",
+      "location": "src/worker/db/schema.ts",
+      "name": "ProductRecipe",
+      "properties": [
+        {
+          "description": "Unique identifier",
+          "name": "id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Reference to parent product",
+          "name": "product_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Reference to raw material component",
+          "name": "raw_material_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Amount of material needed",
+          "name": "quantity",
+          "required": true,
+          "type": "real"
+        },
+        {
+          "description": "Unit for quantity: ml, l, cl, gr, kg, or pcs",
+          "name": "unit",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of record creation",
+          "name": "created_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of last update",
+          "name": "updated_at",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Recipe belongs to exactly one product",
+          "targetEntity": "Product",
+          "type": "belongs-to"
+        },
+        {
+          "description": "Recipe references exactly one raw material",
+          "targetEntity": "RawMaterial",
+          "type": "belongs-to"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Unique constraint prevents duplicate material per product"],
+          "given": "Product and raw material exist",
+          "name": "Add recipe component",
+          "then": "Recipe line is created linking product to material with positive quantity",
+          "when": "addRecipeItem() is called"
+        },
+        {
+          "and": ["Cascade delete removes all recipes when product deleted"],
+          "given": "Product is deleted",
+          "name": "Clean up recipes",
+          "then": "All associated product recipes are removed",
+          "when": "deleteProduct() is called"
+        },
+        {
+          "and": ["Restrict prevents material deletion if used in recipes"],
+          "given": "Material is referenced in active recipe",
+          "name": "Protect referenced material",
+          "then": "Material deletion is blocked with restrict constraint",
+          "when": "deleteRawMaterial() is called"
+        }
+      ],
+      "validations": [
+        "Quantity must be > 0",
+        "Unit must be one of: ml, l, cl, gr, kg, pcs",
+        "Product and raw material combination must be unique",
+        "Product deletion cascades to recipes",
+        "Raw material deletion restricted if referenced"
+      ]
+    },
+    {
+      "description": "Represents a retail outlet or store location with geographic coordinates. *(analyzed in 2 chunks)*",
+      "location": "src/worker/db/schema.ts",
+      "name": "Outlet",
+      "properties": [
+        {
+          "description": "Unique identifier",
+          "name": "id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Outlet name",
+          "name": "name",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Physical address",
+          "name": "address",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Latitude coordinate",
+          "name": "latitude",
+          "required": true,
+          "type": "real"
+        },
+        {
+          "description": "Longitude coordinate",
+          "name": "longitude",
+          "required": true,
+          "type": "real"
+        },
+        {
+          "description": "GPS accuracy in meters",
+          "name": "location_accuracy_m",
+          "required": false,
+          "type": "real"
+        },
+        {
+          "description": "When location was captured",
+          "name": "location_captured_at",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "S3 or R2 key for outlet photo",
+          "name": "photo_key",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Additional notes",
+          "name": "notes",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Outlet status: active or inactive",
+          "name": "status",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Soft deletion timestamp",
+          "name": "deleted_at",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of record creation",
+          "name": "created_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of last update",
+          "name": "updated_at",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Outlet can have multiple consignment cycles",
+          "targetEntity": "ConsignmentCycle",
+          "type": "has-many"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Status defaults to active"],
+          "given": "Valid outlet data with GPS coordinates",
+          "name": "Create outlet",
+          "then": "Outlet is persisted with geographic index for spatial queries",
+          "when": "createOutlet() is called"
+        },
+        {
+          "and": ["Geo index enables nearby outlet queries"],
+          "given": "Multiple outlets exist",
+          "name": "Query by location",
+          "then": "Outlets within geographic bounds are returned efficiently",
+          "when": "findNearbyOutlets() is called"
+        }
+      ],
+      "validations": [
+        "Latitude must be between -90 and 90",
+        "Longitude must be between -180 and 180",
+        "Status must be 'active' or 'inactive'",
+        "Name is required"
+      ]
+    },
+    {
+      "description": "Represents a consignment inventory cycle where products are dropped at an outlet and later picked up with sales/returns reconciliation. *(analyzed in 2 chunks)*",
+      "location": "src/worker/db/schema.ts",
+      "name": "ConsignmentCycle",
+      "properties": [
+        {
+          "description": "Unique identifier",
+          "name": "id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Reference to outlet receiving consignment",
+          "name": "outlet_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Reference to consigned product",
+          "name": "product_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "HPP at time of drop (snapshot)",
+          "name": "hpp_snapshot",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "Price to outlet at time of drop (snapshot)",
+          "name": "price_snapshot",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "Quantity dropped at outlet",
+          "name": "qty_dropped",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "When products were dropped off",
+          "name": "dropped_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Quantity sold by outlet",
+          "name": "qty_sold",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "Quantity returned in good condition",
+          "name": "qty_return_good",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "Quantity returned damaged",
+          "name": "qty_return_damaged",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "Money collected from outlet",
+          "name": "amount_collected",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "When cycle was closed and picked up",
+          "name": "picked_up_at",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Cycle status: open, closed, or voided",
+          "name": "status",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Reference to visit submission that created/updated cycle",
+          "name": "visit_submission_id",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Additional notes",
+          "name": "notes",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of record creation",
+          "name": "created_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp of last update",
+          "name": "updated_at",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Cycle belongs to exactly one outlet",
+          "targetEntity": "Outlet",
+          "type": "belongs-to"
+        },
+        {
+          "description": "Cycle contains exactly one product type",
+          "targetEntity": "Product",
+          "type": "belongs-to"
+        },
+        {
+          "description": "Cycle may be linked to a visit submission",
+          "targetEntity": "VisitSubmission",
+          "type": "belongs-to"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": [
+            "HPP and price are snapshotted at drop time",
+            "All quantities default to 0 except qty_dropped"
+          ],
+          "given": "Staff visits outlet with products",
+          "name": "Drop consignment",
+          "then": "Open cycle is created with product, outlet, quantities, and snapshot pricing",
+          "when": "dropConsignment() is called"
+        },
+        {
+          "and": ["Index on outlet + open status enables quick lookup"],
+          "given": "Staff returns to outlet",
+          "name": "Find open cycles",
+          "then": "Open cycles for outlet not yet picked up are returned",
+          "when": "getOpenCyclesByOutlet() is called"
+        },
+        {
+          "and": ["Picked up at marks cycle closure"],
+          "given": "Cycle is open with sales and returns recorded",
+          "name": "Pick up consignment",
+          "then": "Cycle status changes to closed, picked_up_at is set, final reconciliation calculated",
+          "when": "pickUpConsignment() is called"
+        },
+        {
+          "and": ["Voided status cancels the cycle"],
+          "given": "Cycle is open with errors",
+          "name": "Void cycle",
+          "then": "Cycle status changes to voided, no financial impact recorded",
+          "when": "voidCycle() is called"
+        }
+      ],
+      "validations": [
+        "HPP snapshot must be >= 0",
+        "Price snapshot must be >= 0",
+        "Quantity dropped must be > 0",
+        "Quantity sold must be >= 0",
+        "Quantity returned good must be >= 0",
+        "Quantity returned damaged must be >= 0",
+        "Amount collected must be >= 0",
+        "Outlet deletion restricted if open cycles exist",
+        "Product deletion restricted if referenced in cycles",
+        "qty_sold + qty_return_good + qty_return_damaged <= qty_dropped when closed"
+      ]
+    },
+    {
+      "description": "Represents a submitted visit record by a user to an outlet, including geolocation data, geofence validation, and optional override capabilities. *(analyzed in 2 chunks)*",
+      "location": "src/worker/db/schema.ts",
+      "name": "VisitSubmission",
+      "properties": [
+        {
+          "description": "Client-reported latitude coordinate",
+          "name": "client_latitude",
+          "required": true,
+          "type": "real"
+        },
+        {
+          "description": "Client-reported longitude coordinate",
+          "name": "client_longitude",
+          "required": true,
+          "type": "real"
+        },
+        {
+          "description": "Client-reported GPS accuracy in meters",
+          "name": "client_accuracy_m",
+          "required": false,
+          "type": "real"
+        },
+        {
+          "description": "Timestamp of record creation",
+          "name": "created_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Calculated distance from client to outlet in meters",
+          "name": "distance_m",
+          "required": true,
+          "type": "real"
+        },
+        {
+          "description": "Whether geofence validation was overridden",
+          "name": "geofence_override",
+          "required": true,
+          "type": "boolean"
+        },
+        {
+          "description": "Reason provided for geofence override",
+          "name": "geofence_override_reason",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Allowed radius for geofence validation in meters",
+          "name": "geofence_radius_m",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "description": "Unique idempotency key for duplicate prevention",
+          "name": "idempotency_key",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Optional notes attached to the visit",
+          "name": "notes",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Referenced outlet identifier",
+          "name": "outlet_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "JSON-serialized form responses",
+          "name": "response_json",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "Current lifecycle status of the submission",
+          "name": "status",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "description": "User who voided this submission",
+          "name": "voided_by",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Timestamp when the submission was voided",
+          "name": "voided_at",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "Reason for voiding the submission",
+          "name": "void_reason",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "description": "User who submitted the visit",
+          "name": "user_id",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Visit submission is associated with a specific outlet",
+          "targetEntity": "Outlet",
+          "type": "belongs-to"
+        },
+        {
+          "description": "Visit submission is created by a user",
+          "targetEntity": "User",
+          "type": "belongs-to"
+        },
+        {
+          "description": "Visit submission may be voided by a user",
+          "targetEntity": "User",
+          "type": "belongs-to"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": [
+            "distance_m is calculated from client coordinates to outlet coordinates",
+            "geofence_override is false by default"
+          ],
+          "given": "A user is within valid range of an outlet or provides override reason",
+          "name": "Submit valid visit",
+          "then": "VisitSubmission is created with status 'committed' and idempotency_key set",
+          "when": "visit submission is received with valid outlet_id, user_id, and location data"
+        },
+        {
+          "and": [
+            "voided_at is set to current timestamp",
+            "voided_by references the user performing the action"
+          ],
+          "given": "A committed VisitSubmission exists",
+          "name": "Void existing visit",
+          "then": "VisitSubmission status changes to 'voided'",
+          "when": "authorized user submits void request with reason"
+        },
+        {
+          "and": ["geofence_override_reason must be provided when override is true"],
+          "given": "User is outside geofence_radius_m from outlet",
+          "name": "Geofence override submission",
+          "then": "VisitSubmission is accepted with geofence_override true and reason recorded",
+          "when": "user submits visit with geofence_override set to true and provides override reason"
+        }
+      ],
+      "validations": [
+        "distance_m must be greater than or equal to 0",
+        "geofence_radius_m must be greater than 0",
+        "status must be either 'committed' or 'voided'",
+        "geofence_override_reason is required when geofence_override is true",
+        "voided_at, voided_by, and void_reason are required when status is 'voided'",
+        "idempotency_key must be unique across all submissions",
+        "outlet_id must reference an existing Outlet",
+        "user_id must reference an existing User",
+        "voided_by must reference an existing User when provided"
+      ]
+    },
+    {
+      "description": "A draft visit record that captures collection and delivery activities at an outlet before final submission.",
+      "location": "src/web/lib/visit.ts",
+      "name": "VisitDraft",
+      "properties": [
+        {
+          "description": "Unique key to prevent duplicate submissions",
+          "name": "idempotency_key",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Identifier of the outlet being visited",
+          "name": "outlet_id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Map of pickup items with good and damaged quantities keyed by identifier",
+          "name": "pickups",
+          "required": true,
+          "type": "Record<string, { good: number; damaged: number }>"
+        },
+        {
+          "description": "List of product deliveries with quantity and notes",
+          "name": "drops",
+          "required": true,
+          "type": "array"
+        },
+        {
+          "description": "Flag indicating whether normal validation rules were overridden",
+          "name": "override",
+          "required": true,
+          "type": "boolean"
+        },
+        {
+          "description": "Reason provided when override is true",
+          "name": "overrideReason",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Free-text notes about the visit",
+          "name": "visitNotes",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "ISO timestamp when the draft was last saved",
+          "name": "savedAt",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "VisitDraft is associated with a specific outlet",
+          "targetEntity": "Outlet",
+          "type": "belongs-to"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Draft is stored in localStorage under key konsi_visit_draft_{outletId}"],
+          "given": "A visit with pickups, drops, and notes is in progress",
+          "name": "Save visit draft",
+          "then": "Draft is persisted to localStorage with current timestamp and idempotency key",
+          "when": "saveVisitDraft() is called with outlet ID and draft data"
+        },
+        {
+          "and": ["Returns null if any required field is missing or wrong type"],
+          "given": "A previously saved draft exists in localStorage",
+          "name": "Load visit draft",
+          "then": "Returns validated VisitDraft object or null if invalid",
+          "when": "loadVisitDraft() is called with outlet ID"
+        },
+        {
+          "and": ["Removes localStorage entry for the outlet"],
+          "given": "A saved draft exists for an outlet",
+          "name": "Clear visit draft",
+          "then": "Draft is removed from localStorage",
+          "when": "clearVisitDraft() is called with outlet ID"
+        }
+      ],
+      "validations": [
+        "idempotency_key must be a string",
+        "savedAt must be a string",
+        "pickups must be an object",
+        "drops must be an array",
+        "override must be a boolean",
+        "overrideReason must be a string",
+        "visitNotes must be a string",
+        "Draft is scoped to a single outlet via localStorage key"
+      ]
+    },
+    {
+      "description": "Geographic position captured from device GPS with accuracy estimate.",
+      "location": "src/web/lib/visit.ts",
+      "name": "GpsPosition",
+      "properties": [
+        {
+          "description": "Latitude in decimal degrees",
+          "name": "lat",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Longitude in decimal degrees",
+          "name": "lng",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Accuracy of the position in meters",
+          "name": "accuracy",
+          "required": true,
+          "type": "number"
+        }
+      ],
+      "relationships": [],
+      "scenarios": [
+        {
+          "and": ["Uses high accuracy mode with 10s maximum age and 30s timeout"],
+          "given": "Device supports geolocation",
+          "name": "Watch GPS position",
+          "then": "Callback receives GpsPosition with lat, lng, and accuracy",
+          "when": "watchGps() is called with update and error handlers"
+        },
+        {
+          "and": ["Returns null if geolocation is not available"],
+          "given": "Device does not support geolocation",
+          "name": "GPS unavailable",
+          "then": "Error callback is invoked with 'Perangkat tidak mendukung GPS'",
+          "when": "watchGps() is called"
+        }
+      ],
+      "validations": [
+        "Latitude must be a valid decimal degree",
+        "Longitude must be a valid decimal degree",
+        "Accuracy must be a positive number in meters"
+      ]
+    },
+    {
+      "description": "Represents the current navigation state within the single-page application, mapping URL paths to logical route names with associated parameters.",
+      "location": "src/web/lib/router.ts",
+      "name": "Route",
+      "properties": [
+        {
+          "description": "The logical name identifying the current view or page",
+          "name": "name",
+          "required": true,
+          "type": "RouteName"
+        },
+        {
+          "description": "Identifier of the outlet being visited, present when route is visitForm",
+          "name": "outletId",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "relationships": [],
+      "scenarios": [
+        {
+          "and": ["Route name is 'dashboard'", "currentPath resolves to '/beranda'"],
+          "given": "Browser URL is '/' or '/beranda'",
+          "name": "Parse dashboard route",
+          "then": "Route state reflects dashboard view",
+          "when": "parseRoute is called with the path"
+        },
+        {
+          "and": [
+            "Route name is 'visitForm'",
+            "outletId is 'abc123'",
+            "currentPath resolves to '/kunjungan/abc123'"
+          ],
+          "given": "Browser URL is '/kunjungan/abc123'",
+          "name": "Parse visit form route with outlet",
+          "then": "Route state contains outletId parameter",
+          "when": "parseRoute is called with the path"
+        },
+        {
+          "and": ["Route name is 'notFound'", "currentPath falls back to '/beranda'"],
+          "given": "Browser URL is '/unknown-path'",
+          "name": "Parse unknown route",
+          "then": "Route state reflects notFound",
+          "when": "parseRoute is called with the path"
+        },
+        {
+          "and": ["Browser history is updated via pushState or replaceState"],
+          "given": "User is on any page",
+          "name": "Navigate to new path",
+          "then": "Route store updates to reflect new path",
+          "when": "navigate() is called with a path"
+        },
+        {
+          "and": ["Route store updates from current pathname"],
+          "given": "User clicks browser back/forward button",
+          "name": "Handle browser back/forward",
+          "then": "Application route state synchronizes with URL",
+          "when": "popstate event fires"
+        }
+      ],
+      "validations": [
+        "Path must be normalized to start with '/'",
+        "Empty path normalizes to '/'",
+        "visitForm route requires non-empty outletId",
+        "Unknown paths resolve to notFound route",
+        "Public routes only include '/login'"
+      ]
+    },
+    {
+      "description": "Enumeration of all recognized navigation destinations in the application, used for type-safe routing and tab navigation.",
+      "location": "src/web/lib/router.ts",
+      "name": "RouteName",
+      "properties": [
+        {
+          "description": "Literal value identifying the route",
+          "name": "value",
+          "required": true,
+          "type": "'login' | 'dashboard' | 'visits' | 'visitForm' | 'outlets' | 'master' | 'users' | 'notFound'"
+        }
+      ],
+      "relationships": [],
+      "scenarios": [
+        {
+          "and": [],
+          "given": "A path string exists",
+          "name": "Extract route name from path",
+          "then": "Returns the corresponding RouteName literal",
+          "when": "routeName() is called"
+        }
+      ],
+      "validations": [
+        "Must be one of the eight defined route name literals",
+        "routeName function must return valid RouteName for any input path"
+      ]
+    },
+    {
+      "description": "Represents the bottom navigation tabs available in the application, mapping to primary feature areas.",
+      "location": "src/web/lib/router.ts",
+      "name": "TabKey",
+      "properties": [
+        {
+          "description": "Literal identifier for the tab",
+          "name": "value",
+          "required": true,
+          "type": "'beranda' | 'kunjungan' | 'warung' | 'master' | 'pengguna'"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Each tab maps to a specific application route path",
+          "targetEntity": "Route",
+          "type": "maps-to"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": [
+            "Tab 'beranda' maps to '/beranda'",
+            "Tab 'kunjungan' maps to '/kunjungan'",
+            "Tab 'warung' maps to '/warung'",
+            "Tab 'master' maps to '/master'",
+            "Tab 'pengguna' maps to '/pengguna'"
+          ],
+          "given": "A tab key is selected",
+          "name": "Resolve tab to route path",
+          "then": "Returns the corresponding navigation path string",
+          "when": "routeForTab() is called"
+        }
+      ],
+      "validations": [
+        "Must be one of five defined tab keys",
+        "Each tab key must map to exactly one route path",
+        "Tab keys use Indonesian language labels matching route paths"
+      ]
+    },
+    {
+      "description": "Represents a navigation tab in the application UI, controlling access to main functional areas based on user roles.",
+      "location": "src/web/lib/role.ts",
+      "name": "Tab",
+      "properties": [
+        {
+          "description": "Unique identifier for the tab",
+          "name": "key",
+          "required": true,
+          "type": "TabKey"
+        },
+        {
+          "description": "Display label for the tab",
+          "name": "label",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Roles permitted to access this tab",
+          "name": "roles",
+          "required": true,
+          "type": "string[]"
+        }
+      ],
+      "relationships": [],
+      "scenarios": [
+        {
+          "and": ["Tab 'master' is excluded", "Tab 'pengguna' is excluded"],
+          "given": "User has role 'staff'",
+          "name": "Staff tab access",
+          "then": "Tabs 'beranda', 'kunjungan', 'warung' are returned",
+          "when": "allowedTabs('staff') is called"
+        },
+        {
+          "and": [],
+          "given": "User has role 'owner'",
+          "name": "Owner tab access",
+          "then": "All tabs are returned",
+          "when": "allowedTabs('owner') is called"
+        }
+      ],
+      "validations": [
+        "TabKey must be one of: 'beranda', 'kunjungan', 'warung', 'master', 'pengguna'",
+        "Each tab must have at least one role assigned",
+        "Role 'owner' has access to all tabs",
+        "Role 'staff' does not have access to 'master' or 'pengguna' tabs"
+      ]
+    },
+    {
+      "description": "Represents a subsection within the Master area, controlling access to master data management functions based on user roles.",
+      "location": "src/web/lib/role.ts",
+      "name": "MasterSection",
+      "properties": [
+        {
+          "description": "Unique identifier for the master section",
+          "name": "key",
+          "required": true,
+          "type": "MasterSection"
+        },
+        {
+          "description": "Display label for the section",
+          "name": "label",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Roles permitted to access this section",
+          "name": "roles",
+          "required": true,
+          "type": "string[]"
+        }
+      ],
+      "relationships": [],
+      "scenarios": [
+        {
+          "and": ["Section 'bahan' is excluded", "Section 'warung' is excluded"],
+          "given": "User has role 'staff'",
+          "name": "Staff master section access",
+          "then": "Only section 'produk' is returned",
+          "when": "allowedMasterSections('staff') is called"
+        },
+        {
+          "and": [],
+          "given": "User has role 'owner'",
+          "name": "Owner master section access",
+          "then": "All master sections are returned",
+          "when": "allowedMasterSections('owner') is called"
+        }
+      ],
+      "validations": [
+        "MasterSection must be one of: 'bahan', 'produk', 'warung'",
+        "Each section must have at least one role assigned",
+        "Role 'owner' has access to all master sections",
+        "Role 'staff' only has access to 'produk' section"
+      ]
+    },
+    {
+      "description": "Represents a user role in the system that determines access permissions to tabs and master sections.",
+      "location": "src/web/lib/role.ts",
+      "name": "Role",
+      "properties": [
+        {
+          "description": "Role identifier string",
+          "name": "role",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Role determines which tabs are accessible",
+          "targetEntity": "Tab",
+          "type": "has-many"
+        },
+        {
+          "description": "Role determines which master sections are accessible",
+          "targetEntity": "MasterSection",
+          "type": "has-many"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": [],
+          "given": "Role value is 'owner'",
+          "name": "Owner role check",
+          "then": "isOwner returns true",
+          "when": "isOwner('owner') is called"
+        },
+        {
+          "and": [],
+          "given": "Role value is 'staff'",
+          "name": "Non-owner role check",
+          "then": "isOwner returns false",
+          "when": "isOwner('staff') is called"
+        }
+      ],
+      "validations": [
+        "Valid roles are 'owner' and 'staff'",
+        "Role 'owner' has full system access",
+        "Role 'staff' has restricted access"
+      ]
+    },
+    {
+      "description": "Represents a granular permission or action that can be performed within the system, checked against a user's role.",
+      "location": "src/worker/lib/rbac.ts",
+      "name": "Capability",
+      "properties": [
+        {
+          "description": "The capability identifier in resource:action format",
+          "name": "name",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Capability is contained within a role's permission set",
+          "targetEntity": "Role",
+          "type": "belongs-to"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": [
+            "Capabilities include: auth, dashboard:read, visit:read, visit:write, visit:void, visit:override, outlets:write, settings:read, settings:write, reports:read, products:read, products:write, bom:write, raw_materials:read, raw_materials:write, users:manage, master:delete"
+          ],
+          "given": "A capability string is provided",
+          "name": "Capability type inference",
+          "then": "Type system ensures only valid capabilities from ROLE_PERMISSIONS can be used",
+          "when": "Capability type is used in requirePermission or can()"
+        }
+      ],
+      "validations": [
+        "Capability must be a valid member of the union type derived from ROLE_PERMISSIONS",
+        "Capabilities follow resource:action naming convention"
+      ]
+    },
+    {
+      "description": "Base application error with HTTP status and error code for API responses",
+      "location": "src/worker/lib/errors.ts",
+      "name": "AppError",
+      "properties": [
+        {
+          "description": "HTTP status code for the error response",
+          "name": "status",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Machine-readable error code identifier",
+          "name": "code",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Human-readable error message",
+          "name": "message",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Error class name for identification",
+          "name": "name",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "relationships": [],
+      "scenarios": [
+        {
+          "and": [],
+          "given": "An error condition occurs in the application",
+          "name": "Create generic application error",
+          "then": "An AppError is instantiated with status, code, and message",
+          "when": "new AppError(status, code, message) is called"
+        }
+      ],
+      "validations": [
+        "Status must be a valid HTTP status code",
+        "Code must be a non-empty string",
+        "Message must be a non-empty string"
+      ]
+    },
+    {
+      "description": "Authentication error indicating the request lacks valid credentials",
+      "location": "src/worker/lib/errors.ts",
+      "name": "AuthError",
+      "properties": [
+        {
+          "description": "Fixed HTTP status 401",
+          "name": "status",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Fixed error code AUTH_REQUIRED",
+          "name": "code",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Description of the authentication failure",
+          "name": "message",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "AuthError extends the base AppError class",
+          "targetEntity": "AppError",
+          "type": "extends"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Error code is set to AUTH_REQUIRED", "HTTP status is 401"],
+          "given": "A request is made without valid authentication credentials",
+          "name": "Reject unauthenticated request",
+          "then": "An AuthError is thrown with 401 status and AUTH_REQUIRED code",
+          "when": "Authentication check fails"
+        }
+      ],
+      "validations": [
+        "Status is always 401",
+        "Code is always AUTH_REQUIRED",
+        "Default message is 'Unauthorized'"
+      ]
+    },
+    {
+      "description": "Authorization error indicating the authenticated user lacks permission",
+      "location": "src/worker/lib/errors.ts",
+      "name": "ForbiddenError",
+      "properties": [
+        {
+          "description": "Fixed HTTP status 403",
+          "name": "status",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Fixed error code FORBIDDEN",
+          "name": "code",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Description of the permission denial",
+          "name": "message",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "ForbiddenError extends the base AppError class",
+          "targetEntity": "AppError",
+          "type": "extends"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Error code is set to FORBIDDEN", "HTTP status is 403"],
+          "given": "An authenticated user attempts an action they are not permitted to perform",
+          "name": "Reject forbidden action",
+          "then": "A ForbiddenError is thrown with 403 status and FORBIDDEN code",
+          "when": "Authorization check fails"
+        }
+      ],
+      "validations": [
+        "Status is always 403",
+        "Code is always FORBIDDEN",
+        "Default message is 'Forbidden'"
+      ]
+    },
+    {
+      "description": "Input validation error indicating the request data is malformed or invalid",
+      "location": "src/worker/lib/errors.ts",
+      "name": "ValidationError",
+      "properties": [
+        {
+          "description": "Fixed HTTP status 400",
+          "name": "status",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Fixed error code VALIDATION_ERROR",
+          "name": "code",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Description of the validation failure",
+          "name": "message",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "ValidationError extends the base AppError class",
+          "targetEntity": "AppError",
+          "type": "extends"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Error code is set to VALIDATION_ERROR", "HTTP status is 400"],
+          "given": "Request data fails schema or business rule validation",
+          "name": "Reject invalid input",
+          "then": "A ValidationError is thrown with 400 status and VALIDATION_ERROR code",
+          "when": "Input validation check fails"
+        }
+      ],
+      "validations": [
+        "Status is always 400",
+        "Code is always VALIDATION_ERROR",
+        "Default message is 'Bad request'"
+      ]
+    },
+    {
+      "description": "Resource conflict error indicating a state conflict with existing data",
+      "location": "src/worker/lib/errors.ts",
+      "name": "ConflictError",
+      "properties": [
+        {
+          "description": "Fixed HTTP status 409",
+          "name": "status",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Fixed error code CONFLICT",
+          "name": "code",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Description of the conflict condition",
+          "name": "message",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "ConflictError extends the base AppError class",
+          "targetEntity": "AppError",
+          "type": "extends"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Error code is set to CONFLICT", "HTTP status is 409"],
+          "given": "An operation would create a conflict with existing resource state",
+          "name": "Reject conflicting operation",
+          "then": "A ConflictError is thrown with 409 status and CONFLICT code",
+          "when": "Conflict detection check fails"
+        }
+      ],
+      "validations": [
+        "Status is always 409",
+        "Code is always CONFLICT",
+        "Default message is 'Conflict'"
+      ]
+    },
+    {
+      "description": "Represents a password credential with PBKDF2 hashing for secure storage and verification.",
+      "location": "src/worker/lib/password.ts",
+      "name": "Password",
+      "properties": [
+        {
+          "description": "Raw plaintext password input (never stored)",
+          "name": "password",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Stored hash format: iterations$salt$key",
+          "name": "hash",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "description": "Number of PBKDF2 iterations used for key derivation",
+          "name": "iterations",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Random salt bytes for preventing rainbow table attacks",
+          "name": "salt",
+          "required": true,
+          "type": "Uint8Array"
+        },
+        {
+          "description": "Derived key length in bits",
+          "name": "keyLength",
+          "required": true,
+          "type": "number"
+        }
+      ],
+      "relationships": [],
+      "scenarios": [
+        {
+          "and": [
+            "Hash format is 'iterations$base64(salt)$base64(key)'",
+            "Salt is 16 random bytes"
+          ],
+          "given": "A plaintext password of at least 6 characters",
+          "name": "Hash password",
+          "then": "A deterministic hash string is returned using PBKDF2-SHA-256 with 100,000 iterations",
+          "when": "hashPassword() is called"
+        },
+        {
+          "and": ["Timing-safe comparison prevents timing attacks"],
+          "given": "A plaintext password and a stored hash string",
+          "name": "Verify password",
+          "then": "Returns true if password matches hash, false otherwise",
+          "when": "verifyPassword() is called"
+        },
+        {
+          "and": [],
+          "given": "A plaintext password with fewer than 6 characters",
+          "name": "Reject short password",
+          "then": "ValidationError is thrown with minimum length message",
+          "when": "hashPassword() or verifyPassword() is called"
+        },
+        {
+          "and": [
+            "Malformed hash parts return false",
+            "Invalid iterations number returns false",
+            "Empty salt or expected key returns false"
+          ],
+          "given": "A stored hash with invalid format or corrupted data",
+          "name": "Reject invalid hash format",
+          "then": "Returns false without throwing",
+          "when": "verifyPassword() is called"
+        }
+      ],
+      "validations": [
+        "Password must be at least 6 characters long",
+        "Hash format must be exactly 3 parts separated by '$'",
+        "Iterations must be a finite positive number",
+        "Salt must not be empty",
+        "Expected key must not be empty",
+        "Timing-safe comparison must be used to prevent timing attacks"
+      ]
+    },
+    {
+      "description": "A raw material or ingredient used in product recipes, with a defined unit of measurement and cost.",
+      "location": "src/worker/services/hpp.ts",
+      "name": "Material",
+      "properties": [
+        {
+          "description": "Unique identifier for the material",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Human-readable name of the material",
+          "name": "name",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Unit of measurement for the material",
+          "name": "unit",
+          "required": true,
+          "type": "Unit"
+        },
+        {
+          "description": "Cost per base unit of the material",
+          "name": "costPerBaseUnit",
+          "required": true,
+          "type": "number"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Material is referenced by multiple recipe lines",
+          "targetEntity": "RecipeLine",
+          "type": "has-many"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["All products using this material have their HPP recalculated"],
+          "given": "A material exists with a defined cost per base unit",
+          "name": "Material cost update triggers HPP recalculation",
+          "then": "The material's cost change propagates to all dependent product HPPs",
+          "when": "The material's cost per base unit is updated"
+        }
+      ],
+      "validations": [
+        "Unit must be a valid Unit enum value",
+        "Cost per base unit must be non-negative"
+      ]
+    },
+    {
+      "description": "A line item in a product recipe specifying a material and its quantity, contributing to the product's HPP (Haut Prix de Production / Production Cost Price).",
+      "location": "src/worker/services/hpp.ts",
+      "name": "RecipeLine",
+      "properties": [
+        {
+          "description": "Unique identifier for the recipe line",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Reference to the product this recipe line belongs to",
+          "name": "productId",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Reference to the material used in this line",
+          "name": "materialId",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Quantity of material in the product's unit",
+          "name": "quantity",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Unit of measurement for the quantity",
+          "name": "unit",
+          "required": true,
+          "type": "Unit"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Recipe line belongs to a specific product",
+          "targetEntity": "Product",
+          "type": "belongs-to"
+        },
+        {
+          "description": "Recipe line references a specific material",
+          "targetEntity": "Material",
+          "type": "belongs-to"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": [
+            "All existing recipe lines are deleted before insertion",
+            "HPP is recalculated and stored on the product"
+          ],
+          "given": "A product exists with or without existing recipe lines",
+          "name": "Replace recipe lines for product",
+          "then": "New recipe lines are persisted and product HPP is updated",
+          "when": "replaceRecipeLines is called with new recipe lines"
+        },
+        {
+          "and": [
+            "Material costs are fetched from material map",
+            "Quantities are converted to base units for calculation"
+          ],
+          "given": "A product has recipe lines with materials and quantities",
+          "name": "Compute HPP from recipe lines",
+          "then": "The total production cost price is returned",
+          "when": "computeHPP is called with the recipe lines"
+        }
+      ],
+      "validations": [
+        "Quantity must be positive",
+        "Unit must be a valid Unit enum value",
+        "Material must exist in the material map"
+      ]
+    },
+    {
+      "description": "Enumeration of standard measurement units with their base conversion factors and dimension classifications for material and recipe line quantities.",
+      "location": "src/worker/services/hpp.ts",
+      "name": "Unit",
+      "properties": [
+        {
+          "description": "Unit symbol: ml, l, cl, gr, kg, or pcs",
+          "name": "symbol",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Conversion factor to base unit for calculations",
+          "name": "toBaseFactor",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Physical dimension: volume, mass, or count",
+          "name": "dimension",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Unit is used by materials for their measurement",
+          "targetEntity": "Material",
+          "type": "used-by"
+        },
+        {
+          "description": "Unit is used by recipe lines for quantity specification",
+          "targetEntity": "RecipeLine",
+          "type": "used-by"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": ["Dimension compatibility is checked (vol, mass, count)"],
+          "given": "A recipe line specifies a quantity in a given unit",
+          "name": "Convert quantity to base unit for HPP calculation",
+          "then": "Quantity is normalized using UNIT_TO_BASE conversion factor",
+          "when": "computeHPP processes the recipe line"
+        },
+        {
+          "and": ["Only valid enum values are accepted"],
+          "given": "A unit value is provided in input",
+          "name": "Validate unit value",
+          "then": "Validation passes if unit is in BASE_UNIT_ENUM",
+          "when": "isUnit check is performed"
+        }
+      ],
+      "validations": [
+        "Unit must be one of: ml, l, cl, gr, kg, pcs",
+        "Volume units (ml, l, cl) must convert consistently: 1 l = 1000 ml = 100 cl",
+        "Mass units (gr, kg) must convert consistently: 1 kg = 1000 gr",
+        "Count unit (pcs) has base factor of 1",
+        "Only units of the same dimension can be compared or combined"
+      ]
+    },
+    {
+      "description": "Represents a visit to an outlet where consignment products are either dropped off or picked up, or both.",
+      "location": "src/worker/services/visit.ts",
+      "name": "Visit",
+      "properties": [
+        {
+          "description": "Unique identifier for idempotency",
+          "name": "idempotencyKey",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Identifier of the outlet being visited",
+          "name": "outletId",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "description": "Latitude of the visit location",
+          "name": "latitude",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Longitude of the visit location",
+          "name": "longitude",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "description": "Optional reason for overriding geofence validation",
+          "name": "geofenceOverrideReason",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "description": "Optional notes about the visit",
+          "name": "notes",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "description": "Products being dropped off in this visit",
+          "name": "drops",
+          "required": false,
+          "type": "array"
+        },
+        {
+          "description": "Products being picked up in this visit",
+          "name": "pickups",
+          "required": false,
+          "type": "array"
+        }
+      ],
+      "relationships": [
+        {
+          "description": "Visit occurs at a specific outlet",
+          "targetEntity": "Outlet",
+          "type": "belongs-to"
+        },
+        {
+          "description": "Visit processes drop-offs of products",
+          "targetEntity": "Product",
+          "type": "has-many"
+        },
+        {
+          "description": "Visit processes pickups from consignment cycles",
+          "targetEntity": "ConsignmentCycle",
+          "type": "has-many"
+        }
+      ],
+      "scenarios": [
+        {
+          "and": [
+            "VisitResult contains dropped summaries with product details",
+            "VisitResult contains closed cycle summaries with product details"
+          ],
+          "given": "Valid drop and pickup inputs with matching open cycles and active products",
+          "name": "Process visit with drops and pickups",
+          "then": "Cycles are updated, new cycles created for drops, batch operations executed, and summary returned",
+          "when": "processVisit() is called"
+        },
+        {
+          "and": ["Geofence override reason is trimmed and stored"],
+          "given": "Visit coordinates outside outlet geofence radius but geofenceOverrideReason provided",
+          "name": "Override geofence validation",
+          "then": "Visit is processed normally with override reason recorded",
+          "when": "processVisit() is called"
+        },
+        {
+          "and": ["VisitResult indicates no operations performed"],
+          "given": "Empty drops and pickups arrays",
+          "name": "Process empty visit",
+          "then": "No database mutations occur and empty summary returned",
+          "when": "processVisit() is called"
+        }
+      ],
+      "validations": [
+        "Latitude and longitude must be valid numbers",
+        "If geofenceOverrideReason provided, it must be non-empty after trimming",
+        "At least one of drops or pickups must be provided",
+        "Drop products must exist and be active (not deleted)",
+        "Pickup cycles must be open and match the visit submission idempotency key"
+      ]
+    },
+    {
+      "description": "Represents a photo file with metadata and processing capabilities",
+      "location": "src/web/lib/photo.ts",
+      "name": "Photo",
+      "properties": [
+        {
+          "description": "The raw image file data",
+          "name": "file",
+          "required": true,
+          "type": "File"
+        },
+        {
+          "description": "MIME type of the image",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "description": "Maximum edge dimension for resizing",
+          "name": "maxEdge",
+          "required": false,
+          "type": "number"
+        },
+        {
+          "description": "JPEG compression quality",
+          "name": "quality",
+          "required": false,
+          "type": "number"
+        }
+      ],
+      "relationships": [],
+      "scenarios": [
+        {
+          "and": [
+            "Image is resized to fit within maxEdge while preserving aspect ratio",
+            "Output format is image/jpeg by default"
+          ],
+          "given": "A photo file is selected for upload",
+          "name": "Compress photo for upload",
+          "then": "A compressed Blob is produced with reduced file size",
+          "when": "compressPhoto() is called with file and optional parameters"
+        },
+        {
+          "and": [
+            "Default maxEdge is 1600 pixels",
+            "Default quality is 0.85",
+            "Default type is 'image/jpeg'"
+          ],
+          "given": "A photo file needs compression",
+          "name": "Apply default compression settings",
+          "then": "Photo is compressed with default parameters",
+          "when": "compressPhoto() is called without options"
+        }
+      ],
+      "validations": [
+        "maxEdge must be a positive number",
+        "quality must be between 0 and 1",
+        "type must be a valid image MIME type",
+        "file must be a valid image file"
+      ]
+    }
+  ],
+  "tokens": 37567,
+  "duration": 365042
+}

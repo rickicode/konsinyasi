@@ -1,0 +1,87 @@
+{
+  "total": 9,
+  "byMethod": {
+    "GET": 5,
+    "POST": 1,
+    "PATCH": 1,
+    "DELETE": 1,
+    "PUT": 1
+  },
+  "byFramework": {
+    "hono": 9
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "framework": "hono",
+      "file": "src/worker/index.ts",
+      "handler": "handler",
+      "contractSource": "none"
+    },
+    {
+      "method": "GET",
+      "path": "/api/products",
+      "framework": "hono",
+      "file": "src/worker/index.ts",
+      "handler": "handler",
+      "contractSource": "none"
+    },
+    {
+      "method": "GET",
+      "path": "/api/products/picker",
+      "framework": "hono",
+      "file": "src/worker/index.ts",
+      "handler": "handler",
+      "contractSource": "none"
+    },
+    {
+      "method": "GET",
+      "path": "/api/products/:id",
+      "framework": "hono",
+      "file": "src/worker/index.ts",
+      "handler": "handler",
+      "contractSource": "none"
+    },
+    {
+      "method": "POST",
+      "path": "/api/products",
+      "framework": "hono",
+      "file": "src/worker/index.ts",
+      "handler": "handler",
+      "contractSource": "none"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/products/:id",
+      "framework": "hono",
+      "file": "src/worker/index.ts",
+      "handler": "handler",
+      "contractSource": "none"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/products/:id",
+      "framework": "hono",
+      "file": "src/worker/index.ts",
+      "handler": "handler",
+      "contractSource": "none"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/settings/geofence",
+      "framework": "hono",
+      "file": "src/worker/index.ts",
+      "handler": "handler",
+      "contractSource": "none"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/logout/*",
+      "framework": "hono",
+      "file": "src/worker/index.ts",
+      "handler": "handler",
+      "contractSource": "none"
+    }
+  ]
+}

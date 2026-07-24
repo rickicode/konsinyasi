@@ -1,0 +1,886 @@
+{
+  "generatedAt": "2026-07-24T06:20:58.734Z",
+  "stats": {
+    "totalFunctions": 347,
+    "withIssues": 60,
+    "unreachable": 0,
+    "highFanIn": 3,
+    "highFanOut": 7,
+    "srpViolations": 0,
+    "cycleParticipants": 0,
+    "cyclesDetected": 0,
+    "highComplexity": 7
+  },
+  "priorities": [
+    {
+      "function": "processVisit",
+      "file": "src/worker/services/visit.ts",
+      "fanIn": 0,
+      "fanOut": 22,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [
+        "Process complete visit submission"
+      ],
+      "issues": [
+        "high_fan_out",
+        "high_complexity"
+      ],
+      "cyclomaticComplexity": 26,
+      "priorityScore": 8.2
+    },
+    {
+      "function": "requestJson",
+      "file": "src/web/lib/api/client.ts",
+      "className": "ApiClient",
+      "fanIn": 5,
+      "fanOut": 10,
+      "depth": 2,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "high_fan_out",
+        "high_complexity"
+      ],
+      "cyclomaticComplexity": 15,
+      "priorityScore": 5
+    },
+    {
+      "function": "get",
+      "file": "src/web/lib/api/client.ts",
+      "className": "ApiClient",
+      "fanIn": 14,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "high_fan_in",
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 4.8
+    },
+    {
+      "function": "post",
+      "file": "src/web/lib/api/client.ts",
+      "className": "ApiClient",
+      "fanIn": 10,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "high_fan_in",
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 4.3
+    },
+    {
+      "function": "voidVisit",
+      "file": "src/worker/services/voidVisit.ts",
+      "fanIn": 0,
+      "fanOut": 9,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [
+        "voidVisit"
+      ],
+      "issues": [
+        "high_fan_out",
+        "high_complexity"
+      ],
+      "cyclomaticComplexity": 10,
+      "priorityScore": 4.1
+    },
+    {
+      "function": "replaceRecipeLines",
+      "file": "src/worker/services/hpp.ts",
+      "fanIn": 0,
+      "fanOut": 15,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [
+        "replaceRecipeLines"
+      ],
+      "issues": [
+        "high_fan_out"
+      ],
+      "cyclomaticComplexity": 8,
+      "priorityScore": 3.4
+    },
+    {
+      "function": "createVisitDraftStore",
+      "file": "src/web/features/visits/stores/visit-draft.svelte.ts",
+      "fanIn": 0,
+      "fanOut": 5,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "high_complexity"
+      ],
+      "cyclomaticComplexity": 18,
+      "priorityScore": 3.2
+    },
+    {
+      "function": "requireAuth",
+      "file": "src/worker/lib/session.ts",
+      "fanIn": 1,
+      "fanOut": 10,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [
+        "requireAuth"
+      ],
+      "issues": [
+        "high_fan_out"
+      ],
+      "cyclomaticComplexity": 4,
+      "priorityScore": 2.8
+    },
+    {
+      "function": "recalculateHPP",
+      "file": "src/worker/services/hpp.ts",
+      "fanIn": 1,
+      "fanOut": 8,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [
+        "recalculateHPP"
+      ],
+      "issues": [
+        "high_fan_out"
+      ],
+      "cyclomaticComplexity": 3,
+      "priorityScore": 2.5
+    },
+    {
+      "function": "prefersReducedMotion",
+      "file": "src/web/lib/utils/animations.ts",
+      "fanIn": 8,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "high_fan_in"
+      ],
+      "cyclomaticComplexity": 2,
+      "priorityScore": 2.5
+    },
+    {
+      "function": "compressPhoto",
+      "file": "src/web/lib/photo.ts",
+      "fanIn": 0,
+      "fanOut": 8,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [
+        "compressPhoto"
+      ],
+      "issues": [
+        "high_fan_out"
+      ],
+      "cyclomaticComplexity": 5,
+      "priorityScore": 2.5
+    },
+    {
+      "function": "createOutletFilterState",
+      "file": "src/web/features/outlets/stores/outlet-filter.svelte.ts",
+      "fanIn": 1,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "high_complexity"
+      ],
+      "cyclomaticComplexity": 11,
+      "priorityScore": 2.2
+    },
+    {
+      "function": "apply",
+      "file": "src/web/features/outlets/stores/outlet-filter.svelte.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "high_complexity"
+      ],
+      "cyclomaticComplexity": 11,
+      "priorityScore": 2.2
+    },
+    {
+      "function": "patch",
+      "file": "src/web/lib/api/client.ts",
+      "className": "ApiClient",
+      "fanIn": 4,
+      "fanOut": 1,
+      "depth": 2,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "put",
+      "file": "src/web/lib/api/client.ts",
+      "className": "ApiClient",
+      "fanIn": 1,
+      "fanOut": 1,
+      "depth": 2,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "delete",
+      "file": "src/web/lib/api/client.ts",
+      "className": "ApiClient",
+      "fanIn": 4,
+      "fanOut": 1,
+      "depth": 2,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "createOutlet",
+      "file": "src/web/features/outlets/api/index.ts",
+      "fanIn": 1,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "updateOutlet",
+      "file": "src/web/features/outlets/api/index.ts",
+      "fanIn": 1,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "deleteOutlet",
+      "file": "src/web/features/outlets/api/index.ts",
+      "fanIn": 1,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "outletsQueryOptions",
+      "file": "src/web/features/outlets/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "outletDetailQueryOptions",
+      "file": "src/web/features/outlets/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "createOutletMutationOptions",
+      "file": "src/web/features/outlets/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "updateOutletMutationOptions",
+      "file": "src/web/features/outlets/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "deleteOutletMutationOptions",
+      "file": "src/web/features/outlets/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "uploadOutletPhotoMutationOptions",
+      "file": "src/web/features/outlets/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "haversineM",
+      "file": "src/worker/services/visit.ts",
+      "fanIn": 1,
+      "fanOut": 6,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [
+        "Calculate haversine distance in meters",
+        "haversineM"
+      ],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "createNetworkState",
+      "file": "src/web/lib/stores/network.svelte.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "high_complexity"
+      ],
+      "cyclomaticComplexity": 10,
+      "priorityScore": 2
+    },
+    {
+      "function": "haversineM",
+      "file": "src/web/lib/visit.ts",
+      "fanIn": 0,
+      "fanOut": 6,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [
+        "Calculate haversine distance in meters",
+        "haversineM"
+      ],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "bottomNavTabs",
+      "file": "src/web/lib/role.ts",
+      "fanIn": 0,
+      "fanOut": 0,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 2,
+      "priorityScore": 2
+    },
+    {
+      "function": "topMenuTabs",
+      "file": "src/web/lib/role.ts",
+      "fanIn": 0,
+      "fanOut": 0,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 2,
+      "priorityScore": 2
+    },
+    {
+      "function": "loginMutationOptions",
+      "file": "src/web/features/auth/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "submitVisitMutationOptions",
+      "file": "src/web/features/visits/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "voidVisitMutationOptions",
+      "file": "src/web/features/visits/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "createProduct",
+      "file": "src/web/features/products/api/index.ts",
+      "fanIn": 1,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "updateProduct",
+      "file": "src/web/features/products/api/index.ts",
+      "fanIn": 1,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "deleteProduct",
+      "file": "src/web/features/products/api/index.ts",
+      "fanIn": 1,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "productsQueryOptions",
+      "file": "src/web/features/products/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "productDetailQueryOptions",
+      "file": "src/web/features/products/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "createProductMutationOptions",
+      "file": "src/web/features/products/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "updateProductMutationOptions",
+      "file": "src/web/features/products/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "deleteProductMutationOptions",
+      "file": "src/web/features/products/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "rawMaterialsQueryOptions",
+      "file": "src/web/features/raw-materials/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "rawMaterialDetailQueryOptions",
+      "file": "src/web/features/raw-materials/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "createRawMaterialMutationOptions",
+      "file": "src/web/features/raw-materials/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "updateRawMaterialMutationOptions",
+      "file": "src/web/features/raw-materials/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "deleteRawMaterialMutationOptions",
+      "file": "src/web/features/raw-materials/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "updateUser",
+      "file": "src/web/features/users/api/index.ts",
+      "fanIn": 1,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "deleteUser",
+      "file": "src/web/features/users/api/index.ts",
+      "fanIn": 1,
+      "fanOut": 1,
+      "depth": 1,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "usersQueryOptions",
+      "file": "src/web/features/users/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "userDetailQueryOptions",
+      "file": "src/web/features/users/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "createUserMutationOptions",
+      "file": "src/web/features/users/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "updateUserMutationOptions",
+      "file": "src/web/features/users/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "resetUserPasswordMutationOptions",
+      "file": "src/web/features/users/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "deleteUserMutationOptions",
+      "file": "src/web/features/users/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "pickUser",
+      "file": "src/worker/routes/users.ts",
+      "fanIn": 0,
+      "fanOut": 0,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "pickRawMaterial",
+      "file": "src/worker/routes/raw_materials.ts",
+      "fanIn": 0,
+      "fanOut": 0,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "settingsQueryOptions",
+      "file": "src/web/features/settings/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "updateGeofenceMutationOptions",
+      "file": "src/web/features/settings/api/index.ts",
+      "fanIn": 0,
+      "fanOut": 2,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "formatDate",
+      "file": "src/web/lib/utils/format.ts",
+      "fanIn": 0,
+      "fanOut": 1,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    },
+    {
+      "function": "formatDateTime",
+      "file": "src/web/lib/utils/format.ts",
+      "fanIn": 0,
+      "fanOut": 1,
+      "depth": 0,
+      "sccSize": 1,
+      "requirements": [],
+      "issues": [
+        "in_clone_group"
+      ],
+      "cyclomaticComplexity": 1,
+      "priorityScore": 2
+    }
+  ],
+  "cycles": []
+}

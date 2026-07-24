@@ -1,0 +1,861 @@
+{
+  "projectName": "konsi",
+  "projectType": "node-typescript",
+  "frameworks": [
+    "Vitest",
+    "GitHub Actions"
+  ],
+  "architecture": {
+    "pattern": "unknown",
+    "layers": [
+      {
+        "name": "API Layer",
+        "purpose": "HTTP request handling and routing",
+        "files": [
+          "src/web/features/auth/api/auth.api.ts",
+          "src/worker/routes/auth.ts",
+          "src/web/routes.ts",
+          "src/worker/routes/settings.ts",
+          "src/web/lib/api/errors.ts",
+          "src/web/lib/api/client.ts",
+          "src/web/features/outlets/api/index.ts",
+          "src/worker/routes/products.ts",
+          "src/web/lib/api/query-keys.ts",
+          "src/worker/routes/visit.ts",
+          "src/web/features/auth/api/index.ts",
+          "src/web/features/visits/api/index.ts",
+          "src/web/features/products/api/index.ts",
+          "src/web/features/raw-materials/api/index.ts",
+          "src/web/features/users/api/index.ts",
+          "src/web/features/reports/api/index.ts",
+          "src/worker/routes/users.ts",
+          "src/worker/routes/raw_materials.ts",
+          "src/worker/routes/outlets.ts",
+          "src/worker/routes/dashboard.ts",
+          "src/web/lib/api/query-client.ts",
+          "src/web/features/dashboard/api/index.ts",
+          "src/web/features/settings/api/index.ts",
+          "src/worker/routes/media.ts",
+          "src/worker/routes/reports.ts"
+        ],
+        "representativeFile": "src/web/features/auth/api/auth.api.ts"
+      },
+      {
+        "name": "Service Layer",
+        "purpose": "Business logic and domain operations",
+        "files": [
+          "src/worker/services/hpp.ts",
+          "src/worker/services/visit.ts",
+          "src/worker/services/__tests__/visit-permissions.test.ts",
+          "src/worker/services/__tests__/voidVisit.test.ts",
+          "src/worker/services/__tests__/hpp.test.ts",
+          "src/worker/services/__tests__/visit.test.ts",
+          "src/worker/services/voidVisit.ts"
+        ],
+        "representativeFile": "src/worker/services/hpp.ts"
+      },
+      {
+        "name": "Infrastructure Layer",
+        "purpose": "Configuration, middleware, and utilities",
+        "files": [
+          "src/shared/schemas/settings.schema.ts",
+          "src/worker/routes/settings.ts",
+          "eslint.config.js",
+          "vite.config.ts",
+          "tsconfig.json",
+          "tsconfig.worker.json",
+          "prettier.config.js",
+          "tsconfig.web.json",
+          "playwright.config.ts",
+          "src/web/lib/utils/haptics.ts",
+          "src/web/lib/utils/animations.ts",
+          "vitest.config.ts",
+          "package.json",
+          "src/web/lib/utils/format.ts",
+          "src/web/lib/utils/cn.ts",
+          "src/web/lib/utils/local-storage.ts",
+          "src/web/lib/utils/.gitkeep"
+        ],
+        "representativeFile": "src/shared/schemas/settings.schema.ts"
+      }
+    ]
+  },
+  "domains": [
+    {
+      "name": "domain",
+      "suggestedSpecPath": "openspec/specs/domain/spec.md",
+      "files": [
+        "src/shared/schemas/user.schema.ts",
+        "src/shared/schemas/outlet.schema.ts",
+        "src/shared/schemas/product.schema.ts",
+        "src/shared/schemas/visit.schema.ts",
+        "src/shared/schemas/report.schema.ts",
+        "src/shared/schemas/auth.schema.ts",
+        "src/shared/schemas/raw-material.schema.ts",
+        "src/shared/schemas/.gitkeep"
+      ],
+      "entities": [
+        "UserSchema",
+        "OutletSchema",
+        "ProductSchema",
+        "VisitSchema",
+        "ReportSchema"
+      ],
+      "keyFile": "src/shared/schemas/user.schema.ts"
+    },
+    {
+      "name": "stores",
+      "suggestedSpecPath": "openspec/specs/stores/spec.md",
+      "files": [
+        "src/web/lib/stores/auth.svelte.ts",
+        "src/web/features/auth/stores/auth.svelte.ts",
+        "src/web/lib/stores/network.svelte.ts",
+        "src/web/lib/stores/geolocation.svelte.ts",
+        "src/web/lib/stores/toast.svelte.ts",
+        "src/web/features/outlets/stores/outlet-filter.svelte.ts",
+        "src/web/features/visits/stores/visit-draft.svelte.ts",
+        "src/web/features/reports/stores/report-filters.svelte.ts",
+        "src/web/lib/stores/.gitkeep",
+        "src/web/features/auth/stores/.gitkeep",
+        "src/web/features/outlets/stores/.gitkeep",
+        "src/web/features/visits/stores/.gitkeep",
+        "src/web/features/reports/stores/.gitkeep"
+      ],
+      "entities": [
+        "AuthSvelte",
+        "NetworkSvelte",
+        "GeolocationSvelte",
+        "ToastSvelte",
+        "OutletFilterSvelte"
+      ],
+      "keyFile": "src/web/lib/stores/auth.svelte.ts"
+    },
+    {
+      "name": "api",
+      "suggestedSpecPath": "openspec/specs/api/spec.md",
+      "files": [
+        "src/web/features/auth/api/auth.api.ts",
+        "src/worker/routes/auth.ts",
+        "src/web/lib/api/errors.ts",
+        "src/web/lib/api/client.ts",
+        "src/web/features/outlets/api/index.ts",
+        "src/worker/routes/products.ts",
+        "src/web/lib/api/query-keys.ts",
+        "src/worker/routes/visit.ts",
+        "src/web/features/auth/api/index.ts",
+        "src/web/features/visits/api/index.ts",
+        "src/web/features/products/api/index.ts",
+        "src/web/features/raw-materials/api/index.ts",
+        "src/web/features/users/api/index.ts",
+        "src/web/features/reports/api/index.ts",
+        "src/worker/routes/users.ts",
+        "src/worker/routes/raw_materials.ts",
+        "src/worker/routes/outlets.ts",
+        "src/worker/routes/dashboard.ts",
+        "src/web/lib/api/query-client.ts",
+        "src/web/features/dashboard/api/index.ts",
+        "src/web/features/settings/api/index.ts",
+        "src/worker/routes/media.ts",
+        "src/worker/routes/reports.ts"
+      ],
+      "entities": [
+        "AuthApi",
+        "Auth",
+        "Errors",
+        "Client",
+        "Products"
+      ],
+      "keyFile": "src/web/features/auth/api/auth.api.ts"
+    },
+    {
+      "name": "types",
+      "suggestedSpecPath": "openspec/specs/types/spec.md",
+      "files": [
+        "src/shared/types/api.types.ts",
+        "src/shared/types/.gitkeep"
+      ],
+      "entities": [
+        "ApiTypes"
+      ],
+      "keyFile": "src/shared/types/api.types.ts"
+    },
+    {
+      "name": "worker",
+      "suggestedSpecPath": "openspec/specs/worker/spec.md",
+      "files": [
+        "src/worker/types.ts",
+        "src/worker/lib/rbac.ts",
+        "src/worker/lib/session.ts",
+        "src/worker/lib/errors.ts",
+        "src/worker/index.ts",
+        "src/worker/lib/password.ts"
+      ],
+      "entities": [
+        "Rbac",
+        "Session",
+        "Errors",
+        "Password"
+      ],
+      "keyFile": "src/worker/types.ts"
+    },
+    {
+      "name": "providers",
+      "suggestedSpecPath": "openspec/specs/providers/spec.md",
+      "files": [
+        "src/web/shared/providers/ToastProvider.svelte",
+        "src/web/features/auth/providers/AuthProvider.svelte",
+        "src/web/features/shell/providers/ToastProvider.svelte",
+        "src/web/shared/providers/QueryProvider.svelte",
+        "src/web/shared/providers/.gitkeep",
+        "src/web/shared/providers/OfflineBanner.svelte",
+        "src/web/features/shell/providers/.gitkeep"
+      ],
+      "entities": [
+        "ToastProvider",
+        "AuthProvider",
+        "QueryProvider",
+        "OfflineBanner"
+      ],
+      "keyFile": "src/web/shared/providers/ToastProvider.svelte"
+    },
+    {
+      "name": "components",
+      "suggestedSpecPath": "openspec/specs/components/spec.md",
+      "files": [
+        "src/web/features/shell/components/RouteGuard.svelte",
+        "src/web/features/auth/components/LoginForm.svelte",
+        "src/web/features/shell/components/TopBar.svelte",
+        "src/web/features/shell/components/AppShell.svelte",
+        "src/web/features/dashboard/components/SummaryCards.svelte",
+        "src/web/features/dashboard/components/UrgencyCard.svelte",
+        "src/web/features/outlets/components/MapPicker.svelte",
+        "src/web/features/outlets/components/PhotoUploader.svelte",
+        "src/web/features/outlets/components/GeoCaptureButton.svelte",
+        "src/web/features/outlets/components/OutletCard.svelte",
+        "src/web/features/visits/components/GeofenceStatus.svelte",
+        "src/web/features/visits/components/CyclePickupForm.svelte",
+        "src/web/features/visits/components/DropSheet.svelte",
+        "src/web/features/visits/components/VisitReviewSheet.svelte",
+        "src/web/features/products/components/ProductCard.svelte",
+        "src/web/features/products/components/RecipeEditor.svelte",
+        "src/web/features/users/components/UserForm.svelte",
+        "src/web/features/reports/components/ReportPdfLink.svelte",
+        "src/web/features/products/components/HppDisplay.svelte",
+        "src/web/features/master/components/MasterTabs.svelte",
+        "src/web/features/reports/components/ReportFilters.svelte",
+        "src/web/features/settings/components/RadiusForm.svelte",
+        "src/web/features/auth/components/.gitkeep",
+        "src/web/features/shell/components/.gitkeep",
+        "src/web/features/shell/components/DesktopRail.svelte",
+        "src/web/features/shell/components/BottomNav.svelte",
+        "src/web/features/dashboard/components/.gitkeep",
+        "src/web/features/outlets/components/.gitkeep",
+        "src/web/features/visits/components/.gitkeep",
+        "src/web/features/products/components/.gitkeep",
+        "src/web/features/master/components/.gitkeep",
+        "src/web/features/settings/components/.gitkeep",
+        "src/web/features/users/components/.gitkeep",
+        "src/web/features/reports/components/.gitkeep"
+      ],
+      "entities": [
+        "RouteGuard",
+        "LoginForm",
+        "TopBar",
+        "AppShell",
+        "SummaryCards"
+      ],
+      "keyFile": "src/web/features/shell/components/RouteGuard.svelte"
+    },
+    {
+      "name": "db",
+      "suggestedSpecPath": "openspec/specs/db/spec.md",
+      "files": [
+        "src/worker/db/schema.ts",
+        "src/worker/db/client.ts"
+      ],
+      "entities": [
+        "Schema",
+        "Client"
+      ],
+      "keyFile": "src/worker/db/schema.ts"
+    },
+    {
+      "name": "web",
+      "suggestedSpecPath": "openspec/specs/web/spec.md",
+      "files": [
+        "src/web/routes.ts",
+        "src/web/lib/visit.ts",
+        "src/web/lib/role.ts",
+        "src/web/App.svelte",
+        "src/web/lib/photo.ts",
+        "src/web/app.css",
+        "src/web/main.ts",
+        "src/web/index.html",
+        "src/web/vite-env.d.ts"
+      ],
+      "entities": [
+        "Routes",
+        "Visit",
+        "Role",
+        "App",
+        "Photo"
+      ],
+      "keyFile": "src/web/routes.ts"
+    },
+    {
+      "name": "services",
+      "suggestedSpecPath": "openspec/specs/services/spec.md",
+      "files": [
+        "src/worker/services/hpp.ts",
+        "src/worker/services/visit.ts",
+        "src/worker/services/voidVisit.ts"
+      ],
+      "entities": [
+        "Hpp",
+        "Visit",
+        "VoidVisit"
+      ],
+      "keyFile": "src/worker/services/hpp.ts"
+    },
+    {
+      "name": "router",
+      "suggestedSpecPath": "openspec/specs/router/spec.md",
+      "files": [
+        "src/web/lib/router/guards.svelte.ts",
+        "src/web/lib/router/lazy.ts",
+        "src/web/lib/router/.gitkeep"
+      ],
+      "entities": [
+        "GuardsSvelte",
+        "Lazy"
+      ],
+      "keyFile": "src/web/lib/router/guards.svelte.ts"
+    },
+    {
+      "name": "icons",
+      "suggestedSpecPath": "openspec/specs/icons/spec.md",
+      "files": [
+        "src/web/shared/ui/icons/Icon.svelte",
+        "src/web/public/icons/.gitkeep",
+        "src/web/shared/ui/icons/.gitkeep"
+      ],
+      "entities": [
+        "Icon"
+      ],
+      "keyFile": "src/web/shared/ui/icons/Icon.svelte"
+    },
+    {
+      "name": "pages",
+      "suggestedSpecPath": "openspec/specs/pages/spec.md",
+      "files": [
+        "src/web/features/outlets/pages/OutletDetailPage.svelte",
+        "src/web/features/outlets/pages/OutletFormPage.svelte",
+        "src/web/features/visits/pages/VisitFormPage.svelte",
+        "src/web/features/products/pages/ProductFormPage.svelte",
+        "src/web/features/raw-materials/pages/RawMaterialFormPage.svelte",
+        "src/web/features/products/pages/ProductDetailPage.svelte",
+        "src/web/features/settings/pages/SettingsPage.svelte",
+        "src/web/features/reports/pages/OwnerHubPage.svelte",
+        "src/web/features/shell/pages/RootLayout.svelte",
+        "src/web/features/dashboard/pages/DashboardPage.svelte",
+        "src/web/features/outlets/pages/OutletListPage.svelte",
+        "src/web/features/visits/pages/VisitListPage.svelte",
+        "src/web/features/products/pages/ProductListPage.svelte",
+        "src/web/features/raw-materials/pages/RawMaterialListPage.svelte",
+        "src/web/features/users/pages/UsersPage.svelte",
+        "src/web/features/reports/pages/ReportsPage.svelte",
+        "src/web/features/auth/pages/LoginPage.svelte",
+        "src/web/features/shell/pages/UiKitchenSinkPage.svelte",
+        "src/web/features/visits/pages/PlaceCoffeePage.svelte",
+        "src/web/features/master/pages/MasterPage.svelte",
+        "src/web/features/auth/pages/.gitkeep",
+        "src/web/features/auth/pages/ProfilePage.svelte",
+        "src/web/features/shell/pages/.gitkeep",
+        "src/web/features/shell/pages/NotFoundPage.svelte",
+        "src/web/features/dashboard/pages/.gitkeep",
+        "src/web/features/outlets/pages/.gitkeep",
+        "src/web/features/visits/pages/.gitkeep",
+        "src/web/features/products/pages/.gitkeep",
+        "src/web/features/raw-materials/pages/.gitkeep",
+        "src/web/features/master/pages/.gitkeep",
+        "src/web/features/settings/pages/.gitkeep",
+        "src/web/features/users/pages/.gitkeep",
+        "src/web/features/reports/pages/.gitkeep",
+        "src/web/features/public/pages/CategoryPage.svelte",
+        "src/web/features/public/pages/CartPage.svelte",
+        "src/web/features/public/pages/CheckoutPage.svelte"
+      ],
+      "entities": [
+        "OutletDetailPage",
+        "OutletFormPage",
+        "VisitFormPage",
+        "ProductFormPage",
+        "RawMaterialFormPage"
+      ],
+      "keyFile": "src/web/features/outlets/pages/OutletDetailPage.svelte"
+    },
+    {
+      "name": "utilities",
+      "suggestedSpecPath": "openspec/specs/utilities/spec.md",
+      "files": [
+        "src/web/lib/utils/haptics.ts",
+        "src/web/lib/utils/animations.ts",
+        "src/web/lib/utils/format.ts",
+        "src/web/lib/utils/cn.ts",
+        "src/web/lib/utils/local-storage.ts",
+        "src/web/lib/utils/.gitkeep"
+      ],
+      "entities": [
+        "Haptics",
+        "Animations",
+        "Format",
+        "LocalStorage"
+      ],
+      "keyFile": "src/web/lib/utils/haptics.ts"
+    },
+    {
+      "name": "ui",
+      "suggestedSpecPath": "openspec/specs/ui/spec.md",
+      "files": [
+        "src/web/shared/ui/Button.svelte",
+        "src/web/shared/ui/Input.svelte",
+        "src/web/shared/ui/TextArea.svelte",
+        "src/web/shared/ui/Select.svelte",
+        "src/web/shared/ui/Card.svelte",
+        "src/web/shared/ui/Tabs.svelte",
+        "src/web/shared/ui/Toast.svelte",
+        "src/web/shared/ui/QtyStepper.svelte",
+        "src/web/shared/ui/Dialog.svelte",
+        "src/web/shared/ui/Sheet.svelte",
+        "src/web/shared/ui/NavItem.svelte",
+        "src/web/shared/ui/Skeleton.svelte",
+        "src/web/shared/ui/EmptyState.svelte",
+        "src/web/shared/ui/ErrorState.svelte",
+        "src/web/shared/ui/AgeBadge.svelte"
+      ],
+      "entities": [
+        "Button",
+        "Input",
+        "TextArea",
+        "Select",
+        "Card"
+      ],
+      "keyFile": "src/web/shared/ui/Button.svelte"
+    },
+    {
+      "name": "composables",
+      "suggestedSpecPath": "openspec/specs/composables/spec.md",
+      "files": [
+        "src/web/shared/composables/PullToRefresh.svelte",
+        "src/web/shared/composables/BottomSheet.svelte",
+        "src/web/shared/composables/ConfirmDialog.svelte",
+        "src/web/shared/composables/.gitkeep"
+      ],
+      "entities": [
+        "PullToRefresh",
+        "BottomSheet",
+        "ConfirmDialog"
+      ],
+      "keyFile": "src/web/shared/composables/PullToRefresh.svelte"
+    },
+    {
+      "name": "docs",
+      "suggestedSpecPath": "openspec/specs/docs/spec.md",
+      "files": [
+        "docs/FRONTEND_ARCHITECTURE.md",
+        "docs/IMPLEMENTATION_PLAN.md"
+      ],
+      "entities": [
+        "FRONTENDARCHITECTURE",
+        "IMPLEMENTATIONPLAN"
+      ],
+      "keyFile": "docs/FRONTEND_ARCHITECTURE.md"
+    },
+    {
+      "name": "migrations",
+      "suggestedSpecPath": "openspec/specs/migrations/spec.md",
+      "files": [
+        "migrations/0001_master_data.sql",
+        "migrations/0002_visit.sql",
+        "migrations/0000_init.sql",
+        "migrations/0003_visit_notes.sql",
+        "migrations/0004_products_hpp_override.sql"
+      ],
+      "entities": [
+        "0001MasterData",
+        "0002Visit",
+        "0000Init",
+        "0003VisitNotes",
+        "0004ProductsHppOverride"
+      ],
+      "keyFile": "migrations/0001_master_data.sql"
+    },
+    {
+      "name": "scripts",
+      "suggestedSpecPath": "openspec/specs/scripts/spec.md",
+      "files": [
+        "scripts/generate-pwa-icons.js",
+        "scripts/seed-owner.ts"
+      ],
+      "entities": [
+        "GeneratePwaIcons",
+        "SeedOwner"
+      ],
+      "keyFile": "scripts/generate-pwa-icons.js"
+    },
+    {
+      "name": "outlet",
+      "suggestedSpecPath": "openspec/specs/outlet/spec.md",
+      "files": [
+        "src/shared/schemas/outlet.schema.ts",
+        "src/web/features/outlets/stores/outlet-filter.svelte.ts"
+      ],
+      "entities": [
+        "OutletSchema",
+        "OutletFilterSvelte"
+      ],
+      "keyFile": "src/shared/schemas/outlet.schema.ts"
+    },
+    {
+      "name": "visit",
+      "suggestedSpecPath": "openspec/specs/visit/spec.md",
+      "files": [
+        "src/shared/schemas/visit.schema.ts",
+        "src/web/features/visits/stores/visit-draft.svelte.ts"
+      ],
+      "entities": [
+        "VisitSchema",
+        "VisitDraftSvelte"
+      ],
+      "keyFile": "src/shared/schemas/visit.schema.ts"
+    },
+    {
+      "name": "report",
+      "suggestedSpecPath": "openspec/specs/report/spec.md",
+      "files": [
+        "src/shared/schemas/report.schema.ts",
+        "src/web/features/reports/stores/report-filters.svelte.ts"
+      ],
+      "entities": [
+        "ReportSchema",
+        "ReportFiltersSvelte"
+      ],
+      "keyFile": "src/shared/schemas/report.schema.ts"
+    },
+    {
+      "name": "auth",
+      "suggestedSpecPath": "openspec/specs/auth/spec.md",
+      "files": [
+        "src/shared/schemas/auth.schema.ts",
+        "src/web/lib/stores/auth.svelte.ts",
+        "src/web/features/auth/api/auth.api.ts",
+        "src/web/features/auth/stores/auth.svelte.ts"
+      ],
+      "entities": [
+        "AuthSchema",
+        "AuthSvelte",
+        "AuthApi"
+      ],
+      "keyFile": "src/shared/schemas/auth.schema.ts"
+    },
+    {
+      "name": "raw",
+      "suggestedSpecPath": "openspec/specs/raw/spec.md",
+      "files": [
+        "src/shared/schemas/raw-material.schema.ts",
+        "src/worker/routes/raw_materials.ts"
+      ],
+      "entities": [
+        "RawMaterialSchema",
+        "RawMaterials"
+      ],
+      "keyFile": "src/shared/schemas/raw-material.schema.ts"
+    },
+    {
+      "name": "query",
+      "suggestedSpecPath": "openspec/specs/query/spec.md",
+      "files": [
+        "src/web/lib/api/query-keys.ts",
+        "src/web/lib/api/query-client.ts"
+      ],
+      "entities": [
+        "QueryKeys",
+        "QueryClient"
+      ],
+      "keyFile": "src/web/lib/api/query-keys.ts"
+    },
+    {
+      "name": "api-contract",
+      "suggestedSpecPath": "openspec/specs/api-contract/spec.md",
+      "files": [
+        "API_CONTRACT.md",
+        "eslint.config.js",
+        "vite.config.ts",
+        "tsconfig.json",
+        "tsconfig.worker.json",
+        "prettier.config.js",
+        "tsconfig.web.json",
+        "playwright.config.ts",
+        "vitest.config.ts",
+        "package.json",
+        "PRD.md",
+        "wrangler.toml",
+        ".mcp.json",
+        "opencode.jsonc",
+        ".prettierignore",
+        ".gitignore"
+      ],
+      "entities": [
+        "APICONTRACT",
+        "EslintConfig",
+        "ViteConfig",
+        "Tsconfig",
+        "TsconfigWorker"
+      ],
+      "keyFile": "API_CONTRACT.md"
+    },
+    {
+      "name": "shared",
+      "suggestedSpecPath": "openspec/specs/shared/spec.md",
+      "files": [
+        "src/shared/lib/units.ts",
+        "src/shared/lib/age.ts",
+        "src/shared/lib/money.ts",
+        "src/shared/lib/id.ts",
+        "src/shared/lib/.gitkeep"
+      ],
+      "entities": [
+        "Units",
+        "Age",
+        "Money"
+      ],
+      "keyFile": "src/shared/lib/units.ts"
+    }
+  ],
+  "entryPoints": [
+    {
+      "file": "src/web/features/outlets/api/index.ts",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/worker/index.ts",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/web/features/auth/api/index.ts",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/web/features/visits/api/index.ts",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/web/features/products/api/index.ts",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/web/features/raw-materials/api/index.ts",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/web/features/users/api/index.ts",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/web/features/reports/api/index.ts",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/web/features/dashboard/api/index.ts",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/web/features/settings/api/index.ts",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/web/App.svelte",
+      "type": "application-entry",
+      "initializes": []
+    },
+    {
+      "file": "src/web/app.css",
+      "type": "application-entry",
+      "initializes": [
+        "application"
+      ]
+    },
+    {
+      "file": "src/web/main.ts",
+      "type": "application-entry",
+      "initializes": []
+    },
+    {
+      "file": "src/web/index.html",
+      "type": "application-entry",
+      "initializes": []
+    },
+    {
+      "file": "scripts/generate-pwa-icons.js",
+      "type": "application-entry",
+      "initializes": []
+    }
+  ],
+  "dataFlow": {
+    "sources": [
+      "src/web/features/auth/api/auth.api.ts",
+      "src/worker/routes/auth.ts",
+      "src/worker/routes/settings.ts",
+      "src/web/lib/api/errors.ts",
+      "src/web/lib/api/client.ts",
+      "src/web/features/outlets/api/index.ts",
+      "src/worker/routes/products.ts",
+      "src/web/lib/api/query-keys.ts",
+      "src/worker/routes/visit.ts",
+      "src/web/features/auth/api/index.ts",
+      "src/web/features/visits/api/index.ts",
+      "src/web/features/products/api/index.ts",
+      "src/web/features/raw-materials/api/index.ts",
+      "src/web/features/users/api/index.ts",
+      "src/web/features/reports/api/index.ts",
+      "src/worker/routes/users.ts",
+      "src/worker/routes/raw_materials.ts",
+      "src/worker/routes/outlets.ts",
+      "src/worker/routes/dashboard.ts",
+      "src/web/lib/api/query-client.ts",
+      "src/web/features/dashboard/api/index.ts",
+      "src/web/features/settings/api/index.ts",
+      "src/worker/routes/media.ts",
+      "src/worker/routes/reports.ts"
+    ],
+    "sinks": [],
+    "transformers": [
+      "src/worker/services/hpp.ts",
+      "src/worker/services/visit.ts",
+      "src/worker/services/__tests__/visit-permissions.test.ts",
+      "src/worker/services/__tests__/voidVisit.test.ts",
+      "src/worker/services/__tests__/hpp.test.ts",
+      "src/worker/services/__tests__/visit.test.ts",
+      "src/worker/services/voidVisit.ts"
+    ]
+  },
+  "keyFiles": {
+    "schemas": [
+      "src/shared/schemas/user.schema.ts",
+      "src/shared/schemas/outlet.schema.ts",
+      "src/shared/schemas/product.schema.ts",
+      "src/shared/schemas/visit.schema.ts",
+      "src/shared/schemas/report.schema.ts",
+      "src/shared/schemas/auth.schema.ts",
+      "src/shared/schemas/raw-material.schema.ts",
+      "src/shared/schemas/settings.schema.ts",
+      "src/worker/db/schema.ts",
+      "src/shared/schemas/.gitkeep"
+    ],
+    "config": [
+      "src/shared/schemas/settings.schema.ts",
+      "src/worker/routes/settings.ts",
+      "eslint.config.js",
+      "vite.config.ts",
+      "tsconfig.json",
+      "tsconfig.worker.json",
+      "prettier.config.js",
+      "tsconfig.web.json",
+      "playwright.config.ts",
+      "vitest.config.ts",
+      "package.json"
+    ],
+    "auth": [
+      "src/shared/schemas/auth.schema.ts",
+      "src/web/lib/stores/auth.svelte.ts",
+      "src/web/features/auth/api/auth.api.ts",
+      "src/web/features/auth/providers/AuthProvider.svelte",
+      "src/worker/routes/auth.ts",
+      "src/web/features/auth/stores/auth.svelte.ts",
+      "src/web/features/auth/components/LoginForm.svelte",
+      "src/web/features/auth/api/index.ts",
+      "src/web/features/auth/pages/LoginPage.svelte",
+      "src/web/features/auth/pages/.gitkeep",
+      "src/web/features/auth/pages/ProfilePage.svelte",
+      "src/web/features/auth/components/.gitkeep",
+      "src/web/features/auth/stores/.gitkeep"
+    ],
+    "database": [
+      "src/worker/db/schema.ts",
+      "src/worker/db/client.ts"
+    ],
+    "routes": [
+      "src/web/features/shell/components/RouteGuard.svelte",
+      "src/worker/routes/auth.ts",
+      "src/web/routes.ts",
+      "src/worker/routes/settings.ts",
+      "src/worker/routes/products.ts",
+      "src/worker/routes/visit.ts",
+      "src/worker/routes/users.ts",
+      "src/worker/routes/raw_materials.ts",
+      "src/worker/routes/outlets.ts",
+      "src/worker/routes/dashboard.ts",
+      "src/worker/routes/media.ts",
+      "src/worker/routes/reports.ts"
+    ],
+    "services": [
+      "src/worker/services/hpp.ts",
+      "src/worker/services/visit.ts",
+      "src/worker/services/__tests__/visit-permissions.test.ts",
+      "src/worker/services/__tests__/voidVisit.test.ts",
+      "src/worker/services/__tests__/hpp.test.ts",
+      "src/worker/services/__tests__/visit.test.ts",
+      "src/worker/services/voidVisit.ts"
+    ]
+  },
+  "uiComponents": [],
+  "schemas": [],
+  "routeInventory": {
+    "total": 0,
+    "byMethod": {},
+    "byFramework": {},
+    "routes": []
+  },
+  "middleware": [],
+  "envVars": [],
+  "statistics": {
+    "totalFiles": 260,
+    "analyzedFiles": 227,
+    "skippedFiles": 33,
+    "avgFileScore": 23.9,
+    "nodeCount": 227,
+    "edgeCount": 137,
+    "cycleCount": 0,
+    "clusterCount": 55
+  }
+}

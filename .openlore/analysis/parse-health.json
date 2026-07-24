@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "totalDegradedFiles": 1,
+  "totalErrorRegions": 1,
+  "byLanguage": [
+    {
+      "language": "TypeScript",
+      "degradedFiles": 1,
+      "errorRegions": 1,
+      "parseFailures": 0,
+      "encodingFallbacks": 0
+    }
+  ],
+  "topFiles": [
+    {
+      "filePath": "src/worker/services/__tests__/visit-permissions.test.ts",
+      "language": "TypeScript",
+      "errorCount": 1,
+      "missingCount": 0,
+      "errorLines": [
+        45
+      ]
+    }
+  ],
+  "files": [
+    {
+      "filePath": "src/worker/services/__tests__/visit-permissions.test.ts",
+      "language": "TypeScript",
+      "errorCount": 1,
+      "missingCount": 0,
+      "errorLines": [
+        45
+      ]
+    }
+  ]
+}
