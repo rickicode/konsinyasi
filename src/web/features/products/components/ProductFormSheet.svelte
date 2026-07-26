@@ -18,7 +18,7 @@ import { uomsQueryOptions } from '../../uoms/api/index.js';
     uploadProductPhotoMutationOptions,
   } from '../api/index.js';
   import HppDisplay from './HppDisplay.svelte';
-  import ProductPhotoUploader from './ProductPhotoUploader.svelte';
+  import PhotoUploader from '../../outlets/components/PhotoUploader.svelte';
   import RecipeEditor from './RecipeEditor.svelte';
   import Button from '../../../shared/ui/Button.svelte';
   import Input from '../../../shared/ui/Input.svelte';
@@ -328,7 +328,7 @@ const uomsQuery = createQuery(() => uomsQueryOptions());
         {#if canWrite}
           <section class="rounded-2xl border border-coffee-100 bg-milk p-4">
             <h3 class="mb-3 text-sm font-semibold text-coffee-800">Foto Produk</h3>
-            <ProductPhotoUploader bind:file={photoFile} bind:previewUrl={photoPreviewUrl} />
+            <PhotoUploader bind:file={photoFile} bind:previewUrl={photoPreviewUrl} photoAlt="Foto produk" />
           </section>
         {/if}
       </div>
