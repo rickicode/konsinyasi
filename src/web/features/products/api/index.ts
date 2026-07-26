@@ -21,8 +21,6 @@ import type {
 } from '@shared/schemas/product.schema.js';
 
 const DEFAULT_PAGE_SIZE = 20;
-const okResponseSchema = z.object({ ok: z.boolean() });
-
 export interface FetchProductsPaginatedInput {
   page: number;
   limit: number;
@@ -93,8 +91,8 @@ export async function updateProduct(
 export async function deleteProduct(
   id: string,
   client: ApiClient = apiClient
-): Promise<{ ok: boolean }> {
-  return client.delete(`/api/products/${id}`, okResponseSchema);
+): Promise<void> {
+  await client.delete(`/api/products/${id}`, z.void());
 }
 
 /**
@@ -212,8 +210,8 @@ export function uploadProductPhotoMutationOptions(client: ApiClient = apiClient)
 export async function deleteProductPhoto(
   id: string,
   client: ApiClient = apiClient
-): Promise<{ ok: boolean }> {
-  return client.delete(`/api/products/${id}/photo`, okResponseSchema);
+): Promise<void> {
+  await client.delete(`/api/products/${id}/photo`, z.void());
 }
 
 /**

@@ -72,8 +72,8 @@ export async function resetUserPassword(
 export async function deleteUser(
   id: string,
   client: ApiClient = apiClient
-): Promise<{ ok: boolean }> {
-  return client.delete(`/api/users/${id}`, okResponseSchema);
+): Promise<void> {
+  await client.delete(`/api/users/${id}`, z.void());
 }
 
 // ---------------- queryOptions factories ----------------

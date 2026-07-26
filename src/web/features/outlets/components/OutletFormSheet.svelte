@@ -113,17 +113,23 @@
     return Math.abs(latitude) < 0.0001 && Math.abs(longitude) < 0.0001;
   }
 
+  const REVERSE_GEOCODE_TIMEOUT_MS = 8_000;
+
   async function reverseGeocode(latitude: number, longitude: number): Promise<string | null> {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), REVERSE_GEOCODE_TIMEOUT_MS);
     try {
       const resp = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-        { headers: { 'Accept-Language': 'id' } }
+        { headers: { 'Accept-Language': 'id' }, signal: controller.signal }
       );
       if (!resp.ok) return null;
       const data = await resp.json();
       return data.display_name ?? null;
     } catch {
       return null;
+    } finally {
+      window.clearTimeout(timer);
     }
   }
 
@@ -137,11 +143,14 @@
     // Auto-fill address if empty
     if (!address.trim()) {
       isFetchingAddress = true;
-      const addr = await reverseGeocode(newLat, newLng);
-      if (addr && !address.trim()) {
-        address = addr;
+      try {
+        const addr = await reverseGeocode(newLat, newLng);
+        if (addr && !address.trim()) {
+          address = addr;
+        }
+      } finally {
+        isFetchingAddress = false;
       }
-      isFetchingAddress = false;
     }
   }
 

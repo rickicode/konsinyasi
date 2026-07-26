@@ -17,8 +17,6 @@ import type { PaginatedList } from '@shared/schemas/pagination.schema.js';
 import { queryKeys } from '$lib/api/query-keys.js';
 
 const DEFAULT_PAGE_SIZE = 20;
-const okResponseSchema = z.object({ ok: z.boolean() });
-
 export interface ListRawMaterialsPaginatedInput {
   page: number;
   limit: number;
@@ -67,8 +65,8 @@ export async function updateRawMaterial(
 export async function deleteRawMaterial(
   id: string,
   client: ApiClient = apiClient
-): Promise<{ ok: boolean }> {
-  return client.delete(`/api/raw-materials/${id}`, okResponseSchema);
+): Promise<void> {
+  await client.delete(`/api/raw-materials/${id}`, z.void());
 }
 
 // ---------------- queryOptions factories ----------------

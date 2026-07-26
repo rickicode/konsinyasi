@@ -143,21 +143,30 @@ const uomsQuery = createQuery(() => uomsQueryOptions());
     return Object.keys(errors).length === 0;
   }
 
-  function buildPayload(): ProductCreateInput | ProductUpdateInput {
-    const base = { name: name.trim(), status };
-    if (!canManageFinancial) return base;
+  function buildCreatePayload(): ProductCreateInput {
+    const payload: ProductCreateInput = { name: name.trim(), status };
+    if (!canManageFinancial) return payload;
 
-    const price = Number(priceInput);
     const hasRecipe = recipeLines.length > 0;
-    const override =
-      !hasRecipe && String(hppOverrideInput).trim() !== '' ? Number(hppOverrideInput) : undefined;
+    payload.price_to_outlet = Number(priceInput);
+    payload.recipe_lines = hasRecipe ? recipeLines : undefined;
+    if (!hasRecipe && String(hppOverrideInput).trim() !== '') {
+      payload.hpp_override = Number(hppOverrideInput);
+    }
+    return payload;
+  }
 
-    return {
-      ...base,
-      price_to_outlet: price,
-      recipe_lines: hasRecipe ? recipeLines : undefined,
-      hpp_override: override,
-    };
+  function buildUpdatePayload(): ProductUpdateInput {
+    const payload: ProductUpdateInput = { name: name.trim(), status };
+    if (!canManageFinancial) return payload;
+
+    const hasRecipe = recipeLines.length > 0;
+    payload.price_to_outlet = Number(priceInput);
+    payload.recipe_lines = hasRecipe ? recipeLines : undefined;
+    if (!hasRecipe && String(hppOverrideInput).trim() !== '') {
+      payload.hpp_override = Number(hppOverrideInput);
+    }
+    return payload;
   }
 
   function previewHpp() {
@@ -210,14 +219,13 @@ const uomsQuery = createQuery(() => uomsQueryOptions());
     }
 
     try {
-      const payload = buildPayload();
       let savedId = id;
       if (isCreate) {
-        const created = await createProductItem.mutateAsync(payload as ProductCreateInput);
+        const created = await createProductItem.mutateAsync(buildCreatePayload());
         savedId = created.id;
         toast.add('Produk berhasil dibuat', 'success');
       } else {
-        await updateProductItem.mutateAsync({ id, input: payload as ProductUpdateInput });
+        await updateProductItem.mutateAsync({ id, input: buildUpdatePayload() });
         toast.add('Produk berhasil diperbarui', 'success');
       }
       if (photoFile) {

@@ -82,12 +82,18 @@
       action: input.action,
     };
     toasts.push(item);
-    if (item.duration > 0) {
-      setTimeout(() => removeToast(id), item.duration);
-    }
+    timers.set(
+      id,
+      setTimeout(() => removeToast(id), item.duration)
+    );
   }
 
   function removeToast(id: string) {
+    const timer = timers.get(id);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      timers.delete(id);
+    }
     const idx = toasts.findIndex((t) => t.id === id);
     if (idx !== -1) {
       toasts.splice(idx, 1);
@@ -95,6 +101,10 @@
   }
 
   function clearToasts() {
+    for (const timer of timers.values()) {
+      clearTimeout(timer);
+    }
+    timers.clear();
     toasts.splice(0, toasts.length);
   }
 

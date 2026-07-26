@@ -1,5 +1,6 @@
 import { queryOptions, mutationOptions } from '@tanstack/svelte-query';
 import { apiClient, type ApiClient } from '$lib/api/client.js';
+import { ApiError } from '$lib/api/errors.js';
 import {
   loginResponseSchema,
   loginSchema,
@@ -16,7 +17,15 @@ import type {
 
 // ---------------- raw fetch helpers ----------------
 export async function getCurrentUser(client: ApiClient = apiClient): Promise<MeResponse | null> {
-  return client.get('/api/auth/me', meResponseSchema.nullable()).catch(() => null);
+  try {
+    return await client.get('/api/auth/me', meResponseSchema.nullable());
+  } catch (err) {
+    // Treat authentication failures as logged-out; re-throw real outages.
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 export async function login(

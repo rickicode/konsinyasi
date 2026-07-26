@@ -10,8 +10,6 @@ import {
 } from '@shared/schemas/uom.schema.js';
 import type { Uom, UomCreateInput, UomUpdateInput } from '@shared/schemas/uom.schema.js';
 
-const okResponseSchema = z.object({ ok: z.boolean() });
-
 export async function listUoms(client: ApiClient = apiClient): Promise<Uom[]> {
   return client.get('/api/uoms/', uomListSchema);
 }
@@ -34,8 +32,8 @@ export async function updateUom(
   return client.patch(`/api/uoms/${id}`, input, uomResponseSchema);
 }
 
-export async function deleteUom(id: string, client: ApiClient = apiClient): Promise<{ ok: boolean }> {
-  return client.delete(`/api/uoms/${id}`, okResponseSchema);
+export async function deleteUom(id: string, client: ApiClient = apiClient): Promise<void> {
+  await client.delete(`/api/uoms/${id}`, z.void());
 }
 
 export function uomsQueryOptions(client: ApiClient = apiClient) {

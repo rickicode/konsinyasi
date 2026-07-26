@@ -19,8 +19,6 @@ import type {
 } from '@shared/schemas/outlet.schema.js';
 
 const DEFAULT_PAGE_SIZE = 20;
-const okResponseSchema = z.object({ ok: z.boolean() });
-
 export interface OutletPhotoUploadArgs {
   id: string;
   photo: File;
@@ -88,8 +86,8 @@ export async function updateOutlet(
 export async function deleteOutlet(
   id: string,
   client: ApiClient = apiClient
-): Promise<{ ok: boolean }> {
-  return client.delete(`/api/outlets/${id}`, okResponseSchema);
+): Promise<void> {
+  await client.delete(`/api/outlets/${id}`, z.void());
 }
 
 /**

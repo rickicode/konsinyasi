@@ -23,7 +23,11 @@
       const errors: typeof validation = {};
       for (const issue of result.error.issues) {
         const key = issue.path[0] as 'username' | 'password';
-        if (!errors[key]) errors[key] = issue.message;
+        if (!errors[key]) {
+          errors[key] = issue.message;
+        } else {
+          errors[key] += `; ${issue.message}`;
+        }
       }
       validation = errors;
       return;

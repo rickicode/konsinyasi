@@ -80,9 +80,7 @@ describe('compressImageFile', () => {
   it('scales down so the largest edge matches maxEdge', async () => {
     const file = makeFile('big.png', 'image/png');
     await compressImageFile(file, { maxEdge: 800 });
-    expect(lastCanvas.width).toBe(800);
-    expect(lastCanvas.height).toBe(600);
-    expect(lastCtx.drawImage).toHaveBeenCalled();
+    expect(lastCtx.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 800, 600);
   });
 
   it('keeps original dimensions when the image is already smaller than maxEdge', async () => {
@@ -92,8 +90,7 @@ describe('compressImageFile', () => {
     );
     const file = makeFile('small.png', 'image/png');
     await compressImageFile(file, { maxEdge: 800 });
-    expect(lastCanvas.width).toBe(400);
-    expect(lastCanvas.height).toBe(300);
+    expect(lastCtx.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 400, 300);
   });
 
   it('uses the requested output MIME type and quality for the first encode', async () => {

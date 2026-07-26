@@ -1,6 +1,7 @@
 import { mount } from 'svelte';
 import { registerSW } from 'virtual:pwa-register';
 import { pwaInfo } from 'virtual:pwa-info';
+import { toast } from '$lib/stores/toast.svelte.js';
 import './app.css';
 import App from './App.svelte';
 
@@ -18,11 +19,19 @@ function registerServiceWorker() {
     // instead of showing an animated refresh prompt.
     immediate: prefersReducedMotion,
     onNeedRefresh() {
+      function hasUnsubmittedDrafts() {
+        if (typeof localStorage === 'undefined') return false;
+        return Object.keys(localStorage).some((key) => key.startsWith('konsi_visit_draft_'));
+      }
+      const message = hasUnsubmittedDrafts()
+        ? 'Update aplikasi tersedia. Simpan draft kunjungan terlebih dahulu, lalu muat ulang.'
+        : 'Update aplikasi tersedia. Muat ulang sekarang?';
       if (prefersReducedMotion) {
         updateSW(true);
+      } else if (window.confirm(message)) {
+        updateSW(true);
       } else {
-        // Defer the update slightly so the active page transition is not jarring.
-        window.setTimeout(() => updateSW(true), 2000);
+        toast.add('Update tersedia. Muat ulang setelah menyimpan draft.', 'info');
       }
     },
     onOfflineReady() {
