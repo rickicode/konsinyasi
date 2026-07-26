@@ -57,8 +57,9 @@ app.get('/api/health', (c) => c.json({ status: 'ok' }));
 app.use('/api/auth/logout', requireAuth);
 app.use('/api/auth/me', optionalAuth);
 
-app.use('/api/users/*', requirePermission('users:manage'));
-app.use('/api/raw-materials/*', requirePermission('bom:write'));
+// Root-level route guards for /api/users, /api/raw-materials, /api/outlets and
+// /api/settings are applied inside the mounted sub-routers so exact root paths
+// and all subpaths are protected exactly once.
 app.get('/api/products', requirePermission('products:read'));
 app.get('/api/products/picker', requirePermission('products:read'));
 app.get('/api/products/:id', requirePermission('products:read'));
@@ -67,14 +68,60 @@ app.patch('/api/products/:id', requirePermission('products:write'));
 app.delete('/api/products/:id', requirePermission('products:write'));
 app.post('/api/products/:id/photo', requirePermission('products:write'));
 app.delete('/api/products/:id/photo', requirePermission('products:write'));
-app.use('/api/outlets/:id/photo', requirePermission('outlets:write'), createRateLimitMiddleware({ keyPrefix: 'photo', byUsername: false, windowSeconds: 60, maxAttempts: 30 }));
-app.use('/api/products/:id/photo', requirePermission('products:write'), createRateLimitMiddleware({ keyPrefix: 'photo', byUsername: false, windowSeconds: 60, maxAttempts: 30 }));
-app.use('/api/visits/:id/photos', requirePermission('visit:write'), createRateLimitMiddleware({ keyPrefix: 'photo', byUsername: false, windowSeconds: 60, maxAttempts: 30 }));
-app.use('/api/visits/:id/receipt-photos', requirePermission('visit:write'), createRateLimitMiddleware({ keyPrefix: 'photo', byUsername: false, windowSeconds: 60, maxAttempts: 30 }));
-app.use('/api/settings/brand/logo', requirePermission('settings:write'), createRateLimitMiddleware({ keyPrefix: 'brand-logo', byUsername: false, windowSeconds: 60, maxAttempts: 10 }));
-app.use('/api/outlets/*', requirePermission('outlets:write'));
+app.use(
+  '/api/outlets/:id/photo',
+  requirePermission('outlets:write'),
+  createRateLimitMiddleware({
+    keyPrefix: 'photo',
+    byUsername: false,
+    windowSeconds: 60,
+    maxAttempts: 30,
+  })
+);
+app.use(
+  '/api/products/:id/photo',
+  requirePermission('products:write'),
+  createRateLimitMiddleware({
+    keyPrefix: 'photo',
+    byUsername: false,
+    windowSeconds: 60,
+    maxAttempts: 30,
+  })
+);
+app.use(
+  '/api/visits/:id/photos',
+  requirePermission('visit:write'),
+  createRateLimitMiddleware({
+    keyPrefix: 'photo',
+    byUsername: false,
+    windowSeconds: 60,
+    maxAttempts: 30,
+  })
+);
+app.use(
+  '/api/visits/:id/receipt-photos',
+  requirePermission('visit:write'),
+  createRateLimitMiddleware({
+    keyPrefix: 'photo',
+    byUsername: false,
+    windowSeconds: 60,
+    maxAttempts: 30,
+  })
+);
+app.use(
+  '/api/settings/brand/logo',
+  requirePermission('settings:write'),
+  createRateLimitMiddleware({
+    keyPrefix: 'brand-logo',
+    byUsername: false,
+    windowSeconds: 60,
+    maxAttempts: 10,
+  })
+);
 
-app.use('/api/settings/*', requirePermission('settings:read'));
+// Specific /api/settings/geofence mutation remains guarded here; the generic
+// /api/settings/* read guard lives inside the settings sub-router so root path
+// is protected exactly once.
 app.put('/api/settings/geofence', requirePermission('settings:write'));
 
 app.use('/api/dashboard', requirePermission('dashboard:read'));

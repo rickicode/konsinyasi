@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, eq, gte, isNull, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, lte, not, sql } from 'drizzle-orm';
 import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
 import { consignment_cycles, outlets, products, users, visit_submissions } from '../db/schema.js';
@@ -21,12 +21,15 @@ function parseDateParam(value: string | undefined, fallback: Date): string {
 const reportsRoute = new Hono<Env>();
 
 reportsRoute.get('/', async (c) => {
+  const user = c.get('user');
   const db = createClient(c.env);
   const { from, to, user_id } = c.req.query();
+  // Staff may only view their own data; owners may filter by another user.
+  const effectiveUserId = user.role === 'owner' ? user_id : user.id;
 
   if (
-    user_id &&
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user_id)
+    effectiveUserId &&
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(effectiveUserId)
   ) {
     throw new ValidationError('user_id tidak valid');
   }
@@ -39,13 +42,13 @@ reportsRoute.get('/', async (c) => {
     gte(visit_submissions.created_at, fromDate),
     lte(visit_submissions.created_at, toTimestamp),
     eq(visit_submissions.status, 'committed'),
-    user_id ? eq(visit_submissions.user_id, user_id) : undefined
+    effectiveUserId ? eq(visit_submissions.user_id, effectiveUserId) : undefined
   );
 
   const cycleDateConditions = and(
     gte(consignment_cycles.created_at, fromDate),
     lte(consignment_cycles.created_at, toTimestamp),
-    sql`${consignment_cycles.status} != 'voided'`
+    not(eq(consignment_cycles.status, 'voided'))
   );
 
   // ---- Summaries (independent) ----
@@ -57,7 +60,7 @@ reportsRoute.get('/', async (c) => {
     .from(visit_submissions)
     .where(visitConditions);
 
-  const cycleAggPromise = user_id
+  const cycleAggPromise = effectiveUserId
     ? db
         .select({
           total_revenue: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
@@ -69,7 +72,7 @@ reportsRoute.get('/', async (c) => {
           visit_submissions,
           and(
             eq(consignment_cycles.visit_submission_id, visit_submissions.idempotency_key),
-            eq(visit_submissions.user_id, user_id)
+            eq(visit_submissions.user_id, effectiveUserId)
           )
         )
         .where(cycleDateConditions)
@@ -90,7 +93,7 @@ reportsRoute.get('/', async (c) => {
   const totalMargin = totalRevenue - totalHppUsed;
 
   // ---- Breakdowns (independent) ----
-  const byOutletQuery = user_id
+  const byOutletQuery = effectiveUserId
     ? db
         .select({
           id: outlets.id,
@@ -106,7 +109,13 @@ reportsRoute.get('/', async (c) => {
           visit_submissions,
           eq(consignment_cycles.visit_submission_id, visit_submissions.idempotency_key)
         )
-        .where(and(cycleDateConditions, isNull(outlets.deleted_at), eq(visit_submissions.user_id, user_id)))
+        .where(
+          and(
+            cycleDateConditions,
+            isNull(outlets.deleted_at),
+            eq(visit_submissions.user_id, effectiveUserId)
+          )
+        )
         .groupBy(outlets.id, outlets.name)
     : db
         .select({
@@ -122,7 +131,7 @@ reportsRoute.get('/', async (c) => {
         .where(and(cycleDateConditions, isNull(outlets.deleted_at)))
         .groupBy(outlets.id, outlets.name);
 
-  const byProductQuery = user_id
+  const byProductQuery = effectiveUserId
     ? db
         .select({
           id: products.id,
@@ -138,7 +147,13 @@ reportsRoute.get('/', async (c) => {
           visit_submissions,
           eq(consignment_cycles.visit_submission_id, visit_submissions.idempotency_key)
         )
-        .where(and(cycleDateConditions, eq(visit_submissions.user_id, user_id)))
+        .where(
+          and(
+            cycleDateConditions,
+            eq(visit_submissions.user_id, effectiveUserId),
+            isNull(products.deleted_at)
+          )
+        )
         .groupBy(products.id, products.name)
     : db
         .select({
@@ -151,14 +166,14 @@ reportsRoute.get('/', async (c) => {
         })
         .from(consignment_cycles)
         .innerJoin(products, eq(consignment_cycles.product_id, products.id))
-        .where(cycleDateConditions)
+        .where(and(cycleDateConditions, isNull(products.deleted_at)))
         .groupBy(products.id, products.name);
 
   const byUserWhere = and(
     gte(visit_submissions.created_at, fromDate),
     lte(visit_submissions.created_at, toTimestamp),
     eq(visit_submissions.status, 'committed'),
-    user_id ? eq(visit_submissions.user_id, user_id) : undefined
+    effectiveUserId ? eq(visit_submissions.user_id, effectiveUserId) : undefined
   );
 
   const byUserQuery = db
@@ -175,7 +190,7 @@ reportsRoute.get('/', async (c) => {
       consignment_cycles,
       and(
         eq(visit_submissions.idempotency_key, consignment_cycles.visit_submission_id),
-        sql`${consignment_cycles.status} != 'voided'`
+        not(eq(consignment_cycles.status, 'voided'))
       )
     )
     .innerJoin(users, eq(visit_submissions.user_id, users.id))
@@ -191,7 +206,7 @@ reportsRoute.get('/', async (c) => {
   const payload = {
     from: fromDate,
     to: toDate,
-    user_id: user_id || undefined,
+    effectiveUserId: effectiveUserId || undefined,
     summary: {
       total_revenue: totalRevenue,
       total_hpp_used: totalHppUsed,

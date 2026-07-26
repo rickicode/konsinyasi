@@ -186,7 +186,15 @@ publicRoute.get('/products', async (c) => {
     })
     .from(products)
     .innerJoin(consignment_cycles, eq(products.id, consignment_cycles.product_id))
-    .where(and(eq(consignment_cycles.status, 'open'), isNull(products.deleted_at)))
+    .innerJoin(outlets, eq(consignment_cycles.outlet_id, outlets.id))
+    .where(
+      and(
+        eq(consignment_cycles.status, 'open'),
+        eq(outlets.status, 'active'),
+        isNull(outlets.deleted_at),
+        isNull(products.deleted_at)
+      )
+    )
     .groupBy(products.id, products.name)
     .orderBy(products.name);
 

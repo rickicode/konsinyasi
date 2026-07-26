@@ -160,7 +160,7 @@ export function validateImageFile(
 
   const allowedExtensions = options.allowedExtensions ?? IMAGE_CONFIG.allowedExtensions;
   const ext = extensionFromFileName(file.name);
-  if (ext && !allowedExtensions.includes(ext as ImageExtension)) {
+  if (!ext || !allowedExtensions.includes(ext as ImageExtension)) {
     throw new ValidationError(
       `Format foto tidak didukung. Gunakan ${allowedExtensions.join(', ')}`
     );
@@ -183,7 +183,9 @@ function readUInt16BE(view: Uint8Array, offset: number): number {
   return (view[offset] << 8) | view[offset + 1];
 }
 function readUInt32BE(view: Uint8Array, offset: number): number {
-  return (view[offset] << 24) | (view[offset + 1] << 16) | (view[offset + 2] << 8) | view[offset + 3];
+  return (
+    (view[offset] << 24) | (view[offset + 1] << 16) | (view[offset + 2] << 8) | view[offset + 3]
+  );
 }
 function readUInt24LE(view: Uint8Array, offset: number): number {
   return view[offset] | (view[offset + 1] << 8) | (view[offset + 2] << 16);
@@ -192,12 +194,7 @@ function extractDimensionsFromBuffer(buffer: Uint8Array): { width: number; heigh
   if (buffer.length < 24) return null;
 
   // PNG
-  if (
-    buffer[0] === 0x89 &&
-    buffer[1] === 0x50 &&
-    buffer[2] === 0x4e &&
-    buffer[3] === 0x47
-  ) {
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
     return { width: readUInt32BE(buffer, 16), height: readUInt32BE(buffer, 20) };
   }
 
@@ -240,9 +237,16 @@ function extractDimensionsFromBuffer(buffer: Uint8Array): { width: number; heigh
       if (marker === 0xd9 || marker === 0xd8) continue;
       if (i + 2 >= buffer.length) break;
       const segmentLength = readUInt16BE(buffer, i);
+      if (segmentLength < 2) break;
       if (i + segmentLength >= buffer.length) break;
       // SOF0/SOF1/SOF2/SOF3/SOF5/SOF6/SOF7/SOF9/SOF10/SOF11/SOF13/SOF14/SOF15
-      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      if (
+        marker >= 0xc0 &&
+        marker <= 0xcf &&
+        marker !== 0xc4 &&
+        marker !== 0xc8 &&
+        marker !== 0xcc
+      ) {
         return { height: readUInt16BE(buffer, i + 3), width: readUInt16BE(buffer, i + 5) };
       }
       i += segmentLength;
@@ -253,18 +257,20 @@ function extractDimensionsFromBuffer(buffer: Uint8Array): { width: number; heigh
 }
 
 export async function extractImageMetadata(file: File): Promise<ImageMetadata> {
-const buffer = new Uint8Array(await file.arrayBuffer());
-const dimensions = extractDimensionsFromBuffer(buffer);
-if (!dimensions) {
-throw new ValidationError('Gagal membaca metadata gambar: format tidak didukung atau file rusak');
-}
-return {
-width: dimensions.width,
-height: dimensions.height,
-contentType: file.type,
-size: file.size,
-extension: extensionFromFileName(file.name) as ImageExtension,
-};
+  const buffer = new Uint8Array(await file.arrayBuffer());
+  const dimensions = extractDimensionsFromBuffer(buffer);
+  if (!dimensions) {
+    throw new ValidationError(
+      'Gagal membaca metadata gambar: format tidak didukung atau file rusak'
+    );
+  }
+  return {
+    width: dimensions.width,
+    height: dimensions.height,
+    contentType: file.type,
+    size: file.size,
+    extension: extensionFromFileName(file.name) as ImageExtension,
+  };
 }
 /**
  * Calculate scaled dimensions that fit inside a maximum edge length while

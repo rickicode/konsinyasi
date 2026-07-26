@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Hono } from 'hono';
 import { and, desc, eq, gte, inArray, isNull, lte, type SQL } from 'drizzle-orm';
-import type { Env } from '../types.js';
+import type { Env, SafeUser } from '../types.js';
 import { createClient } from '../db/client.js';
 import {
   app_settings,
@@ -13,7 +13,7 @@ import {
   visit_submissions,
 } from '../db/schema.js';
 import { outletColumns } from './outlets.js';
-import { AppError, ValidationError } from '../lib/errors.js';
+import { AppError, ForbiddenError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
 import { loadOpenCycles, processVisit, type VisitResult } from '../services/visit.js';
 import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination.js';
@@ -150,7 +150,11 @@ visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) 
 
   const [openCycles, settingsRows] = await Promise.all([
     loadOpenCycles(db, outletId),
-    db.select({ value: app_settings.value }).from(app_settings).where(eq(app_settings.key, 'geofence_radius_m')).limit(1),
+    db
+      .select({ value: app_settings.value })
+      .from(app_settings)
+      .where(eq(app_settings.key, 'geofence_radius_m'))
+      .limit(1),
   ]);
 
   const productIds = [...new Set(openCycles.map((cycle) => cycle.product_id))];
@@ -276,10 +280,7 @@ visitRoute.get('/visits', requirePermission('visit:read'), async (c) => {
           .where(inArray(outlets.id, outletIds))
       : Promise.resolve([]),
     userIds.length > 0
-      ? db
-          .select({ id: users.id, name: users.name })
-          .from(users)
-          .where(inArray(users.id, userIds))
+      ? db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, userIds))
       : Promise.resolve([]),
   ]);
 
@@ -335,6 +336,7 @@ async function loadVisitForPhoto(db: ReturnType<typeof createClient>, visitId: s
     .select({
       idempotency_key: visit_submissions.idempotency_key,
       status: visit_submissions.status,
+      user_id: visit_submissions.user_id,
     })
     .from(visit_submissions)
     .where(eq(visit_submissions.idempotency_key, visitId))
@@ -343,6 +345,12 @@ async function loadVisitForPhoto(db: ReturnType<typeof createClient>, visitId: s
     throw new AppError(404, 'NOT_FOUND', 'Kunjungan tidak ditemukan');
   }
   return rows[0];
+}
+
+function assertVisitPhotoAccess(user: SafeUser, visit: { user_id: string }): void {
+  if (user.role !== 'owner' && visit.user_id !== user.id) {
+    throw new ForbiddenError('Anda tidak memiliki akses foto kunjungan ini');
+  }
 }
 
 function parseOptionalString(value: unknown): string | null {
@@ -380,6 +388,7 @@ visitRoute.post('/visits/:id/photos', requirePermission('visit:write'), async (c
   const bucket = requirePhotosBucket(c);
   const db = createClient(c.env);
   const visit = await loadVisitForPhoto(db, visitId);
+  assertVisitPhotoAccess(user, visit);
   if (visit.status !== 'committed') {
     throw new ValidationError('Foto kunjungan hanya dapat ditambahkan pada kunjungan aktif');
   }
@@ -428,9 +437,11 @@ visitRoute.post('/visits/:id/photos', requirePermission('visit:write'), async (c
 visitRoute.delete('/visits/:id/photos/:photoId', requirePermission('visit:write'), async (c) => {
   const visitId = c.req.param('id');
   const photoId = c.req.param('photoId');
+  const user = c.get('user');
   const bucket = requirePhotosBucket(c);
   const db = createClient(c.env);
-  await loadVisitForPhoto(db, visitId);
+  const visit = await loadVisitForPhoto(db, visitId);
+  assertVisitPhotoAccess(user, visit);
   const rows = await db
     .select({ photo_key: visit_photos.photo_key })
     .from(visit_photos)
@@ -439,10 +450,10 @@ visitRoute.delete('/visits/:id/photos/:photoId', requirePermission('visit:write'
   if (!rows[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Foto kunjungan tidak ditemukan');
   }
+  await deleteImageFromR2(bucket, rows[0].photo_key);
   await db
     .delete(visit_photos)
     .where(and(eq(visit_photos.id, photoId), eq(visit_photos.visit_id, visitId)));
-  await deleteImageFromR2(bucket, rows[0].photo_key);
   return c.json({ ok: true });
 });
 
@@ -475,6 +486,7 @@ visitRoute.post('/visits/:id/receipt-photos', requirePermission('visit:write'), 
   const bucket = requirePhotosBucket(c);
   const db = createClient(c.env);
   const visit = await loadVisitForPhoto(db, visitId);
+  assertVisitPhotoAccess(user, visit);
   if (visit.status !== 'committed') {
     throw new ValidationError('Foto bon hanya dapat ditambahkan pada kunjungan aktif');
   }
@@ -489,7 +501,10 @@ visitRoute.post('/visits/:id/receipt-photos', requirePermission('visit:write'), 
     scope: `visits/receipts/${visitId}`,
   });
   const note = parseOptionalString(body.note);
-  const amountRaw = body.amount;
+  let amountRaw: unknown = body.amount;
+  if (typeof amountRaw === 'string' && amountRaw.trim() === '') {
+    amountRaw = null;
+  }
   let amount: number | null = null;
   if (amountRaw !== undefined && amountRaw !== null) {
     const parsed = Number(amountRaw);
@@ -531,9 +546,11 @@ visitRoute.delete(
   async (c) => {
     const visitId = c.req.param('id');
     const photoId = c.req.param('photoId');
+    const user = c.get('user');
     const bucket = requirePhotosBucket(c);
     const db = createClient(c.env);
-    await loadVisitForPhoto(db, visitId);
+    const visit = await loadVisitForPhoto(db, visitId);
+    assertVisitPhotoAccess(user, visit);
     const rows = await db
       .select({ photo_key: receipt_photos.photo_key })
       .from(receipt_photos)
@@ -542,10 +559,10 @@ visitRoute.delete(
     if (!rows[0]) {
       throw new AppError(404, 'NOT_FOUND', 'Foto bon tidak ditemukan');
     }
+    await deleteImageFromR2(bucket, rows[0].photo_key);
     await db
       .delete(receipt_photos)
       .where(and(eq(receipt_photos.id, photoId), eq(receipt_photos.visit_id, visitId)));
-    await deleteImageFromR2(bucket, rows[0].photo_key);
     return c.json({ ok: true });
   }
 );

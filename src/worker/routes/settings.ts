@@ -5,6 +5,7 @@ import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
 import { app_settings } from '../db/schema.js';
 import { ForbiddenError, ValidationError } from '../lib/errors.js';
+import { requirePermission } from '../lib/rbac.js';
 import {
   buildImageUrl,
   deleteImageFromR2,
@@ -56,6 +57,9 @@ async function getBrandLogoKey(db: ReturnType<typeof createClient>): Promise<str
 }
 
 const settings = new Hono<Env>();
+// Enforce settings:read on the root path and all subpaths. Write endpoints
+// perform additional owner checks internally and are further guarded in index.ts.
+settings.use('*', requirePermission('settings:read'));
 
 settings.get('/', async (c) => {
   const db = createClient(c.env);

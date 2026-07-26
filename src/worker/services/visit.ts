@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
@@ -110,6 +110,14 @@ function nowUtcIso(): string {
   return new Date().toISOString();
 }
 
+function isUniqueConstraintError(err: unknown): boolean {
+  if (err instanceof Error) {
+    if (/unique constraint failed/i.test(err.message)) return true;
+    return isUniqueConstraintError(err.cause);
+  }
+  return false;
+}
+
 export async function loadOpenCycles(
   db: DrizzleD1Database<typeof schema>,
   outletId: string
@@ -142,8 +150,12 @@ async function loadGeofenceRadiusM(
 async function fetchExistingResult(
   db: DrizzleD1Database<typeof schema>,
   idempotencyKey: string,
-  actorId: string
+  actorId?: string
 ): Promise<VisitResult | undefined> {
+  const filters: SQL[] = [eq(schema.visit_submissions.idempotency_key, idempotencyKey)];
+  if (actorId) {
+    filters.push(eq(schema.visit_submissions.user_id, actorId));
+  }
   const rows = await db
     .select({
       response_json: schema.visit_submissions.response_json,
@@ -151,12 +163,7 @@ async function fetchExistingResult(
       qty_sold_total: schema.visit_submissions.qty_sold_total,
     })
     .from(schema.visit_submissions)
-    .where(
-      and(
-        eq(schema.visit_submissions.idempotency_key, idempotencyKey),
-        eq(schema.visit_submissions.user_id, actorId)
-      )
-    )
+    .where(and(...filters))
     .limit(1);
   if (!rows[0]) return undefined;
   const parsed = JSON.parse(rows[0].response_json) as VisitResult;
@@ -198,10 +205,7 @@ function checkGeofence(
   }
 }
 
-function validateOpenCycleCoverage(
-  pickups: PickupInput[],
-  openCycles: OpenCycle[]
-): void {
+function validateOpenCycleCoverage(pickups: PickupInput[], openCycles: OpenCycle[]): void {
   if (openCycles.length === 0) return;
   const pickupIds = pickups.map((p) => p.cycle_id);
   const uniquePickupIds = new Set(pickupIds);
@@ -484,7 +488,17 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
     updateOutletLastVisit,
   ];
 
-  await db.batch(statements as never);
+  try {
+    await db.batch(statements as never);
+  } catch (err) {
+    // Double-submit: if another request already inserted the idempotency key we
+    // return the stored response instead of a 500.
+    if (isUniqueConstraintError(err)) {
+      const conflict = await fetchExistingResult(db, idempotencyKey);
+      if (conflict) return conflict;
+    }
+    throw err;
+  }
   await verifyCyclesClosed(db, idempotencyKey, pickups);
   return result;
 }

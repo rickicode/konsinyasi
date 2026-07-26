@@ -101,7 +101,9 @@ export async function fetchRecipeLines(
       schema.raw_materials,
       eq(schema.product_recipes.raw_material_id, schema.raw_materials.id)
     )
-    .where(eq(schema.product_recipes.product_id, productId));
+    .where(
+      and(eq(schema.product_recipes.product_id, productId), isNull(schema.raw_materials.deleted_at))
+    );
   return rows.map((row) => ({
     id: row.id,
     raw_material_id: row.raw_material_id,
@@ -137,7 +139,12 @@ export async function fetchRecipeLinesForProducts(
       schema.raw_materials,
       eq(schema.product_recipes.raw_material_id, schema.raw_materials.id)
     )
-    .where(inArray(schema.product_recipes.product_id, productIds));
+    .where(
+      and(
+        inArray(schema.product_recipes.product_id, productIds),
+        isNull(schema.raw_materials.deleted_at)
+      )
+    );
   for (const row of rows) {
     const line: EnrichedRecipeLine = {
       id: row.id,
@@ -311,7 +318,9 @@ export async function recalculateHPP(
   const rawMaterials = await db
     .select(rawMaterialColumns)
     .from(schema.raw_materials)
-    .where(inArray(schema.raw_materials.id, rawMaterialIds));
+    .where(
+      and(inArray(schema.raw_materials.id, rawMaterialIds), isNull(schema.raw_materials.deleted_at))
+    );
   const materialMap = new Map(rawMaterials.map((m) => [m.id, m]));
   const unitSymbols = new Set<string>();
   for (const line of enriched) {
