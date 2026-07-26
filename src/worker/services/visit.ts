@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
@@ -68,6 +68,7 @@ export type DroppedCycleSummary = {
   cycle_id: string;
   product_name: string;
   qty_dropped: number;
+  price: number;
 };
 
 export type VisitResult = {
@@ -114,85 +115,134 @@ async function loadGeofenceRadiusM(
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-export async function processVisit(input: ProcessVisitInput): Promise<VisitResult> {
-  const {
-    db,
-    actor,
-    outlet,
-    idempotencyKey,
-    pickups,
-    drops,
-    clientLat,
-    clientLng,
-    clientAccuracyM,
-    geofenceOverride,
-    geofenceOverrideReason,
-    notes,
-  } = input;
-
-  const existing = await db
-    .select()
+async function fetchExistingResult(
+  db: DrizzleD1Database<typeof schema>,
+  idempotencyKey: string,
+  actorId: string
+): Promise<VisitResult | undefined> {
+  const rows = await db
+    .select({ response_json: schema.visit_submissions.response_json })
     .from(schema.visit_submissions)
-    .where(eq(schema.visit_submissions.idempotency_key, idempotencyKey))
+    .where(
+      and(
+        eq(schema.visit_submissions.idempotency_key, idempotencyKey),
+        eq(schema.visit_submissions.user_id, actorId)
+      )
+    )
     .limit(1);
-  if (existing[0]) {
-    return JSON.parse(existing[0].response_json) as VisitResult;
-  }
+  return rows[0] ? (JSON.parse(rows[0].response_json) as VisitResult) : undefined;
+}
 
+function assertOutletActive(outlet: typeof schema.outlets.$inferSelect): void {
   if (outlet.status !== 'active' || outlet.deleted_at) {
     throw new ValidationError('Warung tidak aktif');
   }
+}
 
-  const radiusM = await loadGeofenceRadiusM(db);
-  const distanceM = haversineM(clientLat, clientLng, outlet.latitude, outlet.longitude);
-
-  if (distanceM > radiusM) {
-    const ownerOk =
-      actor.role === 'owner' && geofenceOverride && Boolean(geofenceOverrideReason?.trim());
-    if (!ownerOk) {
-      throw new AppError(
-        400,
-        'GEOFENCE_ERROR',
-        `Anda ${distanceM} m dari warung (batas ${radiusM} m)`
-      );
-    }
-  }
-
+function assertHasOperations(pickups: PickupInput[], drops: DropInput[]): void {
   if (pickups.length === 0 && drops.length === 0) {
     throw new ValidationError('Kunjungan harus memiliki penarikan atau penitipan');
   }
+}
 
-  const openCycles = await loadOpenCycles(db, outlet.id);
-  const openCycleIds = new Set(openCycles.map((c) => c.id));
+function checkGeofence(
+  distanceM: number,
+  radiusM: number,
+  actor: typeof schema.users.$inferSelect,
+  override?: boolean,
+  overrideReason?: string
+): void {
+  if (distanceM <= radiusM) return;
 
-  if (openCycleIds.size > 0) {
-    const pickupIds = new Set(pickups.map((p) => p.cycle_id));
-    const missing = [...openCycleIds].filter((id) => !pickupIds.has(id));
-    if (missing.length > 0) {
-      throw new ValidationError('Semua siklus terbuka wajib ditutup dalam kunjungan ini');
-    }
+  const ownerOverride =
+    actor.role === 'owner' && override === true && Boolean(overrideReason?.trim());
+
+  if (!ownerOverride) {
+    throw new AppError(
+      400,
+      'GEOFENCE_ERROR',
+      `Anda ${distanceM} m dari warung (batas ${radiusM} m)`
+    );
+  }
+}
+
+function validateOpenCycleCoverage(
+  pickups: PickupInput[],
+  openCycles: (typeof schema.consignment_cycles.$inferSelect)[]
+): void {
+  if (openCycles.length === 0) return;
+
+  const pickupIds = pickups.map((p) => p.cycle_id);
+  const uniquePickupIds = new Set(pickupIds);
+
+  if (uniquePickupIds.size !== pickupIds.length) {
+    throw new ValidationError('Siklus penarikan tidak boleh duplikat');
   }
 
-  const closedSummaries: ClosedCycleSummary[] = [];
-  const statements: ReturnType<DrizzleD1Database<typeof schema>['batch']> extends infer R
-    ? R
-    : never[] = [];
-  const pickedUpAt = nowUtcIso();
+  const openCycleIds = new Set(openCycles.map((c) => c.id));
+  const missing = [...openCycleIds].filter((id) => !uniquePickupIds.has(id));
 
-  for (const pickup of pickups) {
+  if (missing.length > 0) {
+    throw new ValidationError('Semua siklus terbuka wajib ditutup dalam kunjungan ini');
+  }
+}
+
+type ProductContext = {
+  names: Map<string, string>;
+  activeById: Map<string, typeof schema.products.$inferSelect>;
+};
+
+async function loadProductContext(
+  db: DrizzleD1Database<typeof schema>,
+  productIds: string[]
+): Promise<ProductContext> {
+  if (productIds.length === 0) {
+    return { names: new Map(), activeById: new Map() };
+  }
+
+  const rows = await db
+    .select()
+    .from(schema.products)
+    .where(inArray(schema.products.id, productIds));
+
+  const names = new Map(rows.map((p) => [p.id, p.name]));
+  const activeById = new Map(
+    rows.filter((p) => p.status === 'active' && !p.deleted_at).map((p) => [p.id, p])
+  );
+
+  return { names, activeById };
+}
+
+function processPickups(
+  db: DrizzleD1Database<typeof schema>,
+  inputs: PickupInput[],
+  openCycles: (typeof schema.consignment_cycles.$inferSelect)[],
+  productNames: Map<string, string>,
+  visitId: string,
+  timestamp: string
+): { summaries: ClosedCycleSummary[]; statements: unknown[] } {
+  const summaries: ClosedCycleSummary[] = [];
+  const statements: unknown[] = [];
+
+  for (const pickup of inputs) {
     const cycle = openCycles.find((c) => c.id === pickup.cycle_id);
-    if (!cycle) throw new ValidationError('Siklus tidak ditemukan');
+    if (!cycle) {
+      throw new ValidationError('Siklus tidak ditemukan');
+    }
+
     if (pickup.qty_sold < 0 || pickup.qty_return_good < 0 || pickup.qty_return_damaged < 0) {
       throw new ValidationError('Qty tidak boleh negatif');
     }
+
     const total = pickup.qty_sold + pickup.qty_return_good + pickup.qty_return_damaged;
     if (total !== cycle.qty_dropped) {
       throw new ValidationError(`Penutupan tidak sesuai: ${total} ≠ ${cycle.qty_dropped}`);
     }
+
     const amount = pickup.qty_sold * cycle.price_snapshot;
-    closedSummaries.push({
+    summaries.push({
       cycle_id: cycle.id,
-      product_name: '',
+      product_name: productNames.get(cycle.product_id) ?? 'Produk',
       qty_sold: pickup.qty_sold,
       qty_return_good: pickup.qty_return_good,
       qty_return_damaged: pickup.qty_return_damaged,
@@ -207,10 +257,10 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
           qty_return_good: pickup.qty_return_good,
           qty_return_damaged: pickup.qty_return_damaged,
           amount_collected: amount,
-          picked_up_at: pickedUpAt,
+          picked_up_at: timestamp,
           status: 'closed',
-          visit_submission_id: idempotencyKey,
-          updated_at: pickedUpAt,
+          visit_submission_id: visitId,
+          updated_at: timestamp,
         })
         .where(
           and(
@@ -221,123 +271,191 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
     );
   }
 
-  const droppedProductIds = [...new Set(drops.map((d) => d.product_id))];
-  const activeProducts =
-    droppedProductIds.length > 0
-      ? await db
-          .select()
-          .from(schema.products)
-          .where(
-            and(
-              inArray(schema.products.id, droppedProductIds),
-              eq(schema.products.status, 'active'),
-              isNull(schema.products.deleted_at)
-            )
-          )
-      : [];
-  const productMap = new Map(activeProducts.map((p) => [p.id, p]));
+  return { summaries, statements };
+}
 
-  const droppedSummaries: DroppedCycleSummary[] = [];
+function processDrops(
+  db: DrizzleD1Database<typeof schema>,
+  inputs: DropInput[],
+  activeProducts: Map<string, typeof schema.products.$inferSelect>,
+  productNames: Map<string, string>,
+  outletId: string,
+  visitId: string,
+  timestamp: string
+): { summaries: DroppedCycleSummary[]; statements: unknown[] } {
+  const summaries: DroppedCycleSummary[] = [];
+  const statements: unknown[] = [];
 
-  for (const drop of drops) {
-    if (drop.qty_dropped <= 0) throw new ValidationError('Qty titip harus lebih dari 0');
-    const product = productMap.get(drop.product_id);
-    if (!product) throw new ValidationError('Produk tidak aktif atau tidak ditemukan');
+  for (const drop of inputs) {
+    if (drop.qty_dropped <= 0) {
+      throw new ValidationError('Qty titip harus lebih dari 0');
+    }
+
+    const product = activeProducts.get(drop.product_id);
+    if (!product) {
+      throw new ValidationError('Produk tidak aktif atau tidak ditemukan');
+    }
+
     const cycleId = crypto.randomUUID();
-    droppedSummaries.push({
+    summaries.push({
       cycle_id: cycleId,
-      product_name: product.name,
+      product_name: productNames.get(product.id) ?? product.name,
+      price: product.price_to_outlet,
       qty_dropped: drop.qty_dropped,
     });
 
     statements.push(
       db.insert(schema.consignment_cycles).values({
         id: cycleId,
-        outlet_id: outlet.id,
+        outlet_id: outletId,
         product_id: product.id,
         hpp_snapshot: product.hpp,
         price_snapshot: product.price_to_outlet,
         qty_dropped: drop.qty_dropped,
-        dropped_at: pickedUpAt,
+        dropped_at: timestamp,
         qty_sold: 0,
         qty_return_good: 0,
         qty_return_damaged: 0,
         amount_collected: 0,
         status: 'open',
-        visit_submission_id: idempotencyKey,
+        visit_submission_id: visitId,
         notes: drop.notes ?? null,
-        created_at: pickedUpAt,
-        updated_at: pickedUpAt,
+        created_at: timestamp,
+        updated_at: timestamp,
       })
     );
   }
 
-  const result: VisitResult = {
-    idempotency_key: idempotencyKey,
-    outlet_id: outlet.id,
+  return { summaries, statements };
+}
+
+function buildVisitResult(
+  input: ProcessVisitInput,
+  distanceM: number,
+  radiusM: number,
+  closedSummaries: ClosedCycleSummary[],
+  droppedSummaries: DroppedCycleSummary[]
+): VisitResult {
+  return {
+    idempotency_key: input.idempotencyKey,
+    outlet_id: input.outlet.id,
     closed_cycles: closedSummaries,
     dropped_cycles: droppedSummaries,
     distance_m: distanceM,
     geofence_radius_m: radiusM,
-    geofence_override: !!geofenceOverride,
-    amount_collected_total: closedSummaries.reduce((sum, c) => sum + c.amount_collected, 0),
+    geofence_override: !!input.geofenceOverride,
+    amount_collected_total: closedSummaries.reduce((sum, cycle) => sum + cycle.amount_collected, 0),
   };
+}
 
-  statements.push(
-    db.insert(schema.visit_submissions).values({
-      idempotency_key: idempotencyKey,
-      outlet_id: outlet.id,
-      user_id: actor.id,
-      response_json: JSON.stringify(result),
-      client_latitude: clientLat,
-      client_longitude: clientLng,
-      client_accuracy_m: clientAccuracyM ?? null,
-      distance_m: distanceM,
-      geofence_radius_m: radiusM,
-      geofence_override: !!geofenceOverride,
-      geofence_override_reason: geofenceOverrideReason?.trim() ?? null,
-      notes: notes?.trim() ?? null,
-      status: 'committed',
-      created_at: pickedUpAt,
-    })
+function buildVisitSubmissionInsert(
+  input: ProcessVisitInput,
+  result: VisitResult,
+  timestamp: string
+): unknown {
+  return input.db.insert(schema.visit_submissions).values({
+    idempotency_key: input.idempotencyKey,
+    outlet_id: input.outlet.id,
+    user_id: input.actor.id,
+    response_json: JSON.stringify(result),
+    client_latitude: input.clientLat,
+    client_longitude: input.clientLng,
+    client_accuracy_m: input.clientAccuracyM ?? null,
+    distance_m: result.distance_m,
+    geofence_radius_m: result.geofence_radius_m,
+    geofence_override: result.geofence_override,
+    geofence_override_reason: input.geofenceOverrideReason?.trim() ?? null,
+    notes: input.notes?.trim() ?? null,
+    status: 'committed',
+    created_at: timestamp,
+  });
+}
+
+async function verifyCyclesClosed(
+  db: DrizzleD1Database<typeof schema>,
+  visitId: string,
+  pickups: PickupInput[]
+): Promise<void> {
+  if (pickups.length === 0) return;
+
+  const pickupCycleIds = pickups.map((p) => p.cycle_id);
+  const closedRows = await db
+    .select({ id: schema.consignment_cycles.id })
+    .from(schema.consignment_cycles)
+    .where(
+      and(
+        inArray(schema.consignment_cycles.id, pickupCycleIds),
+        eq(schema.consignment_cycles.status, 'closed'),
+        eq(schema.consignment_cycles.visit_submission_id, visitId)
+      )
+    );
+
+  if (closedRows.length !== pickupCycleIds.length) {
+    throw new ConflictError('Siklus sudah ditutup oleh kunjungan lain');
+  }
+}
+
+export async function processVisit(input: ProcessVisitInput): Promise<VisitResult> {
+  const {
+    db,
+    actor,
+    outlet,
+    idempotencyKey,
+    pickups,
+    drops,
+    clientLat,
+    clientLng,
+    geofenceOverride,
+    geofenceOverrideReason,
+  } = input;
+
+  const existing = await fetchExistingResult(db, idempotencyKey, actor.id);
+  if (existing) return existing;
+
+  assertOutletActive(outlet);
+  assertHasOperations(pickups, drops);
+
+  const radiusM = await loadGeofenceRadiusM(db);
+  const distanceM = haversineM(clientLat, clientLng, outlet.latitude, outlet.longitude);
+  checkGeofence(distanceM, radiusM, actor, geofenceOverride, geofenceOverrideReason);
+
+  const openCycles = await loadOpenCycles(db, outlet.id);
+  validateOpenCycleCoverage(pickups, openCycles);
+
+  const timestamp = nowUtcIso();
+
+  const productIds = new Set<string>();
+  for (const cycle of openCycles) productIds.add(cycle.product_id);
+  for (const drop of drops) productIds.add(drop.product_id);
+
+  const { names, activeById } = await loadProductContext(db, [...productIds]);
+
+  const pickupOps = processPickups(db, pickups, openCycles, names, idempotencyKey, timestamp);
+  const dropOps = processDrops(db, drops, activeById, names, outlet.id, idempotencyKey, timestamp);
+
+  const result = buildVisitResult(
+    input,
+    distanceM,
+    radiusM,
+    pickupOps.summaries,
+    dropOps.summaries
   );
+
+  const updateOutletLastVisit = input.db
+	.update(schema.outlets)
+	.set({ last_visit_at: timestamp })
+	.where(eq(schema.outlets.id, input.outlet.id));
+
+const statements: unknown[] = [
+	...pickupOps.statements,
+	...dropOps.statements,
+	buildVisitSubmissionInsert(input, result, timestamp),
+	updateOutletLastVisit,
+];
 
   await db.batch(statements as never);
 
-  if (pickups.length > 0) {
-    const pickupCycleIds = pickups.map((p) => p.cycle_id);
-    const closedRows = await db
-      .select({ id: schema.consignment_cycles.id })
-      .from(schema.consignment_cycles)
-      .where(
-        and(
-          inArray(schema.consignment_cycles.id, pickupCycleIds),
-          eq(schema.consignment_cycles.status, 'closed'),
-          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey)
-        )
-      );
-    if (closedRows.length !== pickupCycleIds.length) {
-      throw new ConflictError('Siklus sudah ditutup oleh kunjungan lain');
-    }
-  }
-
-  if (result.closed_cycles.length > 0) {
-    const cycleProductIds = [...new Set(openCycles.map((c) => c.product_id))];
-    const productRows =
-      cycleProductIds.length > 0
-        ? await db
-            .select({ id: schema.products.id, name: schema.products.name })
-            .from(schema.products)
-            .where(inArray(schema.products.id, cycleProductIds))
-        : [];
-    const productNames = new Map(productRows.map((p) => [p.id, p.name] as [string, string]));
-    for (const summary of result.closed_cycles) {
-      const cycle = openCycles.find((c) => c.id === summary.cycle_id);
-      if (cycle) {
-        summary.product_name = productNames.get(cycle.product_id) ?? 'Produk';
-      }
-    }
-  }
+  await verifyCyclesClosed(db, idempotencyKey, pickups);
 
   return result;
 }

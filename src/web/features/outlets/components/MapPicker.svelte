@@ -57,10 +57,13 @@
     const initial = isRoughlyValid(lat, lng) ? ([lat, lng] as L.LatLngTuple) : FALLBACK_CENTER;
 
     const m = L.map(container).setView(initial, 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19,
-    }).addTo(m);
+    L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 19,
+      }
+    ).addTo(m);
 
     const mk = L.marker(initial, { draggable: !readonly, icon: buildIcon() }).addTo(m);
 

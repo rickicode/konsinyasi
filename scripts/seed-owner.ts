@@ -1,43 +1,52 @@
-import { execSync } from 'node:child_process';
+/**
+ * One-off script to seed the owner user for local development.
+ * Run: npx tsx scripts/seed-owner.ts
+ */
 import { hashPassword } from '../src/worker/lib/password.js';
+import { writeFileSync, unlinkSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { resolve } from 'node:path';
 
 async function main() {
-  const email = process.env.SEED_OWNER_EMAIL;
-  const password = process.env.SEED_OWNER_PASSWORD;
-
-  if (!email || !password) {
-    console.error('Missing SEED_OWNER_EMAIL or SEED_OWNER_PASSWORD environment variables');
-    process.exit(1);
-  }
-
-  if (password.length < 6) {
-    console.error('Password must be at least 6 characters');
-    process.exit(1);
-  }
-
-  const hash = await hashPassword(password);
-
-  // Escape single quotes for SQL
-  const safeEmail = email.replace(/'/g, "''");
-  const safeHash = hash.replace(/'/g, "''");
+  const seedEmail = 'ricki@Hijitoko.com';
+  const seedPassword = 'p1kunz';
+  const seedName = 'Ricki';
+  const seedUsername = seedEmail.split('@')[0];
+  const passwordHash = await hashPassword(seedPassword);
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
 
   const sql = `
-INSERT OR IGNORE INTO users (id, email, name, password_hash, role, status, created_at, updated_at)
-SELECT lower(hex(randomblob(16))), '${safeEmail}', 'Owner', '${safeHash}', 'owner', 'active', strftime('%Y-%m-%dT%H:%M:%fZ','now'), strftime('%Y-%m-%dT%H:%M:%fZ','now')
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE role = 'owner');
-`;
+    INSERT INTO users (id, email, username, name, password_hash, role, status, created_at, updated_at)
+    VALUES ('${id}', '${seedEmail}', '${seedUsername}', '${seedName}', '${passwordHash}', 'owner', 'active', '${now}', '${now}')
+    ON CONFLICT (email) DO UPDATE SET
+      password_hash = excluded.password_hash,
+      username = excluded.username,
+      name = excluded.name,
+      updated_at = excluded.updated_at;
+  `;
 
-  const fs = await import('node:fs');
-  const path = 'scripts/seed-owner.generated.sql';
-  fs.writeFileSync(path, sql);
-
+  const tempFile = resolve('.seed-owner.sql');
+  writeFileSync(tempFile, sql, 'utf-8');
   try {
-    execSync(`npx wrangler d1 execute konsi --local --file ${path}`, { stdio: 'inherit' });
-    console.log('\nSeed finished.');
-  } catch (e) {
-    console.error('\nSeed failed:', (e as Error).message);
-    process.exit(1);
+    execSync(`npx wrangler d1 execute konsi --local --file=${tempFile}`, {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+    });
+  } finally {
+    try {
+      unlinkSync(tempFile);
+    } catch {
+      // ignore
+    }
   }
+
+  console.log('\n✅ Owner seeded successfully');
+  console.log('   Username: ', seedUsername);
+  console.log('   Password: ', seedPassword);
 }
 
-main();
+main().catch((err) => {
+  console.error('❌ Seed failed:', err);
+  process.exit(1);
+});

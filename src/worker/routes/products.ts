@@ -2,25 +2,28 @@ import { z } from 'zod';
 import { Hono } from 'hono';
 import { and, eq, isNull } from 'drizzle-orm';
 import { createClient } from '../db/client.js';
+import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination.js';
 import { consignment_cycles, product_recipes, products, users } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
+import {
+  deleteImageFromR2,
+  isSafeImageKey,
+  processImageUpload,
+} from '../services/image-processing.js';
 import type { Env } from '../types.js';
 import {
   replaceRecipeLines,
   fetchRecipeLines,
+  fetchRecipeLinesForProducts,
   type EnrichedRecipeLine,
-  BASE_UNIT_ENUM,
 } from '../services/hpp.js';
 
-const baseUnitEnum = BASE_UNIT_ENUM;
 const recipeLineSchema = z.object({
   raw_material_id: z.string().min(1, 'Bahan baku wajib dipilih'),
   quantity: z
     .number({ invalid_type_error: 'Kuantitas harus angka' })
     .positive('Kuantitas harus lebih dari 0'),
-  unit: z.enum(baseUnitEnum, {
-    message: 'Satuan resep harus ml, l, cl, gr, kg, atau pcs',
-  }),
+  unit: z.string().min(1, 'Satuan resep wajib dipilih'),
 });
 
 const createSchema = z.object({
@@ -69,6 +72,7 @@ type ProductResponse = {
   id: string;
   name: string;
   status: 'active' | 'inactive';
+  photo_key?: string | null;
   recipe_lines?: EnrichedRecipeLine[];
   hpp?: number;
   hpp_override?: number | null;
@@ -87,6 +91,7 @@ function pickProduct(
     id: row.id,
     name: row.name,
     status: row.status as 'active' | 'inactive',
+    photo_key: row.photo_key,
     deleted_at: row.deleted_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -104,27 +109,46 @@ function isOwner(user: typeof users.$inferSelect): boolean {
   return user.role === 'owner';
 }
 
+async function buildProductResponses(
+  db: Parameters<typeof fetchRecipeLinesForProducts>[0],
+  rows: (typeof products.$inferSelect)[],
+  owner: boolean
+): Promise<ProductResponse[]> {
+  const productIds = rows.map((row) => row.id);
+  const recipeLinesByProductId = await fetchRecipeLinesForProducts(db, productIds);
+  return rows.map((row) => pickProduct(row, recipeLinesByProductId.get(row.id) ?? [], owner));
+}
+
 productsRoute.get('/', async (c) => {
   const user = c.get('user');
   const owner = isOwner(user);
   const db = createClient(c.env);
+  const pagination = parsePaginationParams(c.req.query());
+  if (pagination) {
+    const total = await db.$count(products, isNull(products.deleted_at));
+    const rows = await db
+      .select()
+      .from(products)
+      .where(isNull(products.deleted_at))
+      .orderBy(products.name)
+      .limit(pagination.limit)
+      .offset((pagination.page - 1) * pagination.limit);
+    const result = await buildProductResponses(db, rows, owner);
+    return c.json(buildPaginatedResponse(result, pagination.page, pagination.limit, total));
+  }
   const rows = await db
     .select()
     .from(products)
     .where(isNull(products.deleted_at))
     .orderBy(products.name);
-  const result: ProductResponse[] = [];
-  for (const row of rows) {
-    const recipeLines = await fetchRecipeLines(db, row.id);
-    result.push(pickProduct(row, recipeLines, owner));
-  }
+  const result = await buildProductResponses(db, rows, owner);
   return c.json(result);
 });
 
 productsRoute.get('/picker', async (c) => {
   const db = createClient(c.env);
   const rows = await db
-    .select({ id: products.id, name: products.name })
+    .select({ id: products.id, name: products.name, price: products.price_to_outlet })
     .from(products)
     .where(and(eq(products.status, 'active'), isNull(products.deleted_at)))
     .orderBy(products.name);
@@ -136,7 +160,11 @@ productsRoute.get('/:id', async (c) => {
   const user = c.get('user');
   const owner = isOwner(user);
   const db = createClient(c.env);
-  const existing = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  const existing = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.id, id), isNull(products.deleted_at)))
+    .limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Produk tidak ditemukan');
   }
@@ -153,6 +181,7 @@ productsRoute.post('/', async (c) => {
     throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
   const data = parsed.data;
+
   if (!owner) {
     data.price_to_outlet = undefined;
     data.hpp_override = undefined;
@@ -162,6 +191,7 @@ productsRoute.post('/', async (c) => {
   } else if (data.price_to_outlet === undefined) {
     throw new ValidationError('Harga outlet wajib diisi');
   }
+
   if (
     data.recipe_lines !== undefined &&
     data.recipe_lines.length > 0 &&
@@ -195,6 +225,7 @@ productsRoute.post('/', async (c) => {
   if (data.recipe_lines !== undefined) {
     await replaceRecipeLines(db, id, data.recipe_lines);
   }
+
   const recipeLines = await fetchRecipeLines(db, id);
   const row = (await db.select().from(products).where(eq(products.id, id)).limit(1))[0];
   return c.json(pickProduct(row, recipeLines, owner), 201);
@@ -210,11 +241,17 @@ productsRoute.patch('/:id', async (c) => {
     throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
   const data = parsed.data;
+
   const db = createClient(c.env);
-  const existing = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  const existing = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.id, id), isNull(products.deleted_at)))
+    .limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Produk tidak ditemukan');
   }
+
   if (!owner && data.recipe_lines !== undefined) {
     throw new ValidationError('Staff tidak boleh mengubah resep produk');
   }
@@ -229,6 +266,7 @@ productsRoute.patch('/:id', async (c) => {
     // Only allow override when no recipe will exist after update.
     setValues.hpp_override = data.hpp_override;
   }
+
   if (Object.keys(setValues).length > 0) {
     setValues.updated_at = new Date().toISOString();
     await db.update(products).set(setValues).where(eq(products.id, id));
@@ -246,7 +284,11 @@ productsRoute.patch('/:id', async (c) => {
 productsRoute.delete('/:id', async (c) => {
   const id = c.req.param('id');
   const db = createClient(c.env);
-  const existing = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  const existing = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.id, id), isNull(products.deleted_at)))
+    .limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Produk tidak ditemukan');
   }
@@ -279,4 +321,71 @@ productsRoute.delete('/:id', async (c) => {
   return c.json({ ok: true });
 });
 
+productsRoute.post('/:id/photo', async (c) => {
+  const id = c.req.param('id');
+  const bucket = c.env.PHOTOS;
+  if (!bucket) {
+    throw new AppError(500, 'CONFIG_ERROR', 'R2 bucket PHOTOS tidak dikonfigurasi');
+  }
+  const db = createClient(c.env);
+  const existing = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.id, id), isNull(products.deleted_at)))
+    .limit(1);
+  if (!existing[0]) {
+    throw new AppError(404, 'NOT_FOUND', 'Produk tidak ditemukan');
+  }
+  const body = await c.req.parseBody({ all: true });
+  const rawPhoto = body.photo;
+  const file =
+    rawPhoto instanceof File
+      ? rawPhoto
+      : Array.isArray(rawPhoto) && rawPhoto[0] instanceof File
+        ? rawPhoto[0]
+        : null;
+
+  const uploaded = await processImageUpload({
+    bucket,
+    file: file as File,
+    scope: `products/${id}`,
+    oldKey: existing[0].photo_key,
+  });
+
+  await db
+    .update(products)
+    .set({
+      photo_key: uploaded.key,
+      updated_at: new Date().toISOString(),
+    })
+    .where(eq(products.id, id));
+  return c.json({ photo_key: uploaded.key, url: uploaded.url });
+});
+productsRoute.delete('/:id/photo', async (c) => {
+  const id = c.req.param('id');
+  const bucket = c.env.PHOTOS;
+  const db = createClient(c.env);
+  const existing = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.id, id), isNull(products.deleted_at)))
+    .limit(1);
+  if (!existing[0]) {
+    throw new AppError(404, 'NOT_FOUND', 'Produk tidak ditemukan');
+  }
+  const photoKey = existing[0].photo_key;
+  if (photoKey) {
+    if (bucket && isSafeImageKey(photoKey)) {
+      await deleteImageFromR2(bucket, photoKey);
+    }
+    await db
+      .update(products)
+      .set({
+        photo_key: null,
+        updated_at: new Date().toISOString(),
+      })
+      .where(eq(products.id, id));
+  }
+  return c.json({ ok: true });
+});
 export default productsRoute;

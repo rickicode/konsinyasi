@@ -4,6 +4,23 @@ import { AppError } from '../lib/errors.js';
 
 const mediaRoute = new Hono<Env>();
 
+// Allowed top-level namespaces under the PHOTOS bucket.
+const SAFE_NAMESPACE_PATTERN = /^(products|outlets|visits\/photos|visits\/receipts|brand)\//;
+
+function sanitizeMediaKey(raw: string): string | null {
+  // Reject empty, absolute, traversal, and null-byte keys.
+  if (!raw || raw.startsWith('/') || raw.includes('\0')) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  if (decoded.includes('..')) return null;
+  if (!SAFE_NAMESPACE_PATTERN.test(decoded)) return null;
+  return decoded;
+}
+
 mediaRoute.get('/*', async (c) => {
   const bucket = c.env.PHOTOS;
   if (!bucket) {
@@ -11,7 +28,8 @@ mediaRoute.get('/*', async (c) => {
   }
 
   const prefix = '/api/media/';
-  const key = c.req.path.startsWith(prefix) ? c.req.path.slice(prefix.length) : '';
+  const rawKey = c.req.path.startsWith(prefix) ? c.req.path.slice(prefix.length) : '';
+  const key = sanitizeMediaKey(rawKey);
   if (!key) {
     throw new AppError(404, 'NOT_FOUND', 'Media tidak ditemukan');
   }

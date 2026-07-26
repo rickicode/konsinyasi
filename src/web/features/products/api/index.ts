@@ -1,10 +1,13 @@
-import { queryOptions, mutationOptions } from '@tanstack/svelte-query';
+import { infiniteQueryOptions, queryOptions, mutationOptions } from '@tanstack/svelte-query';
 import { z } from 'zod';
 import { apiClient, type ApiClient } from '$lib/api/client.js';
 import { queryKeys } from '$lib/api/query-keys.js';
+import { paginatedListSchema } from '@shared/schemas/pagination.schema.js';
+import type { PaginatedList } from '@shared/schemas/pagination.schema.js';
 import {
   productCreateSchema,
   productListSchema,
+  productPhotoUploadResponseSchema,
   productPickerListSchema,
   productResponseSchema,
   productUpdateSchema,
@@ -12,17 +15,43 @@ import {
 import type {
   Product,
   ProductCreateInput,
+  ProductPhotoUploadResponse,
   ProductPickerItem,
   ProductUpdateInput,
 } from '@shared/schemas/product.schema.js';
 
+const DEFAULT_PAGE_SIZE = 20;
 const okResponseSchema = z.object({ ok: z.boolean() });
+
+export interface FetchProductsPaginatedInput {
+  page: number;
+  limit: number;
+}
+
+export interface ProductPhotoUploadArgs {
+  id: string;
+  photo: File;
+}
 
 /**
  * Fetch the public list of active products.
  */
 export async function fetchProducts(client: ApiClient = apiClient): Promise<Product[]> {
   return client.get('/api/products', productListSchema);
+}
+
+/**
+ * Fetch a paginated list of active products.
+ */
+export async function fetchProductsPaginated(
+  { page, limit }: FetchProductsPaginatedInput,
+  client: ApiClient = apiClient
+): Promise<PaginatedList<Product>> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return client.get(
+    `/api/products?${params.toString()}`,
+    paginatedListSchema(productResponseSchema)
+  );
 }
 
 /**
@@ -69,6 +98,18 @@ export async function deleteProduct(
 }
 
 /**
+ * Upload a product photo.
+ */
+export async function uploadProductPhoto(
+  { id, photo }: ProductPhotoUploadArgs,
+  client: ApiClient = apiClient
+): Promise<ProductPhotoUploadResponse> {
+  const body = new FormData();
+  body.append('photo', photo);
+  return client.post(`/api/products/${id}/photo`, body, productPhotoUploadResponseSchema);
+}
+
+/**
  * Fetch active products for picker / dropdown usage.
  */
 export async function fetchProductPicker(
@@ -78,7 +119,6 @@ export async function fetchProductPicker(
 }
 
 // ---------------- queryOptions factories ----------------
-
 /**
  * TanStack Query options for the product list.
  */
@@ -86,6 +126,21 @@ export function productsQueryOptions(client: ApiClient = apiClient) {
   return queryOptions({
     queryKey: queryKeys.products.all,
     queryFn: () => fetchProducts(client),
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+/**
+ * TanStack Query infinite options for the product list.
+ */
+export function productsInfiniteQueryOptions(client: ApiClient = apiClient) {
+  return infiniteQueryOptions({
+    queryKey: [...queryKeys.products.all, 'infinite'],
+    queryFn: ({ pageParam }) =>
+      fetchProductsPaginated({ page: pageParam, limit: DEFAULT_PAGE_SIZE }, client),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.total_pages ? lastPage.meta.page + 1 : undefined,
     staleTime: 1000 * 60 * 2,
   });
 }
@@ -114,7 +169,6 @@ export function productPickerQueryOptions(client: ApiClient = apiClient) {
 }
 
 // ---------------- mutationOptions factories ----------------
-
 /**
  * TanStack Query mutation options for creating a product.
  */
@@ -140,5 +194,33 @@ export function updateProductMutationOptions(client: ApiClient = apiClient) {
 export function deleteProductMutationOptions(client: ApiClient = apiClient) {
   return mutationOptions({
     mutationFn: (id: string) => deleteProduct(id, client),
+  });
+}
+
+/**
+ * TanStack Query mutation options for uploading a product photo.
+ */
+export function uploadProductPhotoMutationOptions(client: ApiClient = apiClient) {
+  return mutationOptions({
+    mutationFn: (args: ProductPhotoUploadArgs) => uploadProductPhoto(args, client),
+  });
+}
+
+/**
+ * Delete a product photo.
+ */
+export async function deleteProductPhoto(
+  id: string,
+  client: ApiClient = apiClient
+): Promise<{ ok: boolean }> {
+  return client.delete(`/api/products/${id}/photo`, okResponseSchema);
+}
+
+/**
+ * TanStack Query mutation options for deleting a product photo.
+ */
+export function deleteProductPhotoMutationOptions(client: ApiClient = apiClient) {
+  return mutationOptions({
+    mutationFn: (id: string) => deleteProductPhoto(id, client),
   });
 }

@@ -1,7 +1,7 @@
 ---
 title: Frontend Rewrite - Ultracode
 type: task
-permalink: konsinyasi/tasks/frontend-rewrite-ultracode
+permalink: konsinyasi/tasks/frontend-rewrite-ultracode-1
 tags:
   - frontend
   - rewrite
@@ -38,12 +38,14 @@ Rebuild `src/web/` as a true mobile-native Svelte 5 SPA with real URLs, feature-
 - Old `src/web/pages/*`, `src/web/lib/*`, `src/web/components/*` are disposable; removed in Phase H.
 
 ## Final Status
+
 - All phases A–H committed to `rewrite/ultracode-frontend`.
 - Gates at HEAD `c4d8be2`: `pnpm check` ✅, `pnpm lint` ✅, `pnpm build` ✅, `pnpm test` ✅ (149 tests, 19 files).
 - Architecture decision `2ee51405` is still pending human approval.
 - Known non-blocking build warnings: Svelte `state_referenced_locally`, `<svelte:component>` deprecation (ReportsPage), and a11y notes in Dialog/Sheet primitives.
 
 ## Follow-up fixes (committed `35b0b28`)
+
 - Eliminated all Svelte build warnings (Dialog/Sheet a11y, `<svelte:component>` deprecation, `state_referenced_locally`).
 - Fixed `t.subscribe is not a function` runtime crash by moving from legacy `$query` store syntax to TanStack Svelte 5 rune object access and accessor-function `createQuery(() => ...)` / `createMutation(() => ...)`.
 - Login page (`/login`) now renders full-screen without shell/topbar/bottom-nav.

@@ -5,31 +5,31 @@
   import Icon from '../../../shared/ui/icons/Icon.svelte';
 
   interface Props {
-    onsubmit: (email: string, password: string) => void | Promise<void>;
+    onsubmit: (username: string, password: string) => void | Promise<void>;
     loading?: boolean;
     error?: string;
   }
 
   let { onsubmit, loading = false, error = '' }: Props = $props();
 
-  let email = $state('');
+  let username = $state('');
   let password = $state('');
-  let validation: { email?: string; password?: string } = $state({});
+  let validation: { username?: string; password?: string } = $state({});
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
-    const result = loginSchema.safeParse({ email, password });
+    const result = loginSchema.safeParse({ username, password });
     if (!result.success) {
       const errors: typeof validation = {};
       for (const issue of result.error.issues) {
-        const key = issue.path[0] as 'email' | 'password';
+        const key = issue.path[0] as 'username' | 'password';
         if (!errors[key]) errors[key] = issue.message;
       }
       validation = errors;
       return;
     }
     validation = {};
-    await onsubmit(email, password);
+    await onsubmit(username, password);
   }
 </script>
 
@@ -45,14 +45,14 @@
   {/if}
 
   <Input
-    label="Email"
-    name="email"
-    type="email"
-    autocomplete="email"
-    placeholder="nama@domain.com"
+    label="Username"
+    name="username"
+    type="text"
+    autocomplete="username"
+    placeholder="Masukkan username"
     required
-    bind:value={email}
-    error={validation.email}
+    bind:value={username}
+    error={validation.username}
   />
 
   <Input

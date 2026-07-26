@@ -1,13 +1,12 @@
 import { z } from 'zod';
 import { Hono } from 'hono';
-import { eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
+import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination.js';
 import { consignment_cycles, outlets } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
-
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp'] as const;
+import { processImageUpload } from '../services/image-processing.js';
 
 function isCoordInvalid(lat: number, lng: number): boolean {
   return Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001;
@@ -25,6 +24,10 @@ const createSchema = z.object({
     .min(-180, 'Longitude minimal -180')
     .max(180, 'Longitude maksimal 180'),
   notes: z.string().optional(),
+  location_accuracy_m: z
+    .number({ invalid_type_error: 'Akurasi harus angka' })
+    .nonnegative('Akurasi tidak boleh negatif')
+    .optional(),
   status: z
     .enum(['active', 'inactive'], { message: 'Status harus active atau inactive' })
     .optional(),
@@ -44,6 +47,10 @@ const updateSchema = z.object({
     .max(180, 'Longitude maksimal 180')
     .optional(),
   notes: z.string().optional(),
+  location_accuracy_m: z
+    .number({ invalid_type_error: 'Akurasi harus angka' })
+    .nonnegative('Akurasi tidak boleh negatif')
+    .optional(),
   status: z
     .enum(['active', 'inactive'], { message: 'Status harus active atau inactive' })
     .optional(),
@@ -66,23 +73,45 @@ function pickOutlet(row: typeof outlets.$inferSelect) {
     deleted_at: row.deleted_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    last_visit_at: row.last_visit_at ?? null,
   };
 }
 
 outletsRoute.get('/', async (c) => {
-  const db = createClient(c.env);
-  const rows = await db
-    .select()
-    .from(outlets)
-    .where(isNull(outlets.deleted_at))
-    .orderBy(outlets.name);
-  return c.json(rows.map(pickOutlet));
+	const db = createClient(c.env);
+	const pagination = parsePaginationParams(c.req.query());
+	const where = isNull(outlets.deleted_at);
+
+	if (pagination) {
+		const countResult = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(outlets)
+			.where(where);
+		const total = countResult[0]?.count ?? 0;
+		const rows = await db
+			.select()
+			.from(outlets)
+			.where(where)
+			.orderBy(outlets.name)
+			.limit(pagination.limit)
+			.offset((pagination.page - 1) * pagination.limit);
+		return c.json(
+			buildPaginatedResponse(rows.map(pickOutlet), pagination.page, pagination.limit, total)
+		);
+	}
+
+	const rows = await db.select().from(outlets).where(where).orderBy(outlets.name);
+	return c.json(rows.map(pickOutlet));
 });
 
 outletsRoute.get('/:id', async (c) => {
   const id = c.req.param('id');
   const db = createClient(c.env);
-  const existing = await db.select().from(outlets).where(eq(outlets.id, id)).limit(1);
+  const existing = await db
+    .select()
+    .from(outlets)
+    .where(and(eq(outlets.id, id), isNull(outlets.deleted_at)))
+    .limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
   }
@@ -109,6 +138,8 @@ outletsRoute.post('/', async (c) => {
     latitude: data.latitude,
     longitude: data.longitude,
     notes: data.notes,
+    location_accuracy_m: data.location_accuracy_m ?? null,
+    location_captured_at: now,
     status: data.status ?? 'active',
     created_at: now,
     updated_at: now,
@@ -126,7 +157,11 @@ outletsRoute.patch('/:id', async (c) => {
   }
   const data = parsed.data;
   const db = createClient(c.env);
-  const existing = await db.select().from(outlets).where(eq(outlets.id, id)).limit(1);
+  const existing = await db
+    .select()
+    .from(outlets)
+    .where(and(eq(outlets.id, id), isNull(outlets.deleted_at)))
+    .limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
   }
@@ -143,6 +178,10 @@ outletsRoute.patch('/:id', async (c) => {
   if (data.latitude !== undefined) setValues.latitude = data.latitude;
   if (data.longitude !== undefined) setValues.longitude = data.longitude;
   if (data.notes !== undefined) setValues.notes = data.notes;
+  if (data.location_accuracy_m !== undefined) {
+    setValues.location_accuracy_m = data.location_accuracy_m;
+    setValues.location_captured_at = new Date().toISOString();
+  }
   if (data.status !== undefined) setValues.status = data.status;
   if (Object.keys(setValues).length === 0) {
     throw new ValidationError('Tidak ada field yang diperbarui');
@@ -156,7 +195,11 @@ outletsRoute.patch('/:id', async (c) => {
 outletsRoute.delete('/:id', async (c) => {
   const id = c.req.param('id');
   const db = createClient(c.env);
-  const existing = await db.select().from(outlets).where(eq(outlets.id, id)).limit(1);
+  const existing = await db
+    .select()
+    .from(outlets)
+    .where(and(eq(outlets.id, id), isNull(outlets.deleted_at)))
+    .limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
   }
@@ -178,13 +221,6 @@ outletsRoute.delete('/:id', async (c) => {
   return c.json({ ok: true });
 });
 
-function extensionFromFileName(file: File): string {
-  const name = file.name || '';
-  const dot = name.lastIndexOf('.');
-  const ext = dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
-  return ALLOWED_EXTS.includes(ext as (typeof ALLOWED_EXTS)[number]) ? ext : 'jpg';
-}
-
 outletsRoute.post('/:id/photo', async (c) => {
   const id = c.req.param('id');
   const bucket = c.env.PHOTOS;
@@ -192,10 +228,15 @@ outletsRoute.post('/:id/photo', async (c) => {
     throw new AppError(500, 'CONFIG_ERROR', 'R2 bucket PHOTOS tidak dikonfigurasi');
   }
   const db = createClient(c.env);
-  const existing = await db.select().from(outlets).where(eq(outlets.id, id)).limit(1);
+  const existing = await db
+    .select()
+    .from(outlets)
+    .where(and(eq(outlets.id, id), isNull(outlets.deleted_at)))
+    .limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
   }
+  const previousPhotoKey = existing[0].photo_key;
   const body = await c.req.parseBody({ all: true });
   const rawPhoto = body.photo;
   const file =
@@ -204,22 +245,16 @@ outletsRoute.post('/:id/photo', async (c) => {
       : Array.isArray(rawPhoto) && rawPhoto[0] instanceof File
         ? rawPhoto[0]
         : null;
-  if (!file) {
-    throw new ValidationError('File foto wajib diunggah');
-  }
-  if (!file.type.startsWith('image/')) {
-    throw new ValidationError('File harus berupa gambar');
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    throw new ValidationError('Ukuran foto maksimal 2 MB');
-  }
-  const ext = extensionFromFileName(file);
-  const key = `outlets/${id}/${crypto.randomUUID()}.${ext}`;
-  await bucket.put(key, file.stream(), {
-    httpMetadata: { contentType: file.type },
+
+  const uploaded = await processImageUpload({
+    bucket,
+    file: file as File,
+    scope: `outlets/${id}`,
+    oldKey: previousPhotoKey,
   });
+
   const updateValues: Partial<typeof outlets.$inferInsert> = {
-    photo_key: key,
+    photo_key: uploaded.key,
     updated_at: new Date().toISOString(),
   };
   const updateLocation = body.update_location === 'true';
@@ -241,7 +276,7 @@ outletsRoute.post('/:id/photo', async (c) => {
     }
   }
   await db.update(outlets).set(updateValues).where(eq(outlets.id, id));
-  return c.json({ photo_key: key, url: `/api/media/${key}` });
+  return c.json({ photo_key: uploaded.key, url: uploaded.url });
 });
 
 export default outletsRoute;

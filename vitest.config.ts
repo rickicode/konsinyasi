@@ -12,20 +12,24 @@ export default defineConfig({
     conditions: ['browser'],
   },
   test: {
-    environment: 'node',
-    globals: false,
-    include: [
-      'src/worker/**/*.test.ts',
-      'src/web/**/*.test.ts',
-      'src/web/**/*.spec.ts',
-      'src/web/lib/__tests__/*.test.ts',
-      'src/shared/**/*.test.ts',
-    ],
-    environmentMatchGlobs: [
-      ['src/worker/**', 'node'],
-      ['src/web/**/*.spec.ts', 'jsdom'],
-      ['src/web/lib/__tests__/*.test.ts', 'node'],
-      ['src/shared/**', 'node'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          environment: 'node',
+          include: ['src/worker/**/*.test.ts', 'src/shared/**/*.test.ts', 'src/web/**/*.test.ts'],
+          exclude: ['src/web/**/*.spec.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'jsdom',
+          environment: 'jsdom',
+          include: ['src/web/**/*.spec.ts'],
+        },
+      },
     ],
   },
 });

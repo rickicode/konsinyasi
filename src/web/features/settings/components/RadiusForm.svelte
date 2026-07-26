@@ -105,7 +105,7 @@
       type="submit"
       fullWidth
       loading={updateMutation.isPending || (settingsQuery.isLoading && !settingsQuery.data)}
-      disabled={!Number.isFinite(Number(radius))}
+      disabled={!String(radius).trim() || !Number.isFinite(Number(radius))}
     >
       Simpan Radius
     </Button>

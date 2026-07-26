@@ -18,6 +18,7 @@
     Clock,
     DollarSign,
     Edit,
+    Eye,
     FileText,
     Home,
     Info,
@@ -28,6 +29,7 @@
     MapPinOff,
     MapPinned,
     Menu,
+    MoreVertical,
     Minus,
     Navigation,
     Package,
@@ -66,6 +68,7 @@
     | 'clock'
     | 'dollar-sign'
     | 'edit'
+    | 'eye'
     | 'file-text'
     | 'home'
     | 'info'
@@ -78,6 +81,7 @@
     | 'map-pinned'
     | 'menu'
     | 'minus'
+    | 'more-vertical'
     | 'navigation'
     | 'package'
     | 'package-open'
@@ -124,6 +128,7 @@
     clock: Clock,
     'dollar-sign': DollarSign,
     edit: Edit,
+    eye: Eye,
     'file-text': FileText,
     home: Home,
     info: Info,
@@ -135,6 +140,7 @@
     'map-pin-off': MapPinOff,
     'map-pinned': MapPinned,
     menu: Menu,
+    'more-vertical': MoreVertical,
     minus: Minus,
     navigation: Navigation,
     package: Package,

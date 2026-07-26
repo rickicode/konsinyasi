@@ -112,27 +112,34 @@ describe('createVisitDraftStore', () => {
     });
 
     it('adds a drop with clamped positive quantity', () => {
-      store.addDrop({ id: 'p1', name: 'Product A' }, 5, 'notes');
+      store.addDrop({ id: 'p1', name: 'Product A', price: 15000 }, 5, 'notes');
       expect(store.drops).toEqual([
-        { id: 'drop-uid', productId: 'p1', productName: 'Product A', qty: 5, notes: 'notes' },
+        {
+          id: 'drop-uid',
+          productId: 'p1',
+          productName: 'Product A',
+          qty: 5,
+          notes: 'notes',
+          price: 15000,
+        },
       ]);
     });
 
     it('updates a drop by id', () => {
-      store.addDrop({ id: 'p1', name: 'Product A' }, 1);
+      store.addDrop({ id: 'p1', name: 'Product A', price: 15000 }, 1);
       store.updateDrop('drop-uid', { qty: 7, notes: 'updated' });
       expect(store.drops[0].qty).toBe(7);
       expect(store.drops[0].notes).toBe('updated');
     });
 
     it('removes a drop by id', () => {
-      store.addDrop({ id: 'p1', name: 'Product A' }, 1);
+      store.addDrop({ id: 'p1', name: 'Product A', price: 15000 }, 1);
       store.removeDrop('drop-uid');
       expect(store.drops).toEqual([]);
     });
 
     it('validates drops when every item has productId and positive qty', () => {
-      store.addDrop({ id: 'p1', name: 'Product A' }, 1);
+      store.addDrop({ id: 'p1', name: 'Product A', price: 15000 }, 1);
       expect(store.areDropsValid()).toBe(true);
       store.updateDrop('drop-uid', { qty: 0 });
       expect(store.areDropsValid()).toBe(false);

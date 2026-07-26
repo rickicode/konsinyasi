@@ -1,10 +1,12 @@
 <script lang="ts">
   import { link, router } from 'svelte-spa-router';
   import { getAuth } from '$lib/stores/auth.svelte';
+  import { getAppConfig } from '$lib/stores/app-config.svelte.js';
   import { bottomNavTabs, topMenuTabs } from '$lib/role.js';
   import Icon from '../../../shared/ui/icons/Icon.svelte';
 
   const auth = getAuth();
+  const appConfig = getAppConfig();
   const items = $derived([...bottomNavTabs(auth.role ?? ''), ...topMenuTabs(auth.role ?? '')]);
   const current = $derived(router.location ?? '/');
 </script>
@@ -13,12 +15,20 @@
   class="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-coffee-100/60 bg-cream lg:flex"
 >
   <div class="flex h-14 items-center gap-3 px-6 pt-safe">
-    <div
-      class="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-700 text-lg font-bold text-white"
-    >
-      K
-    </div>
-    <span class="text-lg font-bold text-coffee-900">Konsi</span>
+    {#if appConfig.brandLogoUrl}
+      <img
+        src={appConfig.brandLogoUrl}
+        alt={appConfig.brandName}
+        class="h-9 w-9 rounded-xl border border-coffee-100 object-contain bg-cream"
+      />
+    {:else}
+      <div
+        class="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-700 text-lg font-bold text-white"
+      >
+        K
+      </div>
+    {/if}
+    <span class="text-lg font-bold text-coffee-900">{appConfig.brandName}</span>
   </div>
   <nav class="flex-1 space-y-1 px-3 pt-4">
     {#each items as item (item.path)}

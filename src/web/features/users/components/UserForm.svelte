@@ -16,14 +16,23 @@
     mode: 'create' | 'edit';
     initial?: User | null;
     loading?: boolean;
+    disableRole?: boolean;
     onSubmit: (data: CreateUserInput | UpdateUserInput) => void;
     onCancel?: () => void;
   }
 
-  let { mode, initial = null, loading = false, onSubmit, onCancel }: Props = $props();
+  let {
+    mode,
+    initial = null,
+    loading = false,
+    disableRole = false,
+    onSubmit,
+    onCancel,
+  }: Props = $props();
 
   let name = $state('');
   let email = $state('');
+  let username = $state('');
   let password = $state('');
   let role: UserRole = $state('staff');
   let status: UserStatus = $state('active');
@@ -32,6 +41,7 @@
   function resetFields() {
     name = '';
     email = '';
+    username = '';
     password = '';
     role = 'staff';
     status = 'active';
@@ -42,6 +52,7 @@
     if (initial) {
       name = initial.name;
       email = initial.email;
+      username = initial.username || '';
       role = initial.role;
       status = initial.status;
       password = '';
@@ -65,7 +76,8 @@
     event.preventDefault();
 
     const schema = mode === 'create' ? createUserSchema : updateUserSchema;
-    const payload = mode === 'create' ? { name, email, password, role } : { name, role, status };
+    const payload =
+      mode === 'create' ? { name, email, username, password, role } : { name, role, status };
 
     const parsed = schema.safeParse(payload);
     if (!parsed.success) {
@@ -108,6 +120,17 @@
 
   {#if mode === 'create'}
     <Input
+      label="Username"
+      name="username"
+      type="text"
+      placeholder="Username login"
+      autocomplete="username"
+      required
+      bind:value={username}
+      error={errors.username}
+    />
+
+    <Input
       label="Password"
       name="password"
       type="password"
@@ -126,6 +149,7 @@
     required
     bind:value={role}
     error={errors.role}
+    disabled={disableRole}
   />
 
   {#if mode === 'edit'}

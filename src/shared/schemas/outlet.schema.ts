@@ -59,6 +59,7 @@ export const outletResponseSchema = z.object({
   deleted_at: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
+  last_visit_at: z.string().nullable().optional(),
 });
 
 export type Outlet = z.infer<typeof outletResponseSchema>;

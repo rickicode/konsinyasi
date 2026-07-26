@@ -13,8 +13,8 @@ describe('password', () => {
     expect(await verifyPassword('wrongpass', hash)).toBe(false);
   });
 
-  it('rejects passwords shorter than 6 characters', async () => {
-    await expect(hashPassword('12345')).rejects.toThrow('at least 6');
+  it('rejects passwords shorter than 8 characters', async () => {
+    await expect(hashPassword('1234567')).rejects.toThrow('at least 8');
   });
 
   it('rejects malformed or empty hashes', async () => {

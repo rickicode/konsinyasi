@@ -8,6 +8,7 @@ import {
   type MeResponse,
 } from '@shared/schemas/auth.schema.js';
 import { apiClient } from '$lib/api/client.js';
+import { ApiError } from '$lib/api/errors.js';
 
 const AUTH_BASE = '/api/auth';
 
@@ -22,9 +23,12 @@ export async function logout(): Promise<LogoutResponse> {
 export async function getCurrentUser(): Promise<MeResponse | null> {
   try {
     return await apiClient.get<MeResponse>(`${AUTH_BASE}/me`, meResponseSchema);
-  } catch {
-    // 401 / 403 means no active session
-    return null;
+  } catch (err) {
+    // 401 / 403 means no active session; everything else should bubble up.
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      return null;
+    }
+    throw err;
   }
 }
 

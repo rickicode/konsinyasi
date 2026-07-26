@@ -15,6 +15,7 @@ export interface DropDraft {
   productId: string;
   productName: string;
   qty: number;
+  price: number;
   notes: string;
 }
 
@@ -131,7 +132,12 @@ export function createVisitDraftStore() {
   function saveToStorage() {
     if (!outletId || typeof localStorage === 'undefined') return;
     lastUpdatedAt = nowIso();
-    localStorage.setItem(STORAGE_KEY(outletId), JSON.stringify(toSnapshot()));
+    try {
+      localStorage.setItem(STORAGE_KEY(outletId), JSON.stringify(toSnapshot()));
+    } catch (err) {
+      // QuotaExceededError / private-mode Safari: keep working in-memory.
+      console.warn('Failed to persist visit draft', err);
+    }
   }
 
   $effect(() => {
@@ -238,13 +244,14 @@ export function createVisitDraftStore() {
       return cycles.every((cycle) => this.isPickupValid(cycle.id, cycle.qty_dropped));
     },
 
-    addDrop(product: { id: string; name: string }, qty: number, notesValue = '') {
+    addDrop(product: { id: string; name: string; price: number }, qty: number, notesValue = '') {
       const item: DropDraft = {
         id: crypto.randomUUID(),
         productId: product.id,
         productName: product.name,
         qty: Math.max(1, Math.floor(qty)),
         notes: notesValue,
+        price: product.price,
       };
       drops = [...drops, item];
     },

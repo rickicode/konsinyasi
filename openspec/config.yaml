@@ -1,0 +1,29 @@
+schema: spec-driven
+openlore:
+  version: 1.0.0
+  generatedAt: 2026-07-25T18:44:59.117Z
+  domains:
+    - outlet
+    - product
+    - visit
+    - auth
+    - report
+    - raw-material
+    - settings
+    - dashboard
+    - photo
+    - sync
+    - user
+    - visit-draft
+    - notification
+  confidence: 0.92
+context: >-
+  # Auto-detected by openlore
+
+  Tech stack: TypeScript, Hono, Svelte, TanStack Query, Zod, Drizzle ORM, Flutter, Cloudflare
+  Workers, Vitest, GitHub Actions, GoRouter
+
+  Architecture: Layered (routes → controllers → services → repositories)
+
+  Domains: outlet, product, visit, auth, report, raw-material, settings, dashboard, photo, sync,
+  user, visit-draft, notification

@@ -51,6 +51,8 @@
 
   const coords = $derived(geolocation.coords);
   const gpsReady = $derived(coords !== null);
+  const gpsAccuracy = $derived(geolocation.accuracy);
+  const gpsAccuracyPoor = $derived(gpsAccuracy === null || gpsAccuracy > 100);
   const gpsError = $derived(geolocation.error?.message ?? null);
   const distanceM = $derived(
     coords && outlet
@@ -91,11 +93,16 @@
   function handleAddDrop(productId: string, qty: number, notes: string) {
     const product = pickerQuery.data?.find((p) => p.id === productId);
     if (!product) return;
-    draft.addDrop(product, qty, notes);
+    draft.addDrop({ id: product.id, name: product.name, price: product.price }, qty, notes);
   }
 
   function handleRemoveDrop(id: string) {
     draft.removeDrop(id);
+  }
+
+  function handleRefreshGps() {
+    geolocation.refresh();
+    toast.add('Memperbarui lokasi GPS...', 'info');
   }
 
   function openReview() {
@@ -194,13 +201,27 @@
           {#each visitResult.dropped_cycles as drop (drop.cycle_id)}
             <li class="flex items-center justify-between">
               <span class="text-coffee-700">{drop.product_name}</span>
-              <span class="font-medium text-coffee-900">{drop.qty_dropped} unit</span>
+              <span class="font-medium text-coffee-900"
+                >{drop.qty_dropped} unit · {formatRupiah(
+                  drop.qty_dropped * (drop.price ?? 0)
+                )}</span
+              >
             </li>
           {/each}
         </ul>
       </Card>
+      <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <div class="flex items-center justify-between">
+          <span class="text-amber-700">Nilai penitipan</span>
+          <span class="text-lg font-bold text-amber-900"
+            >{formatRupiah(
+              visitResult.dropped_cycles.reduce((s, d) => s + d.qty_dropped * (d.price ?? 0), 0)
+            )}</span
+          >
+        </div>
+        <p class="mt-1 text-xs text-amber-600">Nilai stok yang dititipkan ke warung</p>
+      </div>
     {/if}
-
     <Button type="button" variant="primary" fullWidth onclick={finish}>Kunjungan Berikutnya</Button>
   </section>
 {:else}
@@ -276,6 +297,29 @@
         bind:override={draft.override}
         bind:overrideReason={draft.overrideReason}
       />
+
+      {#if gpsReady && gpsAccuracyPoor}
+        <div
+          class="rounded-xl border border-warning/30 bg-warning-bg px-4 py-3 text-sm text-warning"
+          role="status"
+        >
+          <div class="flex items-center justify-between gap-2">
+            <p>
+              Akurasi GPS kurang baik (±{Math.round(gpsAccuracy ?? 0)} m). Tunggu beberapa detik atau
+              refresh GPS.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onclick={handleRefreshGps}
+              disabled={geolocation.acquiring}
+            >
+              {geolocation.acquiring ? 'Mencari...' : 'Refresh GPS'}
+            </Button>
+          </div>
+        </div>
+      {/if}
 
       <CyclePickupForm {cycles} {draft} editable={!submitMutation.isPending} />
 

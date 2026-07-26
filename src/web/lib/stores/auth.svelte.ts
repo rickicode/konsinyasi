@@ -5,6 +5,7 @@ import {
   logout as apiLogout,
   type User,
 } from '../../features/auth/api/auth.api.js';
+import { queryClient } from '$lib/api/query-client.js';
 
 const AUTH_CONTEXT_KEY = Symbol('konsi-auth-context');
 
@@ -58,9 +59,14 @@ const ROLE_CAPABILITIES: Record<User['role'], Set<Capability>> = {
     'settings:read',
     'products:read',
     'products:write',
-    'bom:write',
-    'raw_materials:read',
-    'raw_materials:write',
+    // Staff tidak memiliki akses ke:
+    // - visit:void (pembatalan kunjungan)
+    // - visit:override (override geofence)
+    // - reports:read (laporan keuangan)
+    // - bom:write (bahan baku)
+    // - raw_materials:read/write
+    // - users:manage (kelola pengguna)
+    // - master:delete (hapus data master)
   ]),
 };
 
@@ -86,8 +92,8 @@ export interface AuthState {
   ensureLoaded(): Promise<void>;
   /** Refresh the current user from the server. */
   refresh(): Promise<void>;
-  /** Sign in with email and password. */
-  login(email: string, password: string): Promise<AuthUser>;
+  /** Sign in with username and password. */
+  login(username: string, password: string): Promise<AuthUser>;
   /** Sign out and clear local state. */
   logout(): Promise<void>;
   /** Check whether the current user has a capability. */
@@ -149,8 +155,8 @@ function createAuthState(): AuthState {
       return pending;
     },
     refresh,
-    async login(email: string, password: string): Promise<AuthUser> {
-      await apiLogin({ email, password });
+    async login(username: string, password: string): Promise<AuthUser> {
+      await apiLogin({ username, password });
       const refreshed = await getCurrentUser();
       if (!refreshed) {
         throw new Error('Gagal memuat sesi setelah masuk');
@@ -165,6 +171,7 @@ function createAuthState(): AuthState {
       } catch {
         // best-effort: still clear local state on failure
       }
+      queryClient.clear();
       user = null;
       error = null;
       initialized = true;

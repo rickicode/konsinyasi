@@ -1,0 +1,1169 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#5d4037" />
+    <title>Konsi — Temukan Kopi</title>
+    <meta
+      name="description"
+      content="Temukan warung kopi terdekat yang masih punya stok kopi segar. Cek lokasi, produk tersedia, dan navigasi langsung ke warung kesukaanmu."
+    />
+    <meta
+      name="keywords"
+      content="kopi, warung kopi, kopi terdekat, stok kopi, cari kopi, konsinyasi kopi"
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="%VITE_BASE_URL%/" />
+    <link id="brand-favicon" rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Konsi" />
+    <meta property="og:title" content="Konsi — Temukan Kopi" />
+    <meta
+      property="og:description"
+      content="Temukan warung kopi terdekat yang masih punya stok kopi segar. Cek lokasi, produk tersedia, dan navigasi langsung ke warung kesukaanmu."
+    />
+    <meta property="og:url" content="%VITE_BASE_URL%/" />
+    <meta property="og:image" content="%VITE_BASE_URL%/og-image.png" />
+    <meta property="og:locale" content="id_ID" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konsi — Temukan Kopi" />
+    <meta
+      name="twitter:description"
+      content="Temukan warung kopi terdekat yang masih punya stok kopi segar. Cek lokasi, produk tersedia, dan navigasi langsung ke warung kesukaanmu."
+    />
+    <meta name="twitter:image" content="%VITE_BASE_URL%/og-image.png" />
+    <script id="json-ld" type="application/ld+json"></script>
+    <script>
+      window.__BASE_URL__ = '%VITE_BASE_URL%';
+      window.__API_BASE_URL__ = '%VITE_API_BASE_URL%';
+    </script>
+    <script>
+      (function (brand) {
+        const baseDesc =
+          'Temukan warung kopi terdekat yang masih punya stok kopi segar. Cek lokasi, produk tersedia, dan navigasi langsung ke warung kesukaanmu.';
+        function setFavicon(logoUrl) {
+          const link = document.getElementById('brand-favicon');
+          if (!link) return;
+          if (logoUrl) {
+            link.href = logoUrl;
+            link.type = 'image/png';
+          } else {
+            link.href = '/favicon.svg';
+            link.type = 'image/svg+xml';
+          }
+        }
+        function updateBrand(brandName, logoUrl) {
+          const pageTitle = brandName + ' — Temukan Kopi';
+          document.title = pageTitle;
+          const siteName = document.querySelector('meta[property="og:site_name"]');
+          if (siteName) siteName.content = brandName;
+          [
+            ...document.querySelectorAll('meta[property="og:title"], meta[name="twitter:title"]'),
+          ].forEach((m) => (m.content = pageTitle));
+          const logoText = document.getElementById('brand-logo-text');
+          if (logoText) logoText.textContent = brandName;
+          const logoImg = document.getElementById('brand-logo-img');
+          const fallback = document.getElementById('brand-logo-fallback');
+          if (logoImg) {
+            if (logoUrl) {
+              const fullUrl = logoUrl.startsWith('/') ? (window.__API_BASE_URL__ || '') + logoUrl : logoUrl;
+              logoImg.src = fullUrl;
+              logoImg.style.display = '';
+              if (fallback) fallback.style.display = 'none';
+            } else {
+              logoImg.style.display = 'none';
+              if (fallback) fallback.style.display = '';
+            }
+          }
+          setFavicon(logoUrl);
+          const el = document.getElementById('json-ld');
+          if (el && !window.__jsonLdUpdatedByLoad) {
+            el.textContent = JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: brandName,
+              url: (window.__BASE_URL__ || 'https://kopi.hijitoko.com') + '/',
+              description: baseDesc,
+              inLanguage: 'id-ID',
+            });
+            window.__jsonLdUpdatedByLoad = true;
+          }
+        }
+        updateBrand(brand, null);
+        const apiBase = window.__API_BASE_URL__ || '';
+        fetch(apiBase + '/api/public/brand')
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.brand_name) updateBrand(data.brand_name, data.logo_url || null);
+          })
+          .catch(() => {});
+      })('Konsi');
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+      :root {
+        --coffee-50: #faf7f2;
+        --coffee-100: #f0e6d8;
+        --coffee-200: #e0ccaf;
+        --coffee-300: #c9a87a;
+        --coffee-400: #b58b5a;
+        --coffee-500: #9a7044;
+        --coffee-600: #7d5a38;
+        --coffee-700: #5d4037;
+        --coffee-800: #4a332c;
+        --coffee-900: #3e2a24;
+        --cream: #f7f3eb;
+        --caramel: #c8956c;
+        --success: #22c55e;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          'Plus Jakarta Sans',
+          -apple-system,
+          sans-serif;
+        background: var(--cream);
+        color: var(--coffee-900);
+        min-height: 100dvh;
+      }
+
+      /* Header */
+      .header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(247, 243, 235, 0.95);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--coffee-100);
+        padding: env(safe-area-inset-top) 0 0;
+      }
+      .header-inner {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .logo-icon {
+        width: 36px;
+        height: 36px;
+        background: var(--coffee-700);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 18px;
+        color: white;
+      }
+      .logo-img {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        object-fit: cover;
+        flex-shrink: 0;
+      }
+      .logo-text {
+        font-size: 20px;
+        font-weight: 800;
+      }
+      .map-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        border: none;
+        background: var(--coffee-700);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .map-btn svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* Main */
+      .main {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 16px;
+        padding-bottom: 100px;
+      }
+
+      /* Location Banner */
+      .loc-banner {
+        background: linear-gradient(135deg, var(--coffee-700), var(--coffee-800));
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .loc-icon {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .loc-icon svg {
+        width: 22px;
+        height: 22px;
+        color: white;
+      }
+      .loc-text {
+        flex: 1;
+      }
+      .loc-text h3 {
+        font-size: 14px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 2px;
+      }
+      .loc-text p {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.8);
+      }
+      .loc-btn {
+        padding: 8px 16px;
+        border-radius: 10px;
+        border: none;
+        background: white;
+        color: var(--coffee-700);
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .loc-status {
+        padding: 8px 16px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      /* Stats */
+      .stats {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      .stat {
+        flex: 1;
+        background: white;
+        border-radius: 14px;
+        padding: 12px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+      .stat-value {
+        font-size: 20px;
+        font-weight: 800;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: var(--coffee-500);
+        font-weight: 600;
+      }
+
+      /* Section */
+      .section-title {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* Cards */
+      .list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      .card:active {
+        transform: scale(0.98);
+      }
+      .card-top {
+        padding: 14px;
+        display: flex;
+        gap: 12px;
+      }
+      .card-icon {
+        width: 48px;
+        height: 48px;
+        background: var(--coffee-100);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 24px;
+      }
+      .card-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .card-name {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+      .card-addr {
+        font-size: 12px;
+        color: var(--coffee-500);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .card-addr svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+      }
+      .card-dist {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--caramel);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: center;
+      }
+      .card-dist small {
+        font-size: 10px;
+        color: var(--coffee-400);
+        font-weight: 500;
+      }
+      .card-products {
+        padding: 0 14px 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .tag {
+        background: var(--coffee-50);
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--coffee-700);
+      }
+      .tag b {
+        color: var(--caramel);
+        margin-left: 2px;
+      }
+
+      /* Map Overlay */
+      .map-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        background: white;
+        display: none;
+        flex-direction: column;
+      }
+      .map-overlay.active {
+        display: flex;
+      }
+      .map-overlay .map-container {
+        flex: 1;
+        position: relative;
+      }
+      .map-header {
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--coffee-100);
+        padding-top: calc(12px + env(safe-area-inset-top));
+      }
+      .map-header h2 {
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .map-close {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        border: none;
+        background: var(--coffee-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .map-close svg {
+        width: 18px;
+        height: 18px;
+      }
+      #map-full {
+        flex: 1;
+        min-height: 100%;
+      }
+      .map-controls {
+        position: absolute;
+        bottom: 24px;
+        right: 16px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .map-ctrl {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: none;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .map-ctrl svg {
+        width: 20px;
+        height: 20px;
+        color: var(--coffee-700);
+      }
+      .map-ctrl.active {
+        background: var(--coffee-700);
+      }
+      .map-ctrl.active svg {
+        color: white;
+      }
+
+      /* Detail Modal */
+      .detail-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+      }
+      .detail-overlay.active {
+        display: flex;
+      }
+      .detail {
+        background: var(--cream);
+        border-radius: 24px 24px 0 0;
+        width: 100%;
+        max-width: 480px;
+        max-height: 85vh;
+        overflow-y: auto;
+        padding: 20px;
+        animation: slideUp 0.3s ease;
+      }
+      @keyframes slideUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+      .detail-handle {
+        width: 40px;
+        height: 4px;
+        background: var(--coffee-200);
+        border-radius: 2px;
+        margin: 0 auto 16px;
+      }
+      .detail-title {
+        font-size: 20px;
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+      .detail-addr {
+        font-size: 13px;
+        color: var(--coffee-500);
+        margin-bottom: 4px;
+      }
+      .detail-dist {
+        font-size: 13px;
+        color: var(--caramel);
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+      .detail-section {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--coffee-700);
+        margin-bottom: 10px;
+      }
+      .detail-product {
+        background: white;
+        border-radius: 12px;
+        padding: 14px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .detail-product h4 {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .detail-product p {
+        font-size: 12px;
+        color: var(--coffee-500);
+      }
+      .detail-price {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--caramel);
+      }
+      .detail-qty {
+        font-size: 12px;
+        color: var(--success);
+        font-weight: 600;
+      }
+      .detail-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+      }
+      .btn {
+        flex: 1;
+        padding: 14px;
+        border-radius: 12px;
+        border: none;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .btn svg {
+        width: 18px;
+        height: 18px;
+      }
+      .btn-primary {
+        background: var(--coffee-700);
+        color: white;
+      }
+      .btn-secondary {
+        background: white;
+        color: var(--coffee-700);
+        border: 1.5px solid var(--coffee-200);
+      }
+
+      /* States */
+      .empty {
+        text-align: center;
+        padding: 40px 20px;
+      }
+      .empty-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+      }
+      .empty h3 {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .empty p {
+        font-size: 13px;
+        color: var(--coffee-500);
+      }
+      .loading {
+        text-align: center;
+        padding: 40px;
+      }
+      .spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid var(--coffee-100);
+        border-top-color: var(--coffee-700);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 12px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .loading p {
+        font-size: 13px;
+        color: var(--coffee-500);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo" id="brand-logo">
+          <img id="brand-logo-img" src="/favicon.svg" alt="Konsi" class="logo-img" style="display: none" />
+          <div class="logo-icon" id="brand-logo-fallback">K</div>
+          <span class="logo-text" id="brand-logo-text">Konsi</span>
+        </div>
+        <button class="map-btn" onclick="openMap()" title="Lihat Peta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- Location Banner -->
+      <div class="loc-banner" id="loc-banner">
+        <div class="loc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+          </svg>
+        </div>
+        <div class="loc-text">
+          <h3 id="loc-title">Aktifkan Lokasi</h3>
+          <p id="loc-desc">Untuk menemukan warung terdekat</p>
+        </div>
+        <button class="loc-btn" id="loc-btn" onclick="requestLocation()">Aktifkan</button>
+      </div>
+
+      <section class="stats">
+        <div class="stat">
+          <div class="stat-value" id="s-warungs">-</div>
+          <div class="stat-label">Warung</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="s-products">-</div>
+          <div class="stat-label">Produk</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="s-stock">-</div>
+          <div class="stat-label">Stok</div>
+        </div>
+      </section>
+
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 12px;
+        "
+      >
+        <h2 class="section-title" style="margin-bottom: 0">🏪 Warung Terdekat</h2>
+        <button
+          onclick="openMap()"
+          style="
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1.5px solid #5d4037;
+            background: white;
+            font-size: 12px;
+            font-weight: 700;
+            color: #5d4037;
+            cursor: pointer;
+          "
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          Peta
+        </button>
+      </div>
+      <section class="list" id="list">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Memuat warung...</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Map Fullscreen -->
+    <div class="map-overlay" id="map-overlay">
+      <div class="map-header">
+        <h2>📍 Lokasi Warung</h2>
+        <button class="map-close" onclick="closeMap()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="map-container">
+        <div id="map-full"></div>
+        <div class="map-controls">
+          <button class="map-ctrl" onclick="locateMe()" title="Lokasi Saya">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+            </svg>
+          </button>
+          <button class="map-ctrl" id="sat-btn" onclick="toggleSatellite()" title="Satelit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
+      <div class="detail" id="detail">
+        <div class="detail-handle"></div>
+        <h2 class="detail-title" id="d-title">-</h2>
+        <p class="detail-addr" id="d-addr">-</p>
+        <p class="detail-dist" id="d-dist"></p>
+        <h3 class="detail-section">Produk Tersedia</h3>
+        <div id="d-products"></div>
+        <div class="detail-actions">
+          <button class="btn btn-secondary" onclick="closeDetailDirect()">Tutup</button>
+          <button class="btn btn-primary" onclick="openMaps()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            Navigasi
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      let warungs = [],
+        selected = null,
+        myLat = null,
+        myLng = null;
+      let map,
+        markers = [],
+        isSat = false,
+        tileLayer,
+        satLayer,
+        myLocMarker;
+
+      document.addEventListener('DOMContentLoaded', load);
+
+      async function load() {
+        try {
+          const API_BASE = window.__API_BASE_URL__ || '';
+
+          const res = await fetch(API_BASE + '/api/public/warungs');
+          const data = await res.json();
+          warungs = data.warungs || [];
+          updateStats();
+          renderList();
+          updateJsonLd();
+          // Try to get location automatically
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => onLocation(pos.coords.latitude, pos.coords.longitude),
+              () => {},
+              { timeout: 5000 }
+            );
+          }
+        } catch (e) {
+          document.getElementById('list').innerHTML =
+            '<div class="empty"><div class="empty-icon">☕</div><h3>Gagal memuat</h3><p>Coba refresh halaman</p></div>';
+        }
+      }
+
+      function requestLocation() {
+        if (!navigator.geolocation) return alert('GPS tidak tersedia');
+        document.getElementById('loc-btn').textContent = 'Memuat...';
+        navigator.geolocation.getCurrentPosition(
+          (pos) => onLocation(pos.coords.latitude, pos.coords.longitude),
+          (err) => {
+            document.getElementById('loc-btn').textContent = 'Coba Lagi';
+            alert('Gagal mendapatkan lokasi: ' + err.message);
+          }
+        );
+      }
+
+      function onLocation(lat, lng) {
+        myLat = lat;
+        myLng = lng;
+        // Update banner
+        document.getElementById('loc-title').textContent = 'Lokasi Aktif';
+        document.getElementById('loc-desc').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        document.getElementById('loc-btn').style.display = 'none';
+        // Add status badge
+        const banner = document.getElementById('loc-banner');
+        if (!document.getElementById('loc-status')) {
+          const badge = document.createElement('span');
+          badge.id = 'loc-status';
+          badge.className = 'loc-status';
+          badge.textContent = '✓ Aktif';
+          banner.appendChild(badge);
+        }
+        // Reverse geocoding untuk dapat nama jalan
+        fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+          {
+            headers: { 'Accept-Language': 'id' },
+          }
+        )
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.address) {
+              const addr = data.address;
+              const parts = [];
+              if (addr.road) parts.push(addr.road);
+              if (addr.village || addr.suburb || addr.neighbourhood)
+                parts.push(addr.village || addr.suburb || addr.neighbourhood);
+              if (addr.city || addr.town || addr.regency)
+                parts.push(addr.city || addr.town || addr.regency);
+              if (parts.length) {
+                document.getElementById('loc-desc').textContent = parts.join(', ');
+              }
+            }
+          })
+          .catch(() => {});
+        // Sort and render
+        sortAndRender();
+      }
+
+      function haversine(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = ((lat2 - lat1) * Math.PI) / 180;
+        const dLon = ((lon2 - lon1) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      function formatDist(km) {
+        if (km < 1) return `${Math.round(km * 1000)} m`;
+        return `${km.toFixed(1)} km`;
+      }
+
+      function sortAndRender() {
+        if (myLat && myLng) {
+          warungs.forEach((w) => {
+            w._dist = haversine(myLat, myLng, w.latitude, w.longitude);
+          });
+          warungs.sort((a, b) => a._dist - b._dist);
+        }
+        renderList();
+      }
+
+      function updateStats() {
+        document.getElementById('s-warungs').textContent = warungs.length;
+        const allP = new Set();
+        let total = 0;
+        warungs.forEach((w) => {
+          w.products.forEach((p) => {
+            allP.add(p.name);
+            total += p.available_qty;
+          });
+        });
+        document.getElementById('s-products').textContent = allP.size;
+        document.getElementById('s-stock').textContent = total;
+      }
+
+      function renderList() {
+        if (!warungs.length) {
+          document.getElementById('list').innerHTML =
+            '<div class="empty"><div class="empty-icon">☕</div><h3>Belum ada stok</h3><p>Warung akan muncul saat ada produk</p></div>';
+          return;
+        }
+        let h = '';
+        warungs.forEach((w) => {
+          const dist = w._dist != null ? formatDist(w._dist) : null;
+          const tags = w.products
+            .map((p) => `<span class="tag">${p.name}<b>×${p.available_qty}</b></span>`)
+            .join('');
+          h += `<div class="card" onclick="openDetail('${w.id}')">
+          <div class="card-top">
+            <div class="card-icon">🏪</div>
+            <div class="card-info">
+              <div class="card-name">${esc(w.name)}</div>
+              <div class="card-addr">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${esc(w.address || '-')}
+              </div>
+            </div>
+            ${dist ? `<div class="card-dist">${dist}<small>jarak</small></div>` : ''}
+          </div>
+          <div class="card-products">${tags}</div>
+        </div>`;
+        });
+        document.getElementById('list').innerHTML = h;
+      }
+
+      // Map
+      function openMap() {
+        document.getElementById('map-overlay').classList.add('active');
+        if (!map) {
+          setTimeout(() => {
+            map = L.map('map-full', { zoomControl: false }).setView([-6.2, 106.85], 12);
+            tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+            });
+            satLayer = L.tileLayer(
+              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+              { maxZoom: 19 }
+            ).addTo(map);
+            isSat = true;
+            document.getElementById('sat-btn').classList.add('active');
+            L.control.zoom({ position: 'bottomleft' }).addTo(map);
+            addMarkers();
+            if (myLat && myLng) addMyLocation();
+            map.invalidateSize();
+          }, 100);
+        } else {
+          setTimeout(() => map.invalidateSize(), 100);
+        }
+      }
+      function closeMap() {
+        document.getElementById('map-overlay').classList.remove('active');
+      }
+
+      function addMarkers() {
+        markers.forEach((m) => map.removeLayer(m));
+        markers = [];
+        const bounds = [];
+        warungs.forEach((w, i) => {
+          const dist = w._dist != null ? formatDist(w._dist) : '';
+          const icon = L.divIcon({
+            className: '',
+            html: `
+            <div style="position:relative;display:flex;flex-direction:column;align-items:center">
+              <div style="background:white;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;color:#3e2a24;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);margin-bottom:4px;border:1.5px solid #e0ccaf">
+                ${esc(w.name)}
+                ${dist ? '<span style="color:#c8956c;margin-left:4px;font-size:10px">' + dist + '</span>' : ''}
+              </div>
+              <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid white;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1))"></div>
+              <div style="width:32px;height:32px;background:linear-gradient(135deg,#5d4037,#7d5a38);border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.25)">
+                <span style="color:white;font-size:14px">☕</span>
+              </div>
+            </div>
+          `,
+            iconSize: [0, 0],
+            iconAnchor: [16, 50],
+          });
+          const m = L.marker([w.latitude, w.longitude], { icon }).addTo(map);
+          const prods = w.products.map((p) => `${p.name} ×${p.available_qty}`).join(', ');
+          m.bindPopup(`
+          <div style="font-family:'Plus Jakarta Sans',sans-serif;min-width:150px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:4px">${esc(w.name)}</div>
+            <div style="font-size:11px;color:#9a7044;margin-bottom:6px">${esc(w.address || '')}</div>
+            <div style="font-size:12px;color:#5d4037">${prods}</div>
+            ${dist ? '<div style="font-size:11px;color:#c8956c;margin-top:4px">📍 ' + dist + '</div>' : ''}
+          </div>
+        `);
+          m.on('click', () => {
+            closeMap();
+            openDetail(w.id);
+          });
+          markers.push(m);
+          bounds.push([w.latitude, w.longitude]);
+        });
+        if (myLat && myLng) bounds.push([myLat, myLng]);
+        if (bounds.length) map.fitBounds(bounds, { padding: [60, 60] });
+      }
+
+      function addMyLocation() {
+        if (myLocMarker) map.removeLayer(myLocMarker);
+        const icon = L.divIcon({
+          className: '',
+          html: `
+          <div style="position:relative;display:flex;flex-direction:column;align-items:center">
+            <div style="background:#4285f4;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;color:white;white-space:nowrap;box-shadow:0 2px 6px rgba(66,133,244,0.4);margin-bottom:3px">
+              Lokasi Saya
+            </div>
+            <div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #4285f4"></div>
+            <div style="width:24px;height:24px;background:#4285f4;border:3px solid white;border-radius:50%;box-shadow:0 3px 10px rgba(66,133,244,0.4)"></div>
+          </div>
+        `,
+          iconSize: [0, 0],
+          iconAnchor: [12, 40],
+        });
+        myLocMarker = L.marker([myLat, myLng], { icon }).addTo(map);
+      }
+
+      function toggleSatellite() {
+        if (isSat) {
+          map.removeLayer(satLayer);
+          tileLayer.addTo(map);
+        } else {
+          map.removeLayer(tileLayer);
+          satLayer.addTo(map);
+        }
+        document.getElementById('sat-btn').classList.toggle('active', !isSat);
+        isSat = !isSat;
+      }
+
+      function locateMe() {
+        if (!myLat || !myLng) {
+          requestLocation();
+          return;
+        }
+        addMyLocation();
+        map.setView([myLat, myLng], 14);
+      }
+
+      // Detail
+      function openDetail(id) {
+        const w = warungs.find((x) => x.id === id);
+        if (!w) return;
+        selected = w;
+        document.getElementById('d-title').textContent = w.name;
+        document.getElementById('d-addr').textContent = w.address || '-';
+        document.getElementById('d-dist').textContent =
+          w._dist != null ? `📍 ${formatDist(w._dist)} dari lokasi Anda` : '';
+        let h = '';
+        w.products.forEach((p) => {
+          h += `<div class="detail-product">
+          <div><h4>${esc(p.name)}</h4><p class="detail-qty">${p.available_qty} tersedia</p></div>
+          <div class="detail-price">Rp ${fmt(p.price)}</div>
+        </div>`;
+        });
+        document.getElementById('d-products').innerHTML = h;
+        document.getElementById('detail-overlay').classList.add('active');
+      }
+      function closeDetail(e) {
+        if (e.target === document.getElementById('detail-overlay')) closeDetailDirect();
+      }
+      function closeDetailDirect() {
+        document.getElementById('detail-overlay').classList.remove('active');
+      }
+      function openMaps() {
+        if (!selected) return;
+        window.open(
+          `https://www.google.com/maps/dir/?api=1&destination=${selected.latitude},${selected.longitude}`,
+          '_blank'
+        );
+      }
+
+      function esc(t) {
+        const d = document.createElement('div');
+        d.textContent = t;
+        return d.innerHTML;
+      }
+      function fmt(n) {
+        return new Intl.NumberFormat('id-ID').format(n);
+      }
+
+      function updateJsonLd() {
+        const el = document.getElementById('json-ld');
+        if (!el) return;
+        const brand = document.querySelector('meta[property="og:site_name"]')?.content || 'Konsi';
+        const stores = warungs.map((w) => ({
+          '@type': 'Store',
+          name: w.name,
+          description: `Warung kopi dengan ${w.products?.length || 0} produk tersedia`,
+          url: (window.__BASE_URL__ || 'https://kopi.hijitoko.com') + '/',
+          address: {
+            '@type': 'PostalAddress',
+            streetAddress: w.address || '',
+            addressCountry: 'ID',
+          },
+          geo: {
+            '@type': 'GeoCoordinates',
+            latitude: w.latitude,
+            longitude: w.longitude,
+          },
+          hasOfferCatalog: {
+            '@type': 'OfferCatalog',
+            name: 'Menu Kopi',
+            itemListElement: (w.products || []).map((p) => ({
+              '@type': 'Offer',
+              itemOffered: {
+                '@type': 'Product',
+                name: p.name,
+                offers: {
+                  '@type': 'Offer',
+                  price: String(p.price || 0),
+                  priceCurrency: 'IDR',
+                  availability:
+                    p.available_qty > 0
+                      ? 'https://schema.org/InStock'
+                      : 'https://schema.org/OutOfStock',
+                },
+              },
+            })),
+          },
+        }));
+        const jsonLd = {
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'WebSite',
+              name: brand,
+              url: (window.__BASE_URL__ || 'https://kopi.hijitoko.com') + '/',
+              description:
+                'Temukan warung kopi terdekat yang masih punya stok kopi segar. Cek lokasi, produk tersedia, dan navigasi langsung ke warung kesukaanmu.',
+              inLanguage: 'id-ID',
+            },
+            {
+              '@type': 'ItemList',
+              itemListElement: stores.map((s, i) => ({
+                '@type': 'ListItem',
+                position: i + 1,
+                item: s,
+              })),
+            },
+          ],
+        };
+        el.textContent = JSON.stringify(jsonLd);
+      }
+    </script>
+  </body>
+</html>

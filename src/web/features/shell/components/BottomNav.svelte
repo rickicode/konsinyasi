@@ -9,7 +9,9 @@
   const current = $derived(router.location ?? '/');
 </script>
 
-<nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-coffee-100/60 bg-cream pb-safe">
+<nav
+  class="fixed bottom-0 left-0 right-0 z-40 border-t border-coffee-100/60 bg-cream pb-safe lg:hidden"
+>
   <div class="mx-auto flex max-w-3xl items-center gap-1 overflow-x-auto px-2 py-2 scrollbar-hide">
     {#each items as item (item.path)}
       {@const active =

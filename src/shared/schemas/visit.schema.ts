@@ -62,6 +62,7 @@ export const droppedCycleSummarySchema = z.object({
   cycle_id: z.string(),
   product_name: z.string(),
   qty_dropped: z.number(),
+  price: z.number(),
 });
 
 export type DroppedCycleSummary = z.infer<typeof droppedCycleSummarySchema>;
@@ -110,3 +111,35 @@ export type VisitStateResponse = z.infer<typeof visitStateResponseSchema>;
 export const visitSubmitResponseSchema = visitResultSchema;
 
 export type VisitSubmitResponse = z.infer<typeof visitSubmitResponseSchema>;
+
+export const visitPhotoSchema = z.object({
+  id: z.string(),
+  visit_id: z.string(),
+  photo_key: z.string(),
+  url: z.string(),
+  sequence: z.number(),
+  note: z.string().nullable(),
+  uploaded_by: z.string().nullable(),
+  created_at: z.string(),
+});
+export type VisitPhoto = z.infer<typeof visitPhotoSchema>;
+export const visitPhotoListSchema = z.array(visitPhotoSchema);
+export type VisitPhotoList = z.infer<typeof visitPhotoListSchema>;
+export const visitPhotoUploadResponseSchema = visitPhotoSchema;
+export type VisitPhotoUploadResponse = z.infer<typeof visitPhotoUploadResponseSchema>;
+
+export const receiptPhotoSchema = z.object({
+  id: z.string(),
+  visit_id: z.string(),
+  photo_key: z.string(),
+  url: z.string(),
+  amount: z.number().nullable(),
+  note: z.string().nullable(),
+  uploaded_by: z.string().nullable(),
+  created_at: z.string(),
+});
+export type ReceiptPhoto = z.infer<typeof receiptPhotoSchema>;
+export const receiptPhotoListSchema = z.array(receiptPhotoSchema);
+export type ReceiptPhotoList = z.infer<typeof receiptPhotoListSchema>;
+export const receiptPhotoUploadResponseSchema = receiptPhotoSchema;
+export type ReceiptPhotoUploadResponse = z.infer<typeof receiptPhotoUploadResponseSchema>;

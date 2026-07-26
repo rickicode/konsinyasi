@@ -1,3 +1,0 @@
-{"id":"2ee51405","title":"Rebuild frontend as Svelte 5 SPA with svelte-spa-router, TanStack Query, feature folders, and shared Zod schemas","from":null,"to":"draft","actor":"agent","at":"2026-07-23T20:28:53.692Z","commit":"9cc3aa1"}
-{"id":"2ee51405","title":"Rebuild frontend as Svelte 5 SPA with svelte-spa-router, TanStack Query, feature folders, and shared Zod schemas","from":"draft","to":"rejected","actor":"sync","at":"2026-07-23T20:29:01.776Z","commit":"9cc3aa1"}
-{"id":"0de41376","title":"Rebuild frontend as Svelte 5 SPA with svelte-spa-router, TanStack Query, feature folders, and shared Zod schemas","from":null,"to":"verified","actor":"sync","at":"2026-07-23T20:29:01.776Z","commit":"9cc3aa1"}

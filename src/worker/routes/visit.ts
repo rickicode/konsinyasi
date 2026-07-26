@@ -1,13 +1,40 @@
 import { z } from 'zod';
 import { Hono } from 'hono';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, lte, type SQL } from 'drizzle-orm';
 import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
-import { app_settings, outlets, products } from '../db/schema.js';
+import {
+  app_settings,
+  outlets,
+  products,
+  receipt_photos,
+  users,
+  visit_photos,
+  visit_submissions,
+} from '../db/schema.js';
 import { AppError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
 import { loadOpenCycles, processVisit, type VisitResult } from '../services/visit.js';
+import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination.js';
 import { voidVisit } from '../services/voidVisit.js';
+import {
+  buildImageUrl,
+  deleteImageFromR2,
+  normalizeUploadedFile,
+  processImageUpload,
+} from '../services/image-processing.js';
+
+function parseOptionalDate(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new ValidationError('Format tanggal tidak valid (YYYY-MM-DD)');
+  }
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    throw new ValidationError('Tanggal tidak valid');
+  }
+  return value;
+}
 
 const geofenceCoord = z
   .number({ invalid_type_error: 'Koordinat harus angka' })
@@ -55,7 +82,20 @@ const visitRoute = new Hono<Env>();
 
 export function pickVisitResult(result: VisitResult, includeFinancial: boolean): VisitResult {
   if (includeFinancial) return result;
-  return result;
+
+  // Redact financial fields for non-owners while keeping the response shape intact.
+  return {
+    ...result,
+    amount_collected_total: 0,
+    closed_cycles: result.closed_cycles.map((cycle) => ({
+      ...cycle,
+      amount_collected: 0,
+    })),
+    dropped_cycles: result.dropped_cycles.map((cycle) => ({
+      ...cycle,
+      price: 0,
+    })),
+  };
 }
 
 visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) => {
@@ -153,6 +193,83 @@ visitRoute.post('/outlets/:id/visit', requirePermission('visit:write'), async (c
   return c.json(pickVisitResult(result, user.role === 'owner'), 201);
 });
 
+visitRoute.get('/visits', requirePermission('visit:read'), async (c) => {
+  const user = c.get('user');
+  const db = createClient(c.env);
+  const { outlet_id, user_id, from, to } = c.req.query();
+  const fromDate = parseOptionalDate(from);
+  const toDate = parseOptionalDate(to);
+  const filters: SQL[] = [];
+  if (outlet_id) {
+    filters.push(eq(visit_submissions.outlet_id, outlet_id));
+  }
+  if (fromDate) {
+    filters.push(gte(visit_submissions.created_at, fromDate + 'T00:00:00.000Z'));
+  }
+  if (toDate) {
+    filters.push(lte(visit_submissions.created_at, toDate + 'T23:59:59.999Z'));
+  }
+  if (user.role !== 'owner') {
+    filters.push(eq(visit_submissions.user_id, user.id));
+  } else if (user_id) {
+    filters.push(eq(visit_submissions.user_id, user_id));
+  }
+  const whereClause = filters.length > 0 ? and(...filters) : undefined;
+  const pagination = parsePaginationParams(c.req.query());
+  const totalQuery = db.$count(visit_submissions, whereClause);
+  let rowsQuery = db
+    .select()
+    .from(visit_submissions)
+    .orderBy(desc(visit_submissions.created_at))
+    .$dynamic();
+  if (whereClause) {
+    rowsQuery = rowsQuery.where(whereClause);
+  }
+  if (pagination) {
+    rowsQuery = rowsQuery.limit(pagination.limit).offset((pagination.page - 1) * pagination.limit);
+  }
+  const [total, rows] = await Promise.all([totalQuery, rowsQuery]);
+  const outletIds = [...new Set(rows.map((r) => r.outlet_id))];
+  const userIds = [...new Set(rows.map((r) => r.user_id))];
+  const outletRows =
+    outletIds.length > 0
+      ? await db
+          .select({ id: outlets.id, name: outlets.name })
+          .from(outlets)
+          .where(inArray(outlets.id, outletIds))
+      : [];
+  const userRows =
+    userIds.length > 0
+      ? await db
+          .select({ id: users.id, name: users.name })
+          .from(users)
+          .where(inArray(users.id, userIds))
+      : [];
+  const outletNames = new Map(outletRows.map((o) => [o.id, o.name]));
+  const userNames = new Map(userRows.map((u) => [u.id, u.name]));
+  const data = rows.map((row) => {
+    const response = JSON.parse(row.response_json) as VisitResult;
+    return {
+      idempotency_key: row.idempotency_key,
+      outlet_id: row.outlet_id,
+      outlet_name: outletNames.get(row.outlet_id) ?? 'Warung',
+      user_id: row.user_id,
+      user_name: userNames.get(row.user_id) ?? 'User',
+      created_at: row.created_at,
+      distance_m: row.distance_m,
+      geofence_radius_m: row.geofence_radius_m,
+      geofence_override: row.geofence_override,
+      amount_collected_total: response.amount_collected_total,
+      status: row.status,
+      voided_at: row.voided_at,
+      void_reason: row.void_reason,
+    };
+  });
+  if (pagination) {
+    return c.json(buildPaginatedResponse(data, pagination.page, pagination.limit, total));
+  }
+  return c.json(data);
+});
 visitRoute.post('/visits/:idempotencyKey/void', requirePermission('visit:void'), async (c) => {
   const idempotencyKey = c.req.param('idempotencyKey');
   const user = c.get('user');
@@ -163,9 +280,245 @@ visitRoute.post('/visits/:idempotencyKey/void', requirePermission('visit:void'),
   }
 
   const db = createClient(c.env);
-  await voidVisit(db, user, idempotencyKey, parsed.data.reason);
+  await voidVisit(db, user, idempotencyKey, parsed.data.reason, c.env.PHOTOS);
 
   return c.json({ ok: true });
 });
+
+function requirePhotosBucket(c: { env: { PHOTOS?: R2Bucket } }): R2Bucket {
+  const bucket = c.env.PHOTOS;
+  if (!bucket) {
+    throw new AppError(500, 'CONFIG_ERROR', 'R2 bucket PHOTOS tidak dikonfigurasi');
+  }
+  return bucket;
+}
+
+async function loadVisitForPhoto(db: ReturnType<typeof createClient>, visitId: string) {
+  const rows = await db
+    .select({
+      idempotency_key: visit_submissions.idempotency_key,
+      status: visit_submissions.status,
+    })
+    .from(visit_submissions)
+    .where(eq(visit_submissions.idempotency_key, visitId))
+    .limit(1);
+  if (!rows[0]) {
+    throw new AppError(404, 'NOT_FOUND', 'Kunjungan tidak ditemukan');
+  }
+  return rows[0];
+}
+
+function parseOptionalString(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+visitRoute.get('/visits/:id/photos', requirePermission('visit:read'), async (c) => {
+  const visitId = c.req.param('id');
+  const db = createClient(c.env);
+  await loadVisitForPhoto(db, visitId);
+  const rows = await db
+    .select()
+    .from(visit_photos)
+    .where(eq(visit_photos.visit_id, visitId))
+    .orderBy(visit_photos.sequence, visit_photos.created_at);
+  return c.json(
+    rows.map((row) => ({
+      id: row.id,
+      visit_id: row.visit_id,
+      photo_key: row.photo_key,
+      url: buildImageUrl(row.photo_key),
+      sequence: row.sequence,
+      note: row.note ?? null,
+      uploaded_by: row.uploaded_by ?? null,
+      created_at: row.created_at,
+    }))
+  );
+});
+
+visitRoute.post('/visits/:id/photos', requirePermission('visit:write'), async (c) => {
+  const visitId = c.req.param('id');
+  const user = c.get('user');
+  const bucket = requirePhotosBucket(c);
+  const db = createClient(c.env);
+  const visit = await loadVisitForPhoto(db, visitId);
+  if (visit.status !== 'committed') {
+    throw new ValidationError('Foto kunjungan hanya dapat ditambahkan pada kunjungan aktif');
+  }
+
+  const body = await c.req.parseBody({ all: true });
+  const file = normalizeUploadedFile(body.photo);
+  if (!file) {
+    throw new ValidationError('File foto wajib diunggah');
+  }
+  const uploaded = await processImageUpload({
+    bucket,
+    file,
+    scope: `visits/photos/${visitId}`,
+  });
+
+  const note = parseOptionalString(body.note);
+  const sequenceRaw = body.sequence;
+  const parsedSequence =
+    sequenceRaw === undefined || sequenceRaw === null ? 0 : Number(sequenceRaw);
+  const sequence = Number.isFinite(parsedSequence) ? Math.max(0, Math.round(parsedSequence)) : 0;
+
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.insert(visit_photos).values({
+    id,
+    visit_id: visitId,
+    photo_key: uploaded.key,
+    sequence,
+    note,
+    uploaded_by: user.id,
+    created_at: now,
+    updated_at: now,
+  });
+
+  return c.json(
+    {
+      id,
+      visit_id: visitId,
+      photo_key: uploaded.key,
+      url: uploaded.url,
+      sequence,
+      note,
+      uploaded_by: user.id,
+      created_at: now,
+    },
+    201
+  );
+});
+
+visitRoute.delete('/visits/:id/photos/:photoId', requirePermission('visit:write'), async (c) => {
+  const visitId = c.req.param('id');
+  const photoId = c.req.param('photoId');
+  const bucket = requirePhotosBucket(c);
+  const db = createClient(c.env);
+  await loadVisitForPhoto(db, visitId);
+  const rows = await db
+    .select({ photo_key: visit_photos.photo_key })
+    .from(visit_photos)
+    .where(and(eq(visit_photos.id, photoId), eq(visit_photos.visit_id, visitId)))
+    .limit(1);
+  if (!rows[0]) {
+    throw new AppError(404, 'NOT_FOUND', 'Foto kunjungan tidak ditemukan');
+  }
+  await db
+    .delete(visit_photos)
+    .where(and(eq(visit_photos.id, photoId), eq(visit_photos.visit_id, visitId)));
+  await deleteImageFromR2(bucket, rows[0].photo_key);
+  return c.json({ ok: true });
+});
+
+visitRoute.get('/visits/:id/receipt-photos', requirePermission('visit:read'), async (c) => {
+  const visitId = c.req.param('id');
+  const db = createClient(c.env);
+  await loadVisitForPhoto(db, visitId);
+  const rows = await db
+    .select()
+    .from(receipt_photos)
+    .where(eq(receipt_photos.visit_id, visitId))
+    .orderBy(receipt_photos.created_at);
+  return c.json(
+    rows.map((row) => ({
+      id: row.id,
+      visit_id: row.visit_id,
+      photo_key: row.photo_key,
+      url: buildImageUrl(row.photo_key),
+      amount: row.amount ?? null,
+      note: row.note ?? null,
+      uploaded_by: row.uploaded_by ?? null,
+      created_at: row.created_at,
+    }))
+  );
+});
+
+visitRoute.post('/visits/:id/receipt-photos', requirePermission('visit:write'), async (c) => {
+  const visitId = c.req.param('id');
+  const user = c.get('user');
+  const bucket = requirePhotosBucket(c);
+  const db = createClient(c.env);
+  const visit = await loadVisitForPhoto(db, visitId);
+  if (visit.status !== 'committed') {
+    throw new ValidationError('Foto bon hanya dapat ditambahkan pada kunjungan aktif');
+  }
+
+  const body = await c.req.parseBody({ all: true });
+  const file = normalizeUploadedFile(body.photo);
+  if (!file) {
+    throw new ValidationError('File foto wajib diunggah');
+  }
+  const uploaded = await processImageUpload({
+    bucket,
+    file,
+    scope: `visits/receipts/${visitId}`,
+  });
+
+  const note = parseOptionalString(body.note);
+  const amountRaw = body.amount;
+  let amount: number | null = null;
+  if (amountRaw !== undefined && amountRaw !== null) {
+    const parsed = Number(amountRaw);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new ValidationError('Jumlah bon tidak valid');
+    }
+    amount = Math.round(parsed);
+  }
+
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.insert(receipt_photos).values({
+    id,
+    visit_id: visitId,
+    photo_key: uploaded.key,
+    amount,
+    note,
+    uploaded_by: user.id,
+    created_at: now,
+    updated_at: now,
+  });
+
+  return c.json(
+    {
+      id,
+      visit_id: visitId,
+      photo_key: uploaded.key,
+      url: uploaded.url,
+      amount,
+      note,
+      uploaded_by: user.id,
+      created_at: now,
+    },
+    201
+  );
+});
+
+visitRoute.delete(
+  '/visits/:id/receipt-photos/:photoId',
+  requirePermission('visit:write'),
+  async (c) => {
+    const visitId = c.req.param('id');
+    const photoId = c.req.param('photoId');
+    const bucket = requirePhotosBucket(c);
+    const db = createClient(c.env);
+    await loadVisitForPhoto(db, visitId);
+    const rows = await db
+      .select({ photo_key: receipt_photos.photo_key })
+      .from(receipt_photos)
+      .where(and(eq(receipt_photos.id, photoId), eq(receipt_photos.visit_id, visitId)))
+      .limit(1);
+    if (!rows[0]) {
+      throw new AppError(404, 'NOT_FOUND', 'Foto bon tidak ditemukan');
+    }
+    await db
+      .delete(receipt_photos)
+      .where(and(eq(receipt_photos.id, photoId), eq(receipt_photos.visit_id, visitId)));
+    await deleteImageFromR2(bucket, rows[0].photo_key);
+    return c.json({ ok: true });
+  }
+);
 
 export default visitRoute;

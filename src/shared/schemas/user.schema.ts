@@ -12,6 +12,7 @@ export type UserStatus = z.infer<typeof userStatusSchema>;
 export const userSchema = z.object({
   id: z.string(),
   email: z.string().email(),
+  username: z.string(),
   name: z.string(),
   role: userRoleSchema,
   status: userStatusSchema,
@@ -24,6 +25,7 @@ export type User = z.infer<typeof userSchema>;
 export const createUserSchema = z.object({
   name: z.string().min(1, 'Nama wajib diisi'),
   email: z.string().email('Format email tidak valid'),
+  username: z.string().min(3, 'Username minimal 3 karakter'),
   password: z.string().min(6, 'Password minimal 6 karakter'),
   role: userRoleSchema.optional().default('staff'),
 });

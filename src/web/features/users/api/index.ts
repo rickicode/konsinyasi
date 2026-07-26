@@ -1,4 +1,4 @@
-import { queryOptions, mutationOptions } from '@tanstack/svelte-query';
+import { infiniteQueryOptions, queryOptions, mutationOptions } from '@tanstack/svelte-query';
 import { z } from 'zod';
 import { apiClient, type ApiClient } from '$lib/api/client.js';
 import {
@@ -14,13 +14,29 @@ import type {
   UpdateUserInput,
   User,
 } from '@shared/schemas/user.schema.js';
+import { paginatedListSchema } from '@shared/schemas/pagination.schema.js';
+import type { PaginatedList } from '@shared/schemas/pagination.schema.js';
 import { queryKeys } from '$lib/api/query-keys.js';
 
+const DEFAULT_PAGE_SIZE = 20;
 const okResponseSchema = z.object({ ok: z.boolean() });
+
+export interface ListUsersPaginatedInput {
+  page: number;
+  limit: number;
+}
 
 // ---------------- raw fetch helpers ----------------
 export async function listUsers(client: ApiClient = apiClient): Promise<User[]> {
   return client.get('/api/users/', userListSchema);
+}
+
+export async function listUsersPaginated(
+  { page, limit }: ListUsersPaginatedInput,
+  client: ApiClient = apiClient
+): Promise<PaginatedList<User>> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return client.get(`/api/users/?${params.toString()}`, paginatedListSchema(userSchema));
 }
 
 export async function getUser(id: string, client: ApiClient = apiClient): Promise<User> {
@@ -65,6 +81,18 @@ export function usersQueryOptions(client: ApiClient = apiClient) {
   return queryOptions({
     queryKey: queryKeys.users.all,
     queryFn: () => listUsers(client),
+  });
+}
+
+export function usersInfiniteQueryOptions(client: ApiClient = apiClient) {
+  return infiniteQueryOptions({
+    queryKey: [...queryKeys.users.all, 'infinite'],
+    queryFn: ({ pageParam }) =>
+      listUsersPaginated({ page: pageParam, limit: DEFAULT_PAGE_SIZE }, client),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.total_pages ? lastPage.meta.page + 1 : undefined,
+    staleTime: 1000 * 60 * 2,
   });
 }
 

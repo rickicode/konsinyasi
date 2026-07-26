@@ -26,3 +26,11 @@ scripts/seed-owner.generated.sql
 
 
 
+
+# Generated tooling / cache
+.openlore/
+.playwright-mcp/
+playwright-report/
+/.seed-temp.sql
+/*.png
+.dev.vars

@@ -3,7 +3,6 @@ import { getContext, setContext } from 'svelte';
 const GEOLOCATION_CONTEXT_KEY = Symbol('konsi-geolocation-context');
 
 export type GeolocationPermissionState = 'granted' | 'denied' | 'prompt' | 'unknown';
-
 /**
  * Qualify an accuracy value into a coarse quality bucket.
  */
@@ -20,12 +19,16 @@ export interface GeolocationState {
   readonly error: GeolocationPositionError | null;
   /** True when a watch is active. */
   readonly watching: boolean;
+  /** True while actively trying to obtain an accurate fix. */
+  readonly acquiring: boolean;
   /** Request a one-time position update and permission check. */
   request(options?: PositionOptions): Promise<void>;
   /** Start watching the device position. Idempotent. */
   watch(options?: PositionOptions): void;
   /** Stop watching the device position. */
   stop(): void;
+  /** Restart watch from scratch to obtain a fresh fix. */
+  refresh(): void;
   /** Great-circle distance in kilometers from the last fix to a target lat/lng. */
   distanceTo(latitude: number, longitude: number): number | null;
   /** Great-circle distance in meters from the last fix to a target lat/lng. */
@@ -88,20 +91,43 @@ async function queryPermission(): Promise<GeolocationPermissionState> {
   }
 }
 
+const DEFAULT_REQUEST_OPTIONS: PositionOptions = {
+  enableHighAccuracy: true,
+  maximumAge: 0,
+  timeout: 15_000,
+};
+
+const DEFAULT_WATCH_OPTIONS: PositionOptions = {
+  enableHighAccuracy: true,
+  maximumAge: 0,
+  timeout: 15_000,
+};
+
 function createGeolocationState(): GeolocationState {
   const isBrowser = typeof navigator !== 'undefined' && 'geolocation' in navigator;
   let coords = $state<GeolocationCoordinates | null>(null);
   let permission = $state<GeolocationPermissionState>('prompt');
   let error = $state<GeolocationPositionError | null>(null);
   let watchId: number | null = null;
+  let watchOptions = $state<PositionOptions>(DEFAULT_WATCH_OPTIONS);
+  let acquiring = $state(false);
 
   function onSuccess(position: GeolocationPosition) {
-    coords = position.coords;
+    const next = position.coords;
+    const current = coords;
     error = null;
+    acquiring = false;
+    // Keep the best fix seen so far: prefer lower accuracy, but always keep the
+    // first fix so the UI isn't empty. This prevents watchPosition from bouncing
+    // to a worse (e.g. cell-tower) fix after an initial GPS lock.
+    if (!current || next.accuracy <= current.accuracy) {
+      coords = next;
+    }
   }
 
   function onFailure(err: GeolocationPositionError) {
     error = err;
+    acquiring = false;
     if (err.code === err.PERMISSION_DENIED) {
       permission = 'denied';
     }
@@ -123,25 +149,35 @@ function createGeolocationState(): GeolocationState {
     get watching() {
       return watchId !== null;
     },
+    get acquiring() {
+      return acquiring;
+    },
     async request(options = {}) {
       if (!isBrowser) return;
+      acquiring = true;
       permission = await queryPermission();
-      navigator.geolocation.getCurrentPosition(onSuccess, onFailure, {
-        enableHighAccuracy: true,
-        ...options,
-      });
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            ...DEFAULT_REQUEST_OPTIONS,
+            ...options,
+          });
+        });
+        onSuccess(position);
+      } catch (err) {
+        onFailure(err as GeolocationPositionError);
+      } finally {
+        acquiring = false;
+      }
     },
     watch(options = {}) {
       if (!isBrowser || watchId !== null) return;
+      acquiring = true;
+      watchOptions = { ...DEFAULT_WATCH_OPTIONS, ...options };
       queryPermission().then((state) => {
         permission = state;
       });
-      watchId = navigator.geolocation.watchPosition(onSuccess, onFailure, {
-        enableHighAccuracy: true,
-        maximumAge: 60_000,
-        timeout: 10_000,
-        ...options,
-      });
+      watchId = navigator.geolocation.watchPosition(onSuccess, onFailure, watchOptions);
     },
     stop() {
       if (watchId === null) return;
@@ -149,20 +185,16 @@ function createGeolocationState(): GeolocationState {
         navigator.geolocation.clearWatch(watchId);
       }
       watchId = null;
+      acquiring = false;
+    },
+    refresh() {
+      this.stop();
+      coords = null;
+      this.watch();
     },
     distanceTo(latitude: number, longitude: number) {
       if (!coords) return null;
-      const R = 6371;
-      const dLat = toRadians(latitude - coords.latitude);
-      const dLng = toRadians(longitude - coords.longitude);
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRadians(coords.latitude)) *
-          Math.cos(toRadians(latitude)) *
-          Math.sin(dLng / 2) *
-          Math.sin(dLng / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
+      return distanceBetween(coords.latitude, coords.longitude, latitude, longitude);
     },
     distanceToMeters(latitude: number, longitude: number) {
       const km = this.distanceTo(latitude, longitude);

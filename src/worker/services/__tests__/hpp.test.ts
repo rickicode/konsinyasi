@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { computeHPP, type HPPRecipeLine } from '../hpp.js';
 import { ValidationError } from '../../lib/errors.js';
+import type { UomRegistry } from '@shared/lib/units.js';
+
+const registry: UomRegistry = {
+  ml: { dimension: 'vol', multiplier: 1 },
+  cl: { dimension: 'vol', multiplier: 10 },
+  l: { dimension: 'vol', multiplier: 1000 },
+  gr: { dimension: 'mass', multiplier: 1 },
+  kg: { dimension: 'mass', multiplier: 1000 },
+  pcs: { dimension: 'count', multiplier: 1 },
+};
 
 describe('computeHPP', () => {
   it('returns 0 for empty recipe', () => {
-    expect(computeHPP([])).toBe(0);
+    expect(computeHPP([], registry)).toBe(0);
   });
 
   it('computes single line with matching unit', () => {
@@ -17,7 +27,7 @@ describe('computeHPP', () => {
         unit: 'ml',
       },
     ];
-    expect(computeHPP(lines)).toBe(250);
+    expect(computeHPP(lines, registry)).toBe(250);
   });
 
   it('performs volume conversion from l to ml', () => {
@@ -30,7 +40,7 @@ describe('computeHPP', () => {
         unit: 'l',
       },
     ];
-    expect(computeHPP(lines)).toBe(1000);
+    expect(computeHPP(lines, registry)).toBe(1000);
   });
 
   it('performs mass conversion from kg to gr', () => {
@@ -43,7 +53,7 @@ describe('computeHPP', () => {
         unit: 'kg',
       },
     ];
-    expect(computeHPP(lines)).toBe(10000);
+    expect(computeHPP(lines, registry)).toBe(10000);
   });
 
   it('sums multiple recipe lines', () => {
@@ -63,7 +73,7 @@ describe('computeHPP', () => {
         unit: 'gr',
       },
     ];
-    expect(computeHPP(lines)).toBe(250 + 500);
+    expect(computeHPP(lines, registry)).toBe(250 + 500);
   });
 
   it('throws ValidationError when unit dimension mismatches base unit dimension', () => {
@@ -76,7 +86,7 @@ describe('computeHPP', () => {
         unit: 'kg',
       },
     ];
-    expect(() => computeHPP(lines)).toThrow(ValidationError);
+    expect(() => computeHPP(lines, registry)).toThrow(ValidationError);
   });
 
   it('throws when mixing count dimension with mass', () => {
@@ -89,7 +99,7 @@ describe('computeHPP', () => {
         unit: 'gr',
       },
     ];
-    expect(() => computeHPP(lines)).toThrow(ValidationError);
+    expect(() => computeHPP(lines, registry)).toThrow(ValidationError);
   });
 
   it('keeps pcs dimension consistent', () => {
@@ -102,7 +112,7 @@ describe('computeHPP', () => {
         unit: 'pcs',
       },
     ];
-    expect(computeHPP(lines)).toBe(1200);
+    expect(computeHPP(lines, registry)).toBe(1200);
   });
 
   it('rounds fractional results to integer', () => {
@@ -115,7 +125,6 @@ describe('computeHPP', () => {
         unit: 'cl',
       },
     ];
-    // 1 cl = 10 ml; 10 ml * Rp 3/ml = 30
-    expect(computeHPP(lines)).toBe(30);
+    expect(computeHPP(lines, registry)).toBe(30);
   });
 });

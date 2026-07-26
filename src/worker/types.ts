@@ -13,6 +13,7 @@ export type Bindings = {
   ASSETS: Fetcher;
   SESSION_SECRET?: string;
   PHOTOS?: R2Bucket;
+  PUBLIC_API_BASE_URL?: string;
 };
 
 export type Env = {

@@ -1,7 +1,9 @@
-import { queryOptions, mutationOptions } from '@tanstack/svelte-query';
+import { infiniteQueryOptions, queryOptions, mutationOptions } from '@tanstack/svelte-query';
 import { z } from 'zod';
 import { apiClient, type ApiClient } from '$lib/api/client.js';
 import { queryKeys } from '$lib/api/query-keys.js';
+import { paginatedListSchema } from '@shared/schemas/pagination.schema.js';
+import type { PaginatedList } from '@shared/schemas/pagination.schema.js';
 import {
   outletCreateSchema,
   outletListSchema,
@@ -16,6 +18,7 @@ import type {
   OutletPhotoUploadResponse,
 } from '@shared/schemas/outlet.schema.js';
 
+const DEFAULT_PAGE_SIZE = 20;
 const okResponseSchema = z.object({ ok: z.boolean() });
 
 export interface OutletPhotoUploadArgs {
@@ -26,11 +29,27 @@ export interface OutletPhotoUploadArgs {
   accuracy?: number | null;
 }
 
+export interface FetchOutletsPaginatedInput {
+  page: number;
+  limit: number;
+}
+
 /**
  * Fetch the full list of outlets.
  */
 export async function fetchOutlets(client: ApiClient = apiClient): Promise<Outlet[]> {
   return client.get('/api/outlets', outletListSchema);
+}
+
+/**
+ * Fetch a paginated list of outlets.
+ */
+export async function fetchOutletsPaginated(
+  { page, limit }: FetchOutletsPaginatedInput,
+  client: ApiClient = apiClient
+): Promise<PaginatedList<Outlet>> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return client.get(`/api/outlets?${params.toString()}`, paginatedListSchema(outletResponseSchema));
 }
 
 /**
@@ -92,7 +111,6 @@ export async function uploadOutletPhoto(
 }
 
 // ---------------- queryOptions factories ----------------
-
 /**
  * TanStack Query options for the outlet list.
  */
@@ -100,6 +118,21 @@ export function outletsQueryOptions(client: ApiClient = apiClient) {
   return queryOptions({
     queryKey: queryKeys.outlets.all,
     queryFn: () => fetchOutlets(client),
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+/**
+ * TanStack Query infinite options for the outlet list.
+ */
+export function outletsInfiniteQueryOptions(client: ApiClient = apiClient) {
+  return infiniteQueryOptions({
+    queryKey: [...queryKeys.outlets.all, 'infinite'],
+    queryFn: ({ pageParam }) =>
+      fetchOutletsPaginated({ page: pageParam, limit: DEFAULT_PAGE_SIZE }, client),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.total_pages ? lastPage.meta.page + 1 : undefined,
     staleTime: 1000 * 60 * 2,
   });
 }
@@ -117,7 +150,6 @@ export function outletDetailQueryOptions(id: string, client: ApiClient = apiClie
 }
 
 // ---------------- mutationOptions factories ----------------
-
 /**
  * TanStack Query mutation options for creating an outlet.
  */

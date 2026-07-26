@@ -11,6 +11,7 @@
 
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { SvelteSet } from 'svelte/reactivity';
 
   type Props = {
     children?: Snippet;
@@ -19,6 +20,19 @@
   let { children }: Props = $props();
 
   setContext<ToastApi>(TOAST_KEY, toast);
+
+  const scheduled = new SvelteSet<string>();
+  const AUTO_DISMISS_MS = 5000;
+  $effect(() => {
+    for (const item of toast.toasts) {
+      if (scheduled.has(item.id)) continue;
+      scheduled.add(item.id);
+      setTimeout(() => {
+        toast.dismiss(item.id);
+        scheduled.delete(item.id);
+      }, AUTO_DISMISS_MS);
+    }
+  });
 </script>
 
 {@render children?.()}

@@ -9,6 +9,7 @@ export const queryKeys = {
   settings: {
     all: ['settings'] as const,
     geofence: ['settings', 'geofence'] as const,
+    brand: ['settings', 'brand'] as const,
   },
   dashboard: {
     all: ['dashboard'] as const,
@@ -27,9 +28,16 @@ export const queryKeys = {
     all: ['raw-materials'] as const,
     detail: (id: string) => ['raw-materials', id] as const,
   },
+  uoms: {
+    all: ['uoms'] as const,
+    detail: (id: string) => ['uoms', id] as const,
+  },
   visits: {
     prep: (outletId: string) => ['visits', 'prep', outletId] as const,
     history: ['visits', 'history'] as const,
+    byOutlet: (outletId: string) => ['visits', 'outlet', outletId] as const,
+    photos: (visitId: string) => ['visits', visitId, 'photos'] as const,
+    receiptPhotos: (visitId: string) => ['visits', visitId, 'receipt-photos'] as const,
   },
   reports: {
     summary: (filters: ReportFilters) => ['reports', filters] as const,

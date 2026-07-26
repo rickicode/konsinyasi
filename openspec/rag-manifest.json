@@ -1,0 +1,164 @@
+{
+  "generatedAt": "2026-07-25T18:44:59.126Z",
+  "specVersion": "1.0.0",
+  "domains": [
+    {
+      "domain": "auth",
+      "specPath": "openspec/specs/auth/spec.md",
+      "sourceFiles": [
+        "/workspaces/konsinyasi/src/shared/schemas/auth.schema.ts",
+        "/workspaces/konsinyasi/src/web/lib/stores/auth.svelte.ts",
+        "/workspaces/konsinyasi/mobile/lib/data/datasources/remote/auth_api.dart",
+        "/workspaces/konsinyasi/mobile/lib/data/repositories/auth_repository.dart"
+      ],
+      "requirementCount": 53,
+      "dependsOn": ["domain"],
+      "calledBy": []
+    },
+    {
+      "domain": "dashboard",
+      "specPath": "openspec/specs/dashboard/spec.md",
+      "sourceFiles": [
+        "/workspaces/konsinyasi/mobile/lib/presentation/dashboard/dashboard_page.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/dashboard/staff_dashboard_page.dart"
+      ],
+      "requirementCount": 4,
+      "dependsOn": [],
+      "calledBy": []
+    },
+    {
+      "domain": "notification",
+      "specPath": "openspec/specs/notification/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 11,
+      "dependsOn": [],
+      "calledBy": []
+    },
+    {
+      "domain": "outlet",
+      "specPath": "openspec/specs/outlet/spec.md",
+      "sourceFiles": [
+        "/workspaces/konsinyasi/src/shared/schemas/outlet.schema.ts",
+        "/workspaces/konsinyasi/mobile/lib/data/datasources/remote/outlet_api.dart",
+        "/workspaces/konsinyasi/mobile/lib/data/repositories/outlet_repository.dart",
+        "/workspaces/konsinyasi/src/web/features/outlets/pages/OutletDetailPage.svelte",
+        "/workspaces/konsinyasi/src/web/features/outlets/pages/OutletListPage.svelte",
+        "/workspaces/konsinyasi/mobile/lib/data/datasources/local/outlet_local_datasource.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/outlets/outlet_list_page.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/outlets/outlet_detail_page.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/outlets/outlet_form_page.dart"
+      ],
+      "requirementCount": 58,
+      "dependsOn": [],
+      "calledBy": ["domain", "web"]
+    },
+    {
+      "domain": "photo",
+      "specPath": "openspec/specs/photo/spec.md",
+      "sourceFiles": [
+        "/workspaces/konsinyasi/src/worker/lib/photos.ts",
+        "/workspaces/konsinyasi/src/worker/db/migrations/0006_add_visit_and_receipt_photos.sql"
+      ],
+      "requirementCount": 18,
+      "dependsOn": ["services"],
+      "calledBy": []
+    },
+    {
+      "domain": "product",
+      "specPath": "openspec/specs/product/spec.md",
+      "sourceFiles": [
+        "/workspaces/konsinyasi/src/shared/schemas/product.schema.ts",
+        "/workspaces/konsinyasi/mobile/lib/data/datasources/remote/product_api.dart",
+        "/workspaces/konsinyasi/mobile/lib/data/repositories/product_repository.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/master/product_list_page.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/master/product_form_page.dart",
+        "/workspaces/konsinyasi/mobile/lib/data/datasources/local/product_local_datasource.dart",
+        "/workspaces/konsinyasi/src/worker/db/migrations/0005_add_product_hpp_override.sql",
+        "/workspaces/konsinyasi/scripts/seed-products.ts"
+      ],
+      "requirementCount": 17,
+      "dependsOn": ["shared"],
+      "calledBy": []
+    },
+    {
+      "domain": "raw-material",
+      "specPath": "openspec/specs/raw-material/spec.md",
+      "sourceFiles": ["/workspaces/konsinyasi/src/shared/schemas/raw-material.schema.ts"],
+      "requirementCount": 1,
+      "dependsOn": ["shared"],
+      "calledBy": []
+    },
+    {
+      "domain": "report",
+      "specPath": "openspec/specs/report/spec.md",
+      "sourceFiles": [
+        "/workspaces/konsinyasi/src/shared/schemas/report.schema.ts",
+        "/workspaces/konsinyasi/mobile/lib/data/datasources/remote/reports_api.dart",
+        "/workspaces/konsinyasi/mobile/lib/data/repositories/reports_repository.dart"
+      ],
+      "requirementCount": 16,
+      "dependsOn": [],
+      "calledBy": []
+    },
+    {
+      "domain": "settings",
+      "specPath": "openspec/specs/settings/spec.md",
+      "sourceFiles": [
+        "/workspaces/konsinyasi/src/shared/schemas/settings.schema.ts",
+        "/workspaces/konsinyasi/mobile/lib/presentation/master/settings_page.dart"
+      ],
+      "requirementCount": 27,
+      "dependsOn": [],
+      "calledBy": []
+    },
+    {
+      "domain": "sync",
+      "specPath": "openspec/specs/sync/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 15,
+      "dependsOn": [],
+      "calledBy": []
+    },
+    {
+      "domain": "user",
+      "specPath": "openspec/specs/user/spec.md",
+      "sourceFiles": [
+        "/workspaces/konsinyasi/src/shared/schemas/user.schema.ts",
+        "/workspaces/konsinyasi/mobile/lib/presentation/master/users_page.dart",
+        "/workspaces/konsinyasi/src/worker/db/migrations/0004_add_username.sql"
+      ],
+      "requirementCount": 1,
+      "dependsOn": [],
+      "calledBy": ["auth"]
+    },
+    {
+      "domain": "visit",
+      "specPath": "openspec/specs/visit/spec.md",
+      "sourceFiles": [
+        "/workspaces/konsinyasi/src/shared/schemas/visit.schema.ts",
+        "/workspaces/konsinyasi/mobile/lib/data/datasources/remote/visit_api.dart",
+        "/workspaces/konsinyasi/mobile/lib/data/repositories/visit_repository.dart",
+        "/workspaces/konsinyasi/src/worker/services/visit.ts",
+        "/workspaces/konsinyasi/src/worker/services/voidVisit.ts",
+        "/workspaces/konsinyasi/mobile/lib/data/datasources/local/visit_draft_local_datasource.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/visits/visit_list_page.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/visits/visit_start_page.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/visits/visit_success_page.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/visits/visit_drafts_page.dart",
+        "/workspaces/konsinyasi/mobile/lib/presentation/visits/visit_form_page.dart",
+        "/workspaces/konsinyasi/src/worker/db/migrations/0006_add_visit_and_receipt_photos.sql"
+      ],
+      "requirementCount": 65,
+      "dependsOn": ["db", "outlet", "services", "worker"],
+      "calledBy": []
+    },
+    {
+      "domain": "visit-draft",
+      "specPath": "openspec/specs/visit-draft/spec.md",
+      "sourceFiles": [],
+      "requirementCount": 3,
+      "dependsOn": [],
+      "calledBy": []
+    }
+  ]
+}

@@ -90,7 +90,8 @@ export class ApiClient {
     }
 
     if (response.status === 204) {
-      return schema.parse(undefined) as T;
+      // 204 responses have no body; return undefined and let the caller handle it.
+      return undefined as T;
     }
 
     let data: unknown;

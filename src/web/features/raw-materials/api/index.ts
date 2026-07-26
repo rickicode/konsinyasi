@@ -1,4 +1,4 @@
-import { queryOptions, mutationOptions } from '@tanstack/svelte-query';
+import { infiniteQueryOptions, queryOptions, mutationOptions } from '@tanstack/svelte-query';
 import { z } from 'zod';
 import { apiClient, type ApiClient } from '$lib/api/client.js';
 import {
@@ -12,13 +12,32 @@ import type {
   RawMaterialCreateInput,
   RawMaterialUpdateInput,
 } from '@shared/schemas/raw-material.schema.js';
+import { paginatedListSchema } from '@shared/schemas/pagination.schema.js';
+import type { PaginatedList } from '@shared/schemas/pagination.schema.js';
 import { queryKeys } from '$lib/api/query-keys.js';
 
+const DEFAULT_PAGE_SIZE = 20;
 const okResponseSchema = z.object({ ok: z.boolean() });
+
+export interface ListRawMaterialsPaginatedInput {
+  page: number;
+  limit: number;
+}
 
 // ---------------- raw fetch helpers ----------------
 export async function listRawMaterials(client: ApiClient = apiClient): Promise<RawMaterial[]> {
   return client.get('/api/raw-materials/', rawMaterialListSchema);
+}
+
+export async function listRawMaterialsPaginated(
+  { page, limit }: ListRawMaterialsPaginatedInput,
+  client: ApiClient = apiClient
+): Promise<PaginatedList<RawMaterial>> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return client.get(
+    `/api/raw-materials/?${params.toString()}`,
+    paginatedListSchema(rawMaterialResponseSchema)
+  );
 }
 
 export async function getRawMaterial(
@@ -57,6 +76,18 @@ export function rawMaterialsQueryOptions(client: ApiClient = apiClient) {
   return queryOptions({
     queryKey: queryKeys.rawMaterials.all,
     queryFn: () => listRawMaterials(client),
+  });
+}
+
+export function rawMaterialsInfiniteQueryOptions(client: ApiClient = apiClient) {
+  return infiniteQueryOptions({
+    queryKey: [...queryKeys.rawMaterials.all, 'infinite'],
+    queryFn: ({ pageParam }) =>
+      listRawMaterialsPaginated({ page: pageParam, limit: DEFAULT_PAGE_SIZE }, client),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.page < lastPage.meta.total_pages ? lastPage.meta.page + 1 : undefined,
+    staleTime: 1000 * 60 * 2,
   });
 }
 

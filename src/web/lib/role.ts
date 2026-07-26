@@ -1,4 +1,5 @@
-export type TabKey = 'beranda' | 'kunjungan' | 'warung' | 'master' | 'pengguna' | 'pengaturan';
+export type TabKey =
+  'beranda' | 'kunjungan' | 'warung' | 'master' | 'admin' | 'laporan' | 'pengguna' | 'pengaturan';
 
 export type Tab = { key: TabKey; label: string; roles: string[] };
 
@@ -6,7 +7,9 @@ export const allTabs: Tab[] = [
   { key: 'beranda', label: 'Beranda', roles: ['owner', 'staff'] },
   { key: 'kunjungan', label: 'Kunjungan', roles: ['owner', 'staff'] },
   { key: 'warung', label: 'Warung', roles: ['owner', 'staff'] },
-  { key: 'master', label: 'Master', roles: ['owner', 'staff'] },
+  { key: 'master', label: 'Master', roles: ['owner'] },
+  { key: 'admin', label: 'Admin', roles: ['owner'] },
+  { key: 'laporan', label: 'Laporan', roles: ['owner'] },
   { key: 'pengaturan', label: 'Pengaturan', roles: ['owner'] },
   { key: 'pengguna', label: 'Pengguna', roles: ['owner'] },
 ];
@@ -21,8 +24,8 @@ export type MasterSectionDef = { key: MasterSection; label: string; roles: strin
 
 export const allMasterSections: MasterSectionDef[] = [
   { key: 'bahan', label: 'Bahan Baku', roles: ['owner'] },
-  { key: 'produk', label: 'Produk', roles: ['owner', 'staff'] },
-  { key: 'warung', label: 'Warung', roles: ['owner', 'staff'] },
+  { key: 'produk', label: 'Produk', roles: ['owner'] },
+  { key: 'warung', label: 'Warung', roles: ['owner'] },
 ];
 
 export function allowedMasterSections(role: string): MasterSectionDef[] {
@@ -52,22 +55,15 @@ export type AppNavItem = {
   position: 'bottom' | 'top';
 };
 
-const appNavItems: AppNavItem[] = [
-  // bottom nav (max 4)
+// Owner navigation items
+const ownerNavItems: AppNavItem[] = [
+  // Bottom nav (max 4-5)
   {
     key: 'beranda',
     path: '/beranda',
     label: 'Beranda',
     icon: 'home',
-    roles: ['owner', 'staff'],
-    position: 'bottom',
-  },
-  {
-    key: 'produk',
-    path: '/produk',
-    label: 'Produk',
-    icon: 'package',
-    roles: ['staff'],
+    roles: ['owner'],
     position: 'bottom',
   },
   {
@@ -75,7 +71,7 @@ const appNavItems: AppNavItem[] = [
     path: '/kunjungan',
     label: 'Kunjungan',
     icon: 'clipboard-list',
-    roles: ['owner', 'staff'],
+    roles: ['owner'],
     position: 'bottom',
   },
   {
@@ -83,7 +79,7 @@ const appNavItems: AppNavItem[] = [
     path: '/warung',
     label: 'Warung',
     icon: 'store',
-    roles: ['owner', 'staff'],
+    roles: ['owner'],
     position: 'bottom',
   },
   {
@@ -94,19 +90,18 @@ const appNavItems: AppNavItem[] = [
     roles: ['owner'],
     position: 'bottom',
   },
-
-  // top bar menu
+  // Top bar menu
   {
     key: 'profil',
     path: '/profil',
     label: 'Profil',
     icon: 'user',
-    roles: ['owner', 'staff'],
+    roles: ['owner'],
     position: 'top',
   },
   {
-    key: 'owner',
-    path: '/owner',
+    key: 'admin',
+    path: '/admin',
     label: 'Admin',
     icon: 'shield',
     roles: ['owner'],
@@ -138,14 +133,62 @@ const appNavItems: AppNavItem[] = [
   },
 ];
 
+// Staff navigation items - simplified, no admin features
+const staffNavItems: AppNavItem[] = [
+  // Bottom nav
+  {
+    key: 'beranda',
+    path: '/beranda',
+    label: 'Beranda',
+    icon: 'home',
+    roles: ['staff'],
+    position: 'bottom',
+  },
+  {
+    key: 'kunjungan',
+    path: '/kunjungan',
+    label: 'Kunjungan',
+    icon: 'clipboard-list',
+    roles: ['staff'],
+    position: 'bottom',
+  },
+  {
+    key: 'warung',
+    path: '/warung',
+    label: 'Warung',
+    icon: 'store',
+    roles: ['staff'],
+    position: 'bottom',
+  },
+  {
+    key: 'produk',
+    path: '/produk',
+    label: 'Produk',
+    icon: 'package',
+    roles: ['staff'],
+    position: 'bottom',
+  },
+  // Top bar - only profile
+  {
+    key: 'profil',
+    path: '/profil',
+    label: 'Profil',
+    icon: 'user',
+    roles: ['staff'],
+    position: 'top',
+  },
+];
+
 export function bottomNavTabs(role: string): AppNavItem[] {
-  return appNavItems.filter(
+  const items = role === 'owner' ? ownerNavItems : staffNavItems;
+  return items.filter(
     (item) => item.position === 'bottom' && item.roles.includes(role as 'owner' | 'staff')
   );
 }
 
 export function topMenuTabs(role: string): AppNavItem[] {
-  return appNavItems.filter(
+  const items = role === 'owner' ? ownerNavItems : staffNavItems;
+  return items.filter(
     (item) => item.position === 'top' && item.roles.includes(role as 'owner' | 'staff')
   );
 }

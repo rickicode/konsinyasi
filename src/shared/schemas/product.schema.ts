@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { baseUnitSchema } from '../lib/units.js';
 
 export const productStatusSchema = z.enum(['active', 'inactive'], {
   message: 'Status harus active atau inactive',
@@ -12,7 +11,7 @@ export const recipeLineSchema = z.object({
   quantity: z
     .number({ invalid_type_error: 'Kuantitas harus angka' })
     .positive('Kuantitas harus lebih dari 0'),
-  unit: baseUnitSchema,
+  unit: z.string().min(1, 'Satuan resep wajib dipilih'),
 });
 
 export type RecipeLineInput = z.infer<typeof recipeLineSchema>;
@@ -21,9 +20,9 @@ export const enrichedRecipeLineSchema = z.object({
   id: z.string(),
   raw_material_id: z.string(),
   raw_material_name: z.string(),
-  base_unit: baseUnitSchema,
+  base_unit: z.string().min(1, 'Satuan resep wajib dipilih'),
   quantity: z.number(),
-  unit: baseUnitSchema,
+  unit: z.string().min(1, 'Satuan resep wajib dipilih'),
 });
 
 export type EnrichedRecipeLine = z.infer<typeof enrichedRecipeLineSchema>;
@@ -64,6 +63,12 @@ export const productUpdateSchema = z.object({
 
 export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;
 
+export const productPhotoUploadResponseSchema = z.object({
+  photo_key: z.string(),
+  url: z.string(),
+});
+export type ProductPhotoUploadResponse = z.infer<typeof productPhotoUploadResponseSchema>;
+
 export const productResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -72,6 +77,7 @@ export const productResponseSchema = z.object({
   hpp: z.number().optional(),
   hpp_override: z.number().nullable().optional(),
   price_to_outlet: z.number().optional(),
+  photo_key: z.string().nullable().optional(),
   deleted_at: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -86,6 +92,7 @@ export type ProductList = z.infer<typeof productListSchema>;
 export const productPickerItemSchema = z.object({
   id: z.string(),
   name: z.string(),
+  price: z.number(),
 });
 
 export type ProductPickerItem = z.infer<typeof productPickerItemSchema>;

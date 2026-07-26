@@ -1,6 +1,13 @@
 name = "konsi"
 main = "src/worker/index.ts"
 compatibility_date = "2024-07-01"
+account_id = "f8ab5bbdd826db1b9aa1059d7842be75"
+
+[vars]
+PUBLIC_API_BASE_URL = "https://konsi.rickicode.workers.dev"
+
+[dev]
+port = 8787
 
 [assets]
 directory = "dist/client"
@@ -10,7 +17,7 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "konsi"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "7fb6dcae-5315-44df-90de-f1ddf2ba06fe"
 
 [[r2_buckets]]
 binding = "PHOTOS"

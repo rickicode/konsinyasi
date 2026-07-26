@@ -51,6 +51,13 @@
       return sum + sold * (cycle.price_snapshot ?? 0);
     }, 0)
   );
+
+  const totalDropValue = $derived(
+    draft.drops.reduce((sum, drop) => sum + drop.qty * (drop.price ?? 0), 0)
+  );
+
+  const hasPickups = $derived(cycles.length > 0);
+  const hasDrops = $derived(draft.drops.length > 0);
 </script>
 
 <Sheet
@@ -60,6 +67,7 @@
   {onClose}
 >
   <div class="space-y-4">
+    <!-- Distance -->
     <div
       class="flex items-center justify-between rounded-xl border border-coffee-100 bg-milk px-4 py-3 text-sm"
     >
@@ -69,6 +77,7 @@
       </span>
     </div>
 
+    <!-- Geofence Warning -->
     {#if !isInside}
       <div
         class="rounded-xl border border-danger bg-danger-bg px-4 py-3 text-sm text-danger"
@@ -81,7 +90,8 @@
       </div>
     {/if}
 
-    {#if cycles.length > 0}
+    <!-- Penarikan (Pickup) -->
+    {#if hasPickups}
       <Card variant="visit" class="bg-milk">
         {#snippet header()}
           <h3 class="text-sm font-bold text-coffee-900">Penarikan</h3>
@@ -99,7 +109,8 @@
       </Card>
     {/if}
 
-    {#if draft.drops.length > 0}
+    <!-- Penitipan (Drop) -->
+    {#if hasDrops}
       <Card variant="product" class="bg-milk">
         {#snippet header()}
           <h3 class="text-sm font-bold text-coffee-900">Penitipan Baru</h3>
@@ -108,20 +119,39 @@
           {#each draft.drops as drop (drop.id)}
             <li class="flex items-center justify-between text-sm">
               <span class="text-coffee-700">{drop.productName}</span>
-              <span class="font-medium text-coffee-900">{drop.qty} unit</span>
+              <span class="font-medium text-coffee-900">
+                {drop.qty} unit · {formatRupiah(drop.qty * (drop.price ?? 0))}
+              </span>
             </li>
           {/each}
         </ul>
       </Card>
     {/if}
 
-    <div class="rounded-xl border border-coffee-100 bg-milk px-4 py-3">
-      <div class="flex items-center justify-between">
-        <span class="text-coffee-600">Total setoran</span>
-        <span class="text-lg font-bold text-coffee-900">{formatRupiah(totalCollected)}</span>
+    <!-- Summary -->
+    {#if hasPickups}
+      <div class="rounded-xl border border-coffee-100 bg-milk px-4 py-3">
+        <div class="flex items-center justify-between">
+          <span class="text-coffee-600">Total setoran</span>
+          <span class="text-lg font-bold text-coffee-900">{formatRupiah(totalCollected)}</span>
+        </div>
+        {#if totalCollected > 0}
+          <p class="mt-1 text-xs text-coffee-500">Uang yang dikumpulkan dari penjualan</p>
+        {/if}
       </div>
-    </div>
+    {/if}
 
+    {#if hasDrops}
+      <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <div class="flex items-center justify-between">
+          <span class="text-amber-700">Nilai penitipan</span>
+          <span class="text-lg font-bold text-amber-900">{formatRupiah(totalDropValue)}</span>
+        </div>
+        <p class="mt-1 text-xs text-amber-600">Nilai stok yang dititipkan ke warung</p>
+      </div>
+    {/if}
+
+    <!-- Notes -->
     {#if draft.notes}
       <div class="rounded-xl border border-coffee-100 bg-milk px-4 py-3 text-sm">
         <p class="text-coffee-600">Catatan</p>
@@ -129,6 +159,7 @@
       </div>
     {/if}
 
+    <!-- Actions -->
     <div class="grid grid-cols-2 gap-3 pt-2">
       <Button type="button" variant="secondary" fullWidth onclick={onClose} disabled={isPending}>
         Periksa Lagi

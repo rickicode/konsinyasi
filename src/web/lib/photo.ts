@@ -33,5 +33,6 @@ export async function compressPhoto(
   if (!blob) throw new Error('Canvas compression failed');
 
   const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo';
-  return new File([blob], `${baseName}.jpg`, { type });
+  const extension = type === 'image/png' ? '.png' : type === 'image/webp' ? '.webp' : '.jpg';
+  return new File([blob], `${baseName}${extension}`, { type });
 }

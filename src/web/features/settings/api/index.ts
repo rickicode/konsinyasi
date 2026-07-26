@@ -1,12 +1,28 @@
 import { queryOptions, mutationOptions } from '@tanstack/svelte-query';
+import { z } from 'zod';
 import { apiClient, type ApiClient } from '$lib/api/client.js';
-import { geofenceSettingsSchema, geofenceUpdateSchema } from '@shared/schemas/settings.schema.js';
-import type { GeofenceSettings, GeofenceUpdateInput } from '@shared/schemas/settings.schema.js';
+import {
+  geofenceSettingsSchema,
+  geofenceUpdateSchema,
+  brandUpdateSchema,
+  brandSettingsSchema,
+} from '@shared/schemas/settings.schema.js';
+import type {
+  GeofenceSettings,
+  GeofenceUpdateInput,
+  BrandUpdateInput,
+  BrandSettings,
+} from '@shared/schemas/settings.schema.js';
 import { queryKeys } from '$lib/api/query-keys.js';
 
 // ---------------- raw fetch helpers ----------------
+
 export async function getSettings(client: ApiClient = apiClient): Promise<GeofenceSettings> {
   return client.get('/api/settings/', geofenceSettingsSchema);
+}
+
+export async function getPublicBrand(client: ApiClient = apiClient): Promise<BrandSettings> {
+  return client.get('/api/public/brand', brandSettingsSchema);
 }
 
 export async function updateGeofence(
@@ -17,7 +33,16 @@ export async function updateGeofence(
   return client.put('/api/settings/geofence', input, geofenceSettingsSchema);
 }
 
+export async function updateBrand(
+  input: BrandUpdateInput,
+  client: ApiClient = apiClient
+): Promise<BrandSettings> {
+  brandUpdateSchema.parse(input);
+  return client.put('/api/settings/brand', input, brandSettingsSchema);
+}
+
 // ---------------- queryOptions factories ----------------
+
 export function settingsQueryOptions(client: ApiClient = apiClient) {
   return queryOptions({
     queryKey: queryKeys.settings.all,
@@ -25,9 +50,70 @@ export function settingsQueryOptions(client: ApiClient = apiClient) {
   });
 }
 
+export function publicBrandQueryOptions(client: ApiClient = apiClient) {
+  return queryOptions({
+    queryKey: queryKeys.settings.brand,
+    queryFn: () => getPublicBrand(client),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
 // ---------------- mutation factories ----------------
+
 export function updateGeofenceMutationOptions(client: ApiClient = apiClient) {
   return mutationOptions({
     mutationFn: (input: GeofenceUpdateInput) => updateGeofence(input, client),
+  });
+}
+
+export function updateBrandMutationOptions(client: ApiClient = apiClient) {
+  return mutationOptions({
+    mutationFn: (input: BrandUpdateInput) => updateBrand(input, client),
+  });
+}
+
+const brandLogoUploadResponseSchema = z.object({
+  logo_url: z.string(),
+});
+const okResponseSchema = z.object({ ok: z.boolean() });
+
+export interface BrandLogoUploadArgs {
+  logo: File;
+}
+
+/**
+ * Upload a brand logo.
+ */
+export async function uploadBrandLogo(
+  { logo }: BrandLogoUploadArgs,
+  client: ApiClient = apiClient
+): Promise<{ logo_url: string }> {
+  const body = new FormData();
+  body.append('logo', logo);
+  return client.put('/api/settings/brand/logo', body, brandLogoUploadResponseSchema);
+}
+
+/**
+ * Delete the brand logo.
+ */
+export async function deleteBrandLogo(client: ApiClient = apiClient): Promise<{ ok: boolean }> {
+  return client.delete('/api/settings/brand/logo', okResponseSchema);
+}
+
+/**
+ * TanStack Query mutation options for uploading a brand logo.
+ */
+export function uploadBrandLogoMutationOptions(client: ApiClient = apiClient) {
+  return mutationOptions({
+    mutationFn: (args: BrandLogoUploadArgs) => uploadBrandLogo(args, client),
+  });
+}
+
+/**
+ * TanStack Query mutation options for deleting a brand logo.
+ */
+export function deleteBrandLogoMutationOptions(client: ApiClient = apiClient) {
+  return mutationOptions({
+    mutationFn: () => deleteBrandLogo(client),
   });
 }

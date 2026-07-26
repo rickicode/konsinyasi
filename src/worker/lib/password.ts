@@ -3,7 +3,7 @@ import { ValidationError } from './errors.js';
 const ITERATIONS = 100_000;
 const SALT_LEN = 16;
 const KEY_LEN_BITS = 256;
-const MIN_PASSWORD_LEN = 6;
+const MIN_PASSWORD_LEN = 8;
 
 function base64Encode(bytes: Uint8Array): string {
   const bin = Array.from(bytes, (b) => String.fromCharCode(b)).join('');
@@ -35,8 +35,6 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  assertMinLength(password);
-
   const parts = hash.split('$');
   if (parts.length !== 3) return false;
 

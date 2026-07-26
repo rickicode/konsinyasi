@@ -7,6 +7,7 @@ type MockUser = Omit<typeof users.$inferSelect, 'role'> & { role: string };
 const ownerUser: MockUser = {
   id: 'owner-1',
   email: 'owner@example.com',
+  username: 'owner',
   name: 'Owner',
   password_hash: 'hash',
   role: 'owner',
@@ -77,7 +78,14 @@ const sampleVisitResult: VisitResult = {
       amount_collected: 5000,
     },
   ],
-  dropped_cycles: [],
+  dropped_cycles: [
+    {
+      cycle_id: 'drop-1',
+      product_name: 'Produk B',
+      qty_dropped: 2,
+      price: 3000,
+    },
+  ],
 };
 
 describe('visit route permissions', () => {
@@ -119,15 +127,25 @@ describe('visit route permissions', () => {
 });
 
 describe('pickVisitResult', () => {
-  it('keeps amount_collected visible for non-owner', () => {
+  it('redacts financial data for non-owner', () => {
     const result = pickVisitResult(sampleVisitResult, false);
-    expect(result.closed_cycles[0].amount_collected).toBe(5000);
-    expect(result.amount_collected_total).toBe(5000);
+    expect(result.closed_cycles[0].amount_collected).toBe(0);
+    expect(result.dropped_cycles[0].price).toBe(0);
+    expect(result.amount_collected_total).toBe(0);
   });
 
   it('returns the full result for owner', () => {
     const result = pickVisitResult(sampleVisitResult, true);
     expect(result.closed_cycles[0].amount_collected).toBe(5000);
+    expect(result.dropped_cycles[0].price).toBe(3000);
     expect(result.amount_collected_total).toBe(5000);
+  });
+
+  it('returns a new object for non-owner without mutating the original', () => {
+    const result = pickVisitResult(sampleVisitResult, false);
+    expect(result).not.toBe(sampleVisitResult);
+    expect(result.closed_cycles).not.toBe(sampleVisitResult.closed_cycles);
+    expect(sampleVisitResult.closed_cycles[0].amount_collected).toBe(5000);
+    expect(sampleVisitResult.amount_collected_total).toBe(5000);
   });
 });

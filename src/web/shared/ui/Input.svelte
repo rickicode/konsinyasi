@@ -14,6 +14,9 @@
     disabled?: boolean;
     readonly?: boolean;
     required?: boolean;
+    step?: string;
+    min?: string | number;
+    max?: string | number;
     value?: string;
     class?: string;
   }
@@ -31,6 +34,9 @@
     disabled = false,
     readonly = false,
     required = false,
+    step,
+    min,
+    max,
     value = $bindable(''),
     class: className = '',
   }: Props = $props();
@@ -71,6 +77,9 @@
     {autocomplete}
     {placeholder}
     {disabled}
+    {step}
+    {min}
+    {max}
     readonly={readonly || undefined}
     aria-invalid={error ? 'true' : undefined}
     aria-describedby={describedBy || undefined}

@@ -9,13 +9,18 @@
   import ToastProvider from './features/shell/providers/ToastProvider.svelte';
   import RootLayout from './features/shell/pages/RootLayout.svelte';
   import RouteGuard from './features/shell/components/RouteGuard.svelte';
-  import { routes } from './routes.js';
+  import { staffRoutes, ownerRoutes } from './routes.js';
+  import { updatePageTitle, setBrandTitle } from './lib/utils/page-title.js';
+  import { setAppConfigContext, getAppConfig } from './lib/stores/app-config.svelte';
 
   // Install global rune-backed Svelte contexts.
   setAuthContext();
   setNetworkContext();
   setGeolocationContext();
   setToastContext();
+  setAppConfigContext();
+
+  const appConfig = getAppConfig();
 
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -26,21 +31,74 @@
     },
   });
 
+  function updateFavicon(logoUrl: string | null) {
+    const link = document.getElementById('brand-favicon') as HTMLLinkElement | null;
+    if (!link) return;
+    if (logoUrl) {
+      link.href = logoUrl;
+      link.type = 'image/png';
+    } else {
+      link.href = '/favicon.svg';
+      link.type = 'image/svg+xml';
+    }
+  }
+
   onMount(() => {
+    // Load public brand config as early as possible.
+    appConfig.load().then(() => {
+      setBrandTitle(appConfig.brandName);
+      updateFavicon(appConfig.brandLogoUrl);
+      const hash = window.location.hash || '#/';
+      const route = hash.replace('#', '');
+      updatePageTitle(route);
+    });
     // Prime auth state before the router resolves protected routes.
     auth.ensureLoaded();
-
     // Start listening for browser online/offline events.
     network.start();
-    return () => network.stop();
+
+    // Listen for route changes to update page title
+    const handleRouteChange = () => {
+      const hash = window.location.hash || '#/';
+      const route = hash.replace('#', '');
+      updatePageTitle(route);
+    };
+
+    // Update title on hash change
+    window.addEventListener('hashchange', handleRouteChange);
+    // Update title on initial load
+    handleRouteChange();
+
+    return () => {
+      network.stop();
+      window.removeEventListener('hashchange', handleRouteChange);
+    };
   });
+
+  // Keep document title and favicon in sync when the brand config changes.
+  $effect(() => {
+    setBrandTitle(appConfig.brandName);
+    updateFavicon(appConfig.brandLogoUrl);
+    const hash = window.location.hash || '#/';
+    const route = hash.replace('#', '');
+    updatePageTitle(route);
+  });
+
+  // Select routes based on user role
+  const currentRoutes = $derived(auth.isOwner ? ownerRoutes : staffRoutes);
 </script>
 
 <QueryClientProvider client={queryClient}>
   <ToastProvider>
     <RootLayout>
       <RouteGuard>
-        <Router {routes} />
+        {#if auth.initialized}
+          <Router routes={currentRoutes} />
+        {:else}
+          <div class="flex min-h-dvh items-center justify-center">
+            <p class="text-sm text-coffee-500">Memuat sesi...</p>
+          </div>
+        {/if}
       </RouteGuard>
     </RootLayout>
   </ToastProvider>
