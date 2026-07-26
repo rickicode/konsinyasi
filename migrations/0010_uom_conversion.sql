@@ -1,6 +1,7 @@
 -- UOM conversion support: each active unit now has a dimension and a multiplier
 -- relative to the canonical dimension unit (ml, gr, pcs).
-ALTER TABLE uoms ADD COLUMN dimension TEXT NOT NULL DEFAULT 'count';
+-- Enforce valid UOM dimensions at the DB level for any clients bypassing Drizzle.
+ALTER TABLE uoms ADD COLUMN dimension TEXT NOT NULL DEFAULT 'count' CHECK (dimension IN ('vol', 'mass', 'count'));
 ALTER TABLE uoms ADD COLUMN multiplier INTEGER NOT NULL DEFAULT 1 CHECK (multiplier > 0);
 
 UPDATE uoms SET dimension = 'vol', multiplier = 1 WHERE symbol = 'ml';

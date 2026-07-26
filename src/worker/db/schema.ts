@@ -131,6 +131,7 @@ export const products = sqliteTable(
 		check('chk_products_price', sql`price_to_outlet >= 0`),
 		index('idx_products_deleted_at_name').on(t.deleted_at, t.name),
 		index('idx_products_status_deleted_at_name').on(t.status, t.deleted_at, t.name),
+		uniqueIndex('idx_products_name_active').on(t.name).where(isNull(t.deleted_at)),
 	]
 );
 
@@ -192,6 +193,7 @@ export const outlets = sqliteTable(
 			.on(t.status)
 			.where(sql`deleted_at IS NULL`),
 		index('idx_outlets_name').on(t.name),
+		uniqueIndex('idx_outlets_name_active').on(t.name).where(isNull(t.deleted_at)),
   ]
 );
 
@@ -217,7 +219,8 @@ export const consignment_cycles = sqliteTable(
     status: text('status', { enum: ['open', 'closed', 'voided'] })
       .notNull()
       .default('open'),
-    visit_submission_id: text('visit_submission_id'),
+    // Foreign key declared in Drizzle; D1 currently does not enforce FK constraints.
+    visit_submission_id: text('visit_submission_id').references(() => visit_submissions.idempotency_key, { onDelete: 'set null' }),
     notes: text('notes'),
     created_at: text('created_at')
       .notNull()
@@ -281,6 +284,11 @@ index('idx_visit_submissions_user').on(t.user_id),
 index('idx_visit_submissions_created_at').on(t.created_at),
 index('idx_visit_submissions_outlet_created_at').on(t.outlet_id, t.created_at),
 index('idx_visit_submissions_status_created_at').on(t.status, t.created_at),
+index('idx_visit_submissions_outlet_status_created').on(
+  t.outlet_id,
+  t.status,
+  t.created_at
+),
   ]
 );
 
@@ -304,7 +312,7 @@ export const visit_photos = sqliteTable(
   },
   (t) => [
     index('idx_visit_photos_visit_id').on(t.visit_id),
-    index('idx_visit_photos_sequence').on(t.visit_id, t.sequence),
+    uniqueIndex('idx_visit_photos_sequence').on(t.visit_id, t.sequence),
   ]
 );
 
