@@ -127,8 +127,8 @@ export async function deleteVisitPhoto(
   visitId: string,
   photoId: string,
   client: ApiClient = apiClient
-): Promise<{ ok: boolean }> {
-  return client.delete(`/api/visits/${visitId}/photos/${photoId}`, okResponseSchema);
+): Promise<void> {
+  await client.delete(`/api/visits/${visitId}/photos/${photoId}`, z.void());
 }
 
 export async function fetchReceiptPhotos(
@@ -157,8 +157,8 @@ export async function deleteReceiptPhoto(
   visitId: string,
   photoId: string,
   client: ApiClient = apiClient
-): Promise<{ ok: boolean }> {
-  return client.delete(`/api/visits/${visitId}/receipt-photos/${photoId}`, okResponseSchema);
+): Promise<void> {
+  await client.delete(`/api/visits/${visitId}/receipt-photos/${photoId}`, z.void());
 }
 
 export interface FetchVisitsInput {

@@ -172,6 +172,13 @@ function createAuthState(): AuthState {
         // best-effort: still clear local state on failure
       }
       queryClient.clear();
+      if (typeof localStorage !== 'undefined') {
+        for (const key of Object.keys(localStorage)) {
+          if (key.startsWith('konsi_visit_draft_')) {
+            localStorage.removeItem(key);
+          }
+        }
+      }
       user = null;
       error = null;
       initialized = true;

@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export type GpsPosition = {
   lat: number;
   lng: number;
@@ -30,6 +32,23 @@ export type VisitDraft = {
   savedAt: string;
 };
 
+const visitDraftSchema = z.object({
+  idempotency_key: z.string(),
+  outlet_id: z.string(),
+  pickups: z.record(z.string(), z.object({ good: z.number(), damaged: z.number() })),
+  drops: z.array(
+    z.object({
+      product_id: z.string(),
+      qty_dropped: z.number(),
+      notes: z.string(),
+    })
+  ),
+  override: z.boolean(),
+  overrideReason: z.string(),
+  visitNotes: z.string(),
+  savedAt: z.string().min(1),
+});
+
 export const DRAFT_KEY = (outletId: string) => `konsi_visit_draft_${outletId}`;
 
 export function saveVisitDraft(outletId: string, draft: Omit<VisitDraft, 'outlet_id'>): void {
@@ -50,19 +69,10 @@ export function loadVisitDraft(outletId: string): VisitDraft | null {
   const raw = localStorage.getItem(DRAFT_KEY(outletId));
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as Partial<VisitDraft>;
-    if (
-      typeof parsed.idempotency_key !== 'string' ||
-      typeof parsed.savedAt !== 'string' ||
-      typeof parsed.pickups !== 'object' ||
-      !Array.isArray(parsed.drops) ||
-      typeof parsed.override !== 'boolean' ||
-      typeof parsed.overrideReason !== 'string' ||
-      typeof parsed.visitNotes !== 'string'
-    ) {
-      return null;
-    }
-    return parsed as VisitDraft;
+    const parsed = JSON.parse(raw);
+    const validated = visitDraftSchema.safeParse(parsed);
+    if (!validated.success) return null;
+    return validated.data;
   } catch {
     return null;
   }

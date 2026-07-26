@@ -211,7 +211,7 @@ describe('createVisitDraftStore', () => {
       outlet_id: 'outlet-1',
       idempotency_key: 'saved-key',
       pickups: { 'cycle-1': { cycleId: 'cycle-1', good: 4, damaged: 1 } },
-      drops: [{ id: 'd1', productId: 'p1', productName: 'P1', qty: 2, notes: '' }],
+      drops: [{ id: 'd1', productId: 'p1', productName: 'P1', qty: 2, price: 1000, notes: '' }],
       override: true,
       override_reason: 'owner',
       notes: 'saved notes',

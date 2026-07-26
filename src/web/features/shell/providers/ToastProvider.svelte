@@ -11,6 +11,7 @@
 
 <script lang="ts">
   import type { Snippet } from 'svelte';
+import { SvelteMap } from 'svelte/reactivity';
   import { SvelteSet } from 'svelte/reactivity';
 
   type Props = {
@@ -22,17 +23,32 @@
   setContext<ToastApi>(TOAST_KEY, toast);
 
   const scheduled = new SvelteSet<string>();
+  const timers = new SvelteMap<string, ReturnType<typeof setTimeout>>();
   const AUTO_DISMISS_MS = 5000;
   $effect(() => {
     for (const item of toast.toasts) {
       if (scheduled.has(item.id)) continue;
       scheduled.add(item.id);
-      setTimeout(() => {
-        toast.dismiss(item.id);
-        scheduled.delete(item.id);
-      }, AUTO_DISMISS_MS);
+      timers.set(
+        item.id,
+        setTimeout(() => {
+          toast.dismiss(item.id);
+          scheduled.delete(item.id);
+          timers.delete(item.id);
+        }, AUTO_DISMISS_MS)
+      );
     }
   });
+
+  function dismiss(id: string) {
+    const timer = timers.get(id);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+    timers.delete(id);
+    scheduled.delete(id);
+    toast.dismiss(id);
+  }
 </script>
 
 {@render children?.()}
@@ -59,7 +75,7 @@
           <button
             type="button"
             class="shrink-0 text-xs font-bold text-coffee-400 hover:text-coffee-600"
-            onclick={() => toast.dismiss(item.id)}
+            onclick={() => dismiss(item.id)}
           >
             Tutup
           </button>

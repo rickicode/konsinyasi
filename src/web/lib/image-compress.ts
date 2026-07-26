@@ -74,6 +74,7 @@ export async function compressImageFile(
   { maxEdge = 1600, quality = 0.85, outputType = 'image/jpeg', maxBytes }: CompressImageOptions = {}
 ): Promise<File> {
   const { source, width, height, close } = await decodeImageSource(file);
+  let canvas: HTMLCanvasElement | null = null;
   try {
     let nextWidth = width;
     let nextHeight = height;
@@ -83,7 +84,7 @@ export async function compressImageFile(
       nextHeight = Math.round(height * ratio);
     }
 
-    const canvas = document.createElement('canvas');
+    canvas = document.createElement('canvas');
     canvas.width = nextWidth;
     canvas.height = nextHeight;
     const ctx = canvas.getContext('2d');
@@ -98,7 +99,7 @@ export async function compressImageFile(
     const qualityStep = 0.05;
     while (true) {
       blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, outputType, currentQuality)
+        canvas!.toBlob(resolve, outputType, currentQuality)
       );
       if (!blob) {
         throw new Error('Canvas compression failed');
@@ -116,6 +117,10 @@ export async function compressImageFile(
     }
     return new File([blob], outputName(file.name, outputType), { type: outputType });
   } finally {
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
     close();
   }
 }

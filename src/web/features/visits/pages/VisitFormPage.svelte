@@ -44,6 +44,8 @@
   let showReview = $state(false);
   let visitResult = $state<VisitResult | null>(null);
   let formError = $state<string | null>(null);
+  // Idempotency guard: only load prep data into the draft once per outlet.
+  let loadedOutletId = $state('');
 
   const outlet = $derived(prepQuery.data?.outlet ?? null);
   const cycles = $derived(prepQuery.data?.cycles ?? []);
@@ -78,8 +80,9 @@
   });
 
   $effect(() => {
-    if (prepQuery.data && !draft.isLoaded) {
+    if (prepQuery.data && outletId && loadedOutletId !== outletId) {
       draft.load(outletId, prepQuery.data.cycles);
+      loadedOutletId = outletId;
     }
   });
 
@@ -135,8 +138,8 @@
     push('/kunjungan');
   }
 
-  function retryPrep() {
-    queryClient.refetchQueries({ queryKey: queryKeys.visits.prep(outletId) });
+  async function retryPrep() {
+    await queryClient.refetchQueries({ queryKey: queryKeys.visits.prep(outletId) });
   }
 </script>
 

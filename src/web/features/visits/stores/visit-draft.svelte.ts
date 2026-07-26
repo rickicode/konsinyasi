@@ -1,4 +1,5 @@
 import { SvelteMap } from 'svelte/reactivity';
+import { z } from 'zod';
 import { type VisitCycleState, type VisitSubmissionInput } from '@shared/schemas/visit.schema.js';
 import { generateIdempotencyKey } from '$lib/visit.js';
 
@@ -32,6 +33,36 @@ interface VisitDraftSnapshot {
 
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 const STORAGE_KEY = (outletId: string) => `konsi_visit_draft_v2_${outletId}`;
+/**
+ * Zod schema for a persisted visit draft snapshot.
+ * Any localStorage payload that fails this schema is discarded.
+ */
+const pickupDraftSchema = z.object({
+  cycleId: z.string(),
+  good: z.number().int().nonnegative(),
+  damaged: z.number().int().nonnegative(),
+});
+
+const dropDraftSchema = z.object({
+  id: z.string(),
+  productId: z.string(),
+  productName: z.string(),
+  qty: z.number().int().positive(),
+  price: z.number().nonnegative(),
+  notes: z.string(),
+});
+
+export const visitDraftSnapshotSchema = z.object({
+  outlet_id: z.string(),
+  idempotency_key: z.string(),
+  pickups: z.record(z.string(), pickupDraftSchema),
+  drops: z.array(dropDraftSchema),
+  override: z.boolean(),
+  override_reason: z.string(),
+  notes: z.string(),
+  updated_at: z.string().min(1),
+});
+
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -109,20 +140,32 @@ export function createVisitDraftStore() {
     }
     const raw = localStorage.getItem(STORAGE_KEY(targetId));
     if (raw) {
+      let isValid = false;
       try {
-        const parsed = JSON.parse(raw) as Partial<VisitDraftSnapshot>;
+        const parsed = JSON.parse(raw);
+        const validated = visitDraftSnapshotSchema.safeParse(parsed);
         if (
-          parsed.outlet_id === targetId &&
-          parsed.idempotency_key &&
-          parsed.updated_at &&
-          isFresh(parsed.updated_at)
+          validated.success &&
+          validated.data.outlet_id === targetId &&
+          validated.data.idempotency_key &&
+          isFresh(validated.data.updated_at)
         ) {
-          applySnapshot(parsed as VisitDraftSnapshot, cycles);
+          applySnapshot(validated.data, cycles);
           isLoaded = true;
-          return;
+          isValid = true;
         }
       } catch {
         // ignore corrupted draft
+      }
+      if (!isValid) {
+        // Remove an invalid/corrupted snapshot so it does not stick around.
+        try {
+          localStorage.removeItem(STORAGE_KEY(targetId));
+        } catch {
+          // ignore
+        }
+      } else {
+        return;
       }
     }
     resetPickups(cycles);

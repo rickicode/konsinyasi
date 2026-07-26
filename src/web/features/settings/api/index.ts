@@ -75,7 +75,6 @@ export function updateBrandMutationOptions(client: ApiClient = apiClient) {
 const brandLogoUploadResponseSchema = z.object({
   logo_url: z.string(),
 });
-const okResponseSchema = z.object({ ok: z.boolean() });
 
 export interface BrandLogoUploadArgs {
   logo: File;
@@ -96,8 +95,8 @@ export async function uploadBrandLogo(
 /**
  * Delete the brand logo.
  */
-export async function deleteBrandLogo(client: ApiClient = apiClient): Promise<{ ok: boolean }> {
-  return client.delete('/api/settings/brand/logo', okResponseSchema);
+export async function deleteBrandLogo(client: ApiClient = apiClient): Promise<void> {
+  await client.delete('/api/settings/brand/logo', z.void());
 }
 
 /**
