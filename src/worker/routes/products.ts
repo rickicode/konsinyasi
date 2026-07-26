@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { and, eq, isNull } from 'drizzle-orm';
 import { createClient } from '../db/client.js';
 import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination.js';
-import { consignment_cycles, product_recipes, products, users } from '../db/schema.js';
+import { consignment_cycles, product_recipes, products } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
 import {
   deleteImageFromR2,
@@ -68,6 +68,33 @@ const updateSchema = z.object({
 
 const productsRoute = new Hono<Env>();
 
+export const productListColumns = {
+  id: products.id,
+  name: products.name,
+  hpp: products.hpp,
+  hpp_override: products.hpp_override,
+  price_to_outlet: products.price_to_outlet,
+  status: products.status,
+  photo_key: products.photo_key,
+  deleted_at: products.deleted_at,
+  created_at: products.created_at,
+  updated_at: products.updated_at,
+};
+
+export type ProductListRow = Pick<
+  typeof products.$inferSelect,
+  | 'id'
+  | 'name'
+  | 'hpp'
+  | 'hpp_override'
+  | 'price_to_outlet'
+  | 'status'
+  | 'photo_key'
+  | 'deleted_at'
+  | 'created_at'
+  | 'updated_at'
+>;
+
 type ProductResponse = {
   id: string;
   name: string;
@@ -83,7 +110,7 @@ type ProductResponse = {
 };
 
 function pickProduct(
-  row: typeof products.$inferSelect,
+  row: ProductListRow,
   recipeLines: EnrichedRecipeLine[],
   includeFinancial: boolean
 ): ProductResponse {
@@ -105,13 +132,13 @@ function pickProduct(
   return response;
 }
 
-function isOwner(user: typeof users.$inferSelect): boolean {
+function isOwner(user: { role: string }): boolean {
   return user.role === 'owner';
 }
 
 async function buildProductResponses(
   db: Parameters<typeof fetchRecipeLinesForProducts>[0],
-  rows: (typeof products.$inferSelect)[],
+  rows: ProductListRow[],
   owner: boolean
 ): Promise<ProductResponse[]> {
   const productIds = rows.map((row) => row.id);
@@ -124,22 +151,25 @@ productsRoute.get('/', async (c) => {
   const owner = isOwner(user);
   const db = createClient(c.env);
   const pagination = parsePaginationParams(c.req.query());
+  const where = isNull(products.deleted_at);
+
   if (pagination) {
-    const total = await db.$count(products, isNull(products.deleted_at));
-    const rows = await db
-      .select()
+    const rowsQuery = db
+      .select(productListColumns)
       .from(products)
-      .where(isNull(products.deleted_at))
+      .where(where)
       .orderBy(products.name)
       .limit(pagination.limit)
       .offset((pagination.page - 1) * pagination.limit);
+    const [total, rows] = await Promise.all([db.$count(products, where), rowsQuery]);
     const result = await buildProductResponses(db, rows, owner);
     return c.json(buildPaginatedResponse(result, pagination.page, pagination.limit, total));
   }
+
   const rows = await db
-    .select()
+    .select(productListColumns)
     .from(products)
-    .where(isNull(products.deleted_at))
+    .where(where)
     .orderBy(products.name);
   const result = await buildProductResponses(db, rows, owner);
   return c.json(result);
@@ -161,14 +191,14 @@ productsRoute.get('/:id', async (c) => {
   const owner = isOwner(user);
   const db = createClient(c.env);
   const existing = await db
-    .select()
+    .select(productListColumns)
     .from(products)
     .where(and(eq(products.id, id), isNull(products.deleted_at)))
     .limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Produk tidak ditemukan');
   }
-  const recipeLines = await fetchRecipeLines(db, id);
+  const [recipeLines] = await Promise.all([fetchRecipeLines(db, id)]);
   return c.json(pickProduct(existing[0], recipeLines, owner));
 });
 
@@ -180,8 +210,8 @@ productsRoute.post('/', async (c) => {
   if (!parsed.success) {
     throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
-  const data = parsed.data;
 
+  const data = parsed.data;
   if (!owner) {
     data.price_to_outlet = undefined;
     data.hpp_override = undefined;
@@ -226,9 +256,12 @@ productsRoute.post('/', async (c) => {
     await replaceRecipeLines(db, id, data.recipe_lines);
   }
 
-  const recipeLines = await fetchRecipeLines(db, id);
-  const row = (await db.select().from(products).where(eq(products.id, id)).limit(1))[0];
-  return c.json(pickProduct(row, recipeLines, owner), 201);
+  const [rowResult, recipeLines] = await Promise.all([
+    db.select(productListColumns).from(products).where(eq(products.id, id)).limit(1),
+    fetchRecipeLines(db, id),
+  ]);
+  const row = rowResult[0];
+  return c.json(pickProduct(row!, recipeLines, owner), 201);
 });
 
 productsRoute.patch('/:id', async (c) => {
@@ -240,11 +273,11 @@ productsRoute.patch('/:id', async (c) => {
   if (!parsed.success) {
     throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
-  const data = parsed.data;
 
+  const data = parsed.data;
   const db = createClient(c.env);
   const existing = await db
-    .select()
+    .select(productListColumns)
     .from(products)
     .where(and(eq(products.id, id), isNull(products.deleted_at)))
     .limit(1);
@@ -276,16 +309,19 @@ productsRoute.patch('/:id', async (c) => {
     await replaceRecipeLines(db, id, data.recipe_lines);
   }
 
-  const row = (await db.select().from(products).where(eq(products.id, id)).limit(1))[0];
-  const recipeLines = await fetchRecipeLines(db, id);
-  return c.json(pickProduct(row, recipeLines, owner));
+  const [rowResult, recipeLines] = await Promise.all([
+    db.select(productListColumns).from(products).where(eq(products.id, id)).limit(1),
+    fetchRecipeLines(db, id),
+  ]);
+  const row = rowResult[0];
+  return c.json(pickProduct(row!, recipeLines, owner));
 });
 
 productsRoute.delete('/:id', async (c) => {
   const id = c.req.param('id');
   const db = createClient(c.env);
   const existing = await db
-    .select()
+    .select(productListColumns)
     .from(products)
     .where(and(eq(products.id, id), isNull(products.deleted_at)))
     .limit(1);
@@ -293,20 +329,14 @@ productsRoute.delete('/:id', async (c) => {
     throw new AppError(404, 'NOT_FOUND', 'Produk tidak ditemukan');
   }
 
-  const recipe = await db
-    .select({ id: product_recipes.id })
-    .from(product_recipes)
-    .where(eq(product_recipes.product_id, id))
-    .limit(1);
+  const [recipe, cycles] = await Promise.all([
+    db.select({ id: product_recipes.id }).from(product_recipes).where(eq(product_recipes.product_id, id)).limit(1),
+    db.select({ id: consignment_cycles.id }).from(consignment_cycles).where(eq(consignment_cycles.product_id, id)).limit(1),
+  ]);
+
   if (recipe.length > 0) {
     throw new ConflictError('Produk masih digunakan di resep; hapus resep terlebih dahulu');
   }
-
-  const cycles = await db
-    .select({ id: consignment_cycles.id })
-    .from(consignment_cycles)
-    .where(eq(consignment_cycles.product_id, id))
-    .limit(1);
   if (cycles.length > 0) {
     throw new ConflictError('Produk memiliki riwayat siklus konsinyasi; tidak dapat dihapus');
   }
@@ -329,13 +359,14 @@ productsRoute.post('/:id/photo', async (c) => {
   }
   const db = createClient(c.env);
   const existing = await db
-    .select()
+    .select(productListColumns)
     .from(products)
     .where(and(eq(products.id, id), isNull(products.deleted_at)))
     .limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Produk tidak ditemukan');
   }
+
   const body = await c.req.parseBody({ all: true });
   const rawPhoto = body.photo;
   const file =
@@ -344,14 +375,12 @@ productsRoute.post('/:id/photo', async (c) => {
       : Array.isArray(rawPhoto) && rawPhoto[0] instanceof File
         ? rawPhoto[0]
         : null;
-
   const uploaded = await processImageUpload({
     bucket,
     file: file as File,
     scope: `products/${id}`,
     oldKey: existing[0].photo_key,
   });
-
   await db
     .update(products)
     .set({
@@ -361,12 +390,13 @@ productsRoute.post('/:id/photo', async (c) => {
     .where(eq(products.id, id));
   return c.json({ photo_key: uploaded.key, url: uploaded.url });
 });
+
 productsRoute.delete('/:id/photo', async (c) => {
   const id = c.req.param('id');
   const bucket = c.env.PHOTOS;
   const db = createClient(c.env);
   const existing = await db
-    .select()
+    .select(productListColumns)
     .from(products)
     .where(and(eq(products.id, id), isNull(products.deleted_at)))
     .limit(1);
@@ -388,4 +418,5 @@ productsRoute.delete('/:id/photo', async (c) => {
   }
   return c.json({ ok: true });
 });
+
 export default productsRoute;

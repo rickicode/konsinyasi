@@ -15,34 +15,68 @@ function colorRank(color: 'red' | 'yellow' | 'green' | 'none'): number {
   return { red: 0, yellow: 1, green: 2, none: 3 }[color];
 }
 
+const outletColumns = {
+  id: outlets.id,
+  name: outlets.name,
+  address: outlets.address,
+  latitude: outlets.latitude,
+  longitude: outlets.longitude,
+  photo_key: outlets.photo_key,
+};
+
+type OutletDashboardRow = {
+  id: string;
+  name: string;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  photo_key: string | null;
+};
+
+const cycleColumns = {
+  id: consignment_cycles.id,
+  outlet_id: consignment_cycles.outlet_id,
+  qty_dropped: consignment_cycles.qty_dropped,
+  dropped_at: consignment_cycles.dropped_at,
+  price_snapshot: consignment_cycles.price_snapshot,
+};
+
+type CycleDashboardRow = {
+  id: string;
+  outlet_id: string;
+  qty_dropped: number;
+  dropped_at: string;
+  price_snapshot: number;
+};
+
 dashboardRoute.get('/', async (c) => {
   const user = c.get('user');
   const includeFinancial = user.role === 'owner';
   const db = createClient(c.env);
 
-  const activeOutlets = await db
-    .select()
+  const activeOutlets = (await db
+    .select(outletColumns)
     .from(outlets)
     .where(and(eq(outlets.status, 'active'), isNull(outlets.deleted_at)))
-    .orderBy(outlets.name);
+    .orderBy(outlets.name)) as OutletDashboardRow[];
 
   const activeOutletIds = activeOutlets.map((o) => o.id);
-const openCycles =
-	activeOutletIds.length === 0
-		? []
-		: await db
-				.select()
-				.from(consignment_cycles)
-				.where(
-					and(
-						eq(consignment_cycles.status, 'open'),
-						inArray(consignment_cycles.outlet_id, activeOutletIds)
-					)
-				);
+
+  const openCycles: CycleDashboardRow[] =
+    activeOutletIds.length === 0
+      ? []
+      : ((await db
+          .select(cycleColumns)
+          .from(consignment_cycles)
+          .where(
+            and(
+              eq(consignment_cycles.status, 'open'),
+              inArray(consignment_cycles.outlet_id, activeOutletIds)
+            )
+          )) as CycleDashboardRow[]);
 
   const activeCycles = openCycles;
-
-  const cyclesByOutlet = new Map<string, typeof activeCycles>();
+  const cyclesByOutlet = new Map<string, CycleDashboardRow[]>();
   for (const cycle of activeCycles) {
     const list = cyclesByOutlet.get(cycle.outlet_id) ?? [];
     list.push(cycle);
@@ -60,7 +94,6 @@ const openCycles =
       cycles.length > 0
         ? Math.max(...cycles.map((cycle) => (cycle.dropped_at ? ageHours(cycle.dropped_at) : 0)))
         : -1;
-
     let color: 'red' | 'yellow' | 'green' | 'none' = 'none';
     if (maxAgeH >= 96) color = 'red';
     else if (maxAgeH >= 72) color = 'yellow';
@@ -90,6 +123,7 @@ const openCycles =
     return b.max_age_hours - a.max_age_hours;
   });
 
+  c.header('Cache-Control', 'private, max-age=60');
   return c.json({
     summary: {
       total_outlets: activeOutlets.length,

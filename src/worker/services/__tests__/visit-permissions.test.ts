@@ -68,6 +68,7 @@ const sampleVisitResult: VisitResult = {
   geofence_radius_m: 100,
   geofence_override: false,
   amount_collected_total: 5000,
+  qty_sold_total: 1,
   closed_cycles: [
     {
       cycle_id: 'cycle-1',

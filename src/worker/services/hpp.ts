@@ -11,7 +11,6 @@ type RecipeLineInput = {
 };
 
 export type Unit = string;
-
 export type HPPRecipeLine = {
   rawMaterialId: string;
   baseUnit: Unit;
@@ -71,6 +70,18 @@ export function computeHPP(lines: HPPRecipeLine[], registry: UomRegistry): numbe
   }
   return Math.round(total);
 }
+
+const rawMaterialColumns = {
+  id: schema.raw_materials.id,
+  name: schema.raw_materials.name,
+  base_unit: schema.raw_materials.base_unit,
+  price_per_base_unit: schema.raw_materials.price_per_base_unit,
+};
+
+const productHppColumns = {
+  id: schema.products.id,
+  hpp_override: schema.products.hpp_override,
+};
 
 export async function fetchRecipeLines(
   db: DrizzleD1Database<typeof schema>,
@@ -160,12 +171,11 @@ export async function replaceRecipeLines(
   if (lines.length === 0) {
     await db.delete(schema.product_recipes).where(eq(schema.product_recipes.product_id, productId));
     const productRows = await db
-      .select()
+      .select(productHppColumns)
       .from(schema.products)
       .where(eq(schema.products.id, productId))
       .limit(1);
-    const product = productRows[0];
-    const hpp = product?.hpp_override ?? 0;
+    const hpp = productRows[0]?.hpp_override ?? 0;
     await db
       .update(schema.products)
       .set({ hpp, updated_at: new Date().toISOString() })
@@ -179,7 +189,7 @@ export async function replaceRecipeLines(
   }
 
   const rawMaterials = await db
-    .select()
+    .select(rawMaterialColumns)
     .from(schema.raw_materials)
     .where(
       and(inArray(schema.raw_materials.id, rawMaterialIds), isNull(schema.raw_materials.deleted_at))
@@ -189,7 +199,6 @@ export async function replaceRecipeLines(
   }
 
   const materialMap = new Map(rawMaterials.map((m) => [m.id, m]));
-
   const unitSymbols = new Set<string>();
   for (const line of lines) {
     const material = materialMap.get(line.raw_material_id)!;
@@ -234,7 +243,7 @@ export async function replaceRecipeLines(
   );
 
   const productRows = await db
-    .select()
+    .select(productHppColumns)
     .from(schema.products)
     .where(eq(schema.products.id, productId))
     .limit(1);
@@ -264,7 +273,6 @@ export async function replaceRecipeLines(
     .update(schema.products)
     .set({ hpp, hpp_override: null, updated_at: new Date().toISOString() })
     .where(eq(schema.products.id, productId));
-
   await db.batch([upsertRecipes, deleteObsolete, updateProduct] as never);
 
   const enriched = await fetchRecipeLines(db, productId);
@@ -282,7 +290,7 @@ export async function recalculateHPP(
   productId: string
 ): Promise<number> {
   const productRows = await db
-    .select()
+    .select(productHppColumns)
     .from(schema.products)
     .where(eq(schema.products.id, productId))
     .limit(1);
@@ -301,18 +309,16 @@ export async function recalculateHPP(
 
   const rawMaterialIds = [...new Set(enriched.map((l) => l.raw_material_id))];
   const rawMaterials = await db
-    .select()
+    .select(rawMaterialColumns)
     .from(schema.raw_materials)
     .where(inArray(schema.raw_materials.id, rawMaterialIds));
   const materialMap = new Map(rawMaterials.map((m) => [m.id, m]));
-
   const unitSymbols = new Set<string>();
   for (const line of enriched) {
     unitSymbols.add(line.unit);
     unitSymbols.add(line.base_unit);
   }
   const registry = await buildUomRegistry(db, unitSymbols);
-
   const recipeHPP = computeHPP(
     enriched.map((l) => ({
       rawMaterialId: l.raw_material_id,
@@ -323,7 +329,6 @@ export async function recalculateHPP(
     })),
     registry
   );
-
   const hpp = effectiveHPP(product, recipeHPP);
   await db
     .update(schema.products)
@@ -345,7 +350,9 @@ export async function recalculateAllProductsUsingMaterial(
     .from(schema.product_recipes)
     .where(eq(schema.product_recipes.raw_material_id, rawMaterialId))
     .groupBy(schema.product_recipes.product_id);
-  for (const row of rows) {
-    await recalculateHPP(db, row.product_id);
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map((row) => recalculateHPP(db, row.product_id)));
   }
 }

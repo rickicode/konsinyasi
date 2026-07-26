@@ -12,6 +12,7 @@ import {
   visit_photos,
   visit_submissions,
 } from '../db/schema.js';
+import { outletColumns } from './outlets.js';
 import { AppError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
 import { loadOpenCycles, processVisit, type VisitResult } from '../services/visit.js';
@@ -39,7 +40,6 @@ function parseOptionalDate(value: string | undefined): string | undefined {
 const geofenceCoord = z
   .number({ invalid_type_error: 'Koordinat harus angka' })
   .finite({ message: 'Koordinat tidak valid' });
-
 const accuracySchema = z
   .number({ invalid_type_error: 'Akurasi harus angka' })
   .nonnegative('Akurasi tidak boleh negatif')
@@ -78,11 +78,47 @@ const voidSchema = z.object({
   reason: z.string().min(1, 'Alasan pembatalan wajib diisi'),
 });
 
+export const visitListColumns = {
+  idempotency_key: visit_submissions.idempotency_key,
+  outlet_id: visit_submissions.outlet_id,
+  user_id: visit_submissions.user_id,
+  response_json: visit_submissions.response_json,
+  amount_collected_total: visit_submissions.amount_collected_total,
+  qty_sold_total: visit_submissions.qty_sold_total,
+  distance_m: visit_submissions.distance_m,
+  geofence_radius_m: visit_submissions.geofence_radius_m,
+  geofence_override: visit_submissions.geofence_override,
+  notes: visit_submissions.notes,
+  status: visit_submissions.status,
+  voided_at: visit_submissions.voided_at,
+  void_reason: visit_submissions.void_reason,
+  created_at: visit_submissions.created_at,
+};
+
+export const visitPhotoColumns = {
+  id: visit_photos.id,
+  visit_id: visit_photos.visit_id,
+  photo_key: visit_photos.photo_key,
+  sequence: visit_photos.sequence,
+  note: visit_photos.note,
+  uploaded_by: visit_photos.uploaded_by,
+  created_at: visit_photos.created_at,
+};
+
+export const receiptPhotoColumns = {
+  id: receipt_photos.id,
+  visit_id: receipt_photos.visit_id,
+  photo_key: receipt_photos.photo_key,
+  amount: receipt_photos.amount,
+  note: receipt_photos.note,
+  uploaded_by: receipt_photos.uploaded_by,
+  created_at: receipt_photos.created_at,
+};
+
 const visitRoute = new Hono<Env>();
 
 export function pickVisitResult(result: VisitResult, includeFinancial: boolean): VisitResult {
   if (includeFinancial) return result;
-
   // Redact financial fields for non-owners while keeping the response shape intact.
   return {
     ...result,
@@ -105,14 +141,18 @@ visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) 
   const db = createClient(c.env);
 
   const outletRows = await db
-    .select()
+    .select(outletColumns)
     .from(outlets)
     .where(and(eq(outlets.id, outletId), isNull(outlets.deleted_at)))
     .limit(1);
   const outlet = outletRows[0];
   if (!outlet) throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
 
-  const openCycles = await loadOpenCycles(db, outletId);
+  const [openCycles, settingsRows] = await Promise.all([
+    loadOpenCycles(db, outletId),
+    db.select({ value: app_settings.value }).from(app_settings).where(eq(app_settings.key, 'geofence_radius_m')).limit(1),
+  ]);
+
   const productIds = [...new Set(openCycles.map((cycle) => cycle.product_id))];
   const productRows =
     productIds.length > 0
@@ -141,13 +181,7 @@ visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) 
     };
   });
 
-  const settingsRows = await db
-    .select()
-    .from(app_settings)
-    .where(eq(app_settings.key, 'geofence_radius_m'))
-    .limit(1);
   const radiusM = Number(settingsRows[0]?.value ?? 100);
-
   return c.json({
     outlet,
     geofence_radius_m: Number.isFinite(radiusM) ? radiusM : 100,
@@ -163,16 +197,15 @@ visitRoute.post('/outlets/:id/visit', requirePermission('visit:write'), async (c
   if (!parsed.success) {
     throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
-
   const db = createClient(c.env);
-
   const outletRows = await db
-    .select()
+    .select(outletColumns)
     .from(outlets)
     .where(and(eq(outlets.id, outletId), isNull(outlets.deleted_at)))
     .limit(1);
-  const outlet = outletRows[0];
-  if (!outlet) throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
+  const outletRow = outletRows[0];
+  if (!outletRow) throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
+  const outlet = outletRow as typeof outlets.$inferSelect;
 
   const data = parsed.data;
   const result = await processVisit({
@@ -189,7 +222,6 @@ visitRoute.post('/outlets/:id/visit', requirePermission('visit:write'), async (c
     geofenceOverrideReason: data.geofence_override_reason,
     notes: data.notes,
   });
-
   return c.json(pickVisitResult(result, user.role === 'owner'), 201);
 });
 
@@ -199,6 +231,7 @@ visitRoute.get('/visits', requirePermission('visit:read'), async (c) => {
   const { outlet_id, user_id, from, to } = c.req.query();
   const fromDate = parseOptionalDate(from);
   const toDate = parseOptionalDate(to);
+
   const filters: SQL[] = [];
   if (outlet_id) {
     filters.push(eq(visit_submissions.outlet_id, outlet_id));
@@ -216,9 +249,10 @@ visitRoute.get('/visits', requirePermission('visit:read'), async (c) => {
   }
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
   const pagination = parsePaginationParams(c.req.query());
+
   const totalQuery = db.$count(visit_submissions, whereClause);
   let rowsQuery = db
-    .select()
+    .select(visitListColumns)
     .from(visit_submissions)
     .orderBy(desc(visit_submissions.created_at))
     .$dynamic();
@@ -228,48 +262,53 @@ visitRoute.get('/visits', requirePermission('visit:read'), async (c) => {
   if (pagination) {
     rowsQuery = rowsQuery.limit(pagination.limit).offset((pagination.page - 1) * pagination.limit);
   }
+
   const [total, rows] = await Promise.all([totalQuery, rowsQuery]);
+
   const outletIds = [...new Set(rows.map((r) => r.outlet_id))];
   const userIds = [...new Set(rows.map((r) => r.user_id))];
-  const outletRows =
+
+  const [outletRows, userRows] = await Promise.all([
     outletIds.length > 0
-      ? await db
+      ? db
           .select({ id: outlets.id, name: outlets.name })
           .from(outlets)
           .where(inArray(outlets.id, outletIds))
-      : [];
-  const userRows =
+      : Promise.resolve([]),
     userIds.length > 0
-      ? await db
+      ? db
           .select({ id: users.id, name: users.name })
           .from(users)
           .where(inArray(users.id, userIds))
-      : [];
+      : Promise.resolve([]),
+  ]);
+
   const outletNames = new Map(outletRows.map((o) => [o.id, o.name]));
   const userNames = new Map(userRows.map((u) => [u.id, u.name]));
-  const data = rows.map((row) => {
-    const response = JSON.parse(row.response_json) as VisitResult;
-    return {
-      idempotency_key: row.idempotency_key,
-      outlet_id: row.outlet_id,
-      outlet_name: outletNames.get(row.outlet_id) ?? 'Warung',
-      user_id: row.user_id,
-      user_name: userNames.get(row.user_id) ?? 'User',
-      created_at: row.created_at,
-      distance_m: row.distance_m,
-      geofence_radius_m: row.geofence_radius_m,
-      geofence_override: row.geofence_override,
-      amount_collected_total: response.amount_collected_total,
-      status: row.status,
-      voided_at: row.voided_at,
-      void_reason: row.void_reason,
-    };
-  });
+
+  const data = rows.map((row) => ({
+    idempotency_key: row.idempotency_key,
+    outlet_id: row.outlet_id,
+    outlet_name: outletNames.get(row.outlet_id) ?? 'Warung',
+    user_id: row.user_id,
+    user_name: userNames.get(row.user_id) ?? 'User',
+    created_at: row.created_at,
+    distance_m: row.distance_m,
+    geofence_radius_m: row.geofence_radius_m,
+    geofence_override: row.geofence_override,
+    amount_collected_total: row.amount_collected_total,
+    qty_sold_total: row.qty_sold_total,
+    status: row.status,
+    voided_at: row.voided_at,
+    void_reason: row.void_reason,
+  }));
+
   if (pagination) {
     return c.json(buildPaginatedResponse(data, pagination.page, pagination.limit, total));
   }
   return c.json(data);
 });
+
 visitRoute.post('/visits/:idempotencyKey/void', requirePermission('visit:void'), async (c) => {
   const idempotencyKey = c.req.param('idempotencyKey');
   const user = c.get('user');
@@ -278,10 +317,8 @@ visitRoute.post('/visits/:idempotencyKey/void', requirePermission('visit:void'),
   if (!parsed.success) {
     throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
-
   const db = createClient(c.env);
   await voidVisit(db, user, idempotencyKey, parsed.data.reason, c.env.PHOTOS);
-
   return c.json({ ok: true });
 });
 
@@ -319,7 +356,7 @@ visitRoute.get('/visits/:id/photos', requirePermission('visit:read'), async (c) 
   const db = createClient(c.env);
   await loadVisitForPhoto(db, visitId);
   const rows = await db
-    .select()
+    .select(visitPhotoColumns)
     .from(visit_photos)
     .where(eq(visit_photos.visit_id, visitId))
     .orderBy(visit_photos.sequence, visit_photos.created_at);
@@ -346,7 +383,6 @@ visitRoute.post('/visits/:id/photos', requirePermission('visit:write'), async (c
   if (visit.status !== 'committed') {
     throw new ValidationError('Foto kunjungan hanya dapat ditambahkan pada kunjungan aktif');
   }
-
   const body = await c.req.parseBody({ all: true });
   const file = normalizeUploadedFile(body.photo);
   if (!file) {
@@ -357,13 +393,11 @@ visitRoute.post('/visits/:id/photos', requirePermission('visit:write'), async (c
     file,
     scope: `visits/photos/${visitId}`,
   });
-
   const note = parseOptionalString(body.note);
   const sequenceRaw = body.sequence;
   const parsedSequence =
     sequenceRaw === undefined || sequenceRaw === null ? 0 : Number(sequenceRaw);
   const sequence = Number.isFinite(parsedSequence) ? Math.max(0, Math.round(parsedSequence)) : 0;
-
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   await db.insert(visit_photos).values({
@@ -376,7 +410,6 @@ visitRoute.post('/visits/:id/photos', requirePermission('visit:write'), async (c
     created_at: now,
     updated_at: now,
   });
-
   return c.json(
     {
       id,
@@ -418,7 +451,7 @@ visitRoute.get('/visits/:id/receipt-photos', requirePermission('visit:read'), as
   const db = createClient(c.env);
   await loadVisitForPhoto(db, visitId);
   const rows = await db
-    .select()
+    .select(receiptPhotoColumns)
     .from(receipt_photos)
     .where(eq(receipt_photos.visit_id, visitId))
     .orderBy(receipt_photos.created_at);
@@ -445,7 +478,6 @@ visitRoute.post('/visits/:id/receipt-photos', requirePermission('visit:write'), 
   if (visit.status !== 'committed') {
     throw new ValidationError('Foto bon hanya dapat ditambahkan pada kunjungan aktif');
   }
-
   const body = await c.req.parseBody({ all: true });
   const file = normalizeUploadedFile(body.photo);
   if (!file) {
@@ -456,7 +488,6 @@ visitRoute.post('/visits/:id/receipt-photos', requirePermission('visit:write'), 
     file,
     scope: `visits/receipts/${visitId}`,
   });
-
   const note = parseOptionalString(body.note);
   const amountRaw = body.amount;
   let amount: number | null = null;
@@ -467,7 +498,6 @@ visitRoute.post('/visits/:id/receipt-photos', requirePermission('visit:write'), 
     }
     amount = Math.round(parsed);
   }
-
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   await db.insert(receipt_photos).values({
@@ -480,7 +510,6 @@ visitRoute.post('/visits/:id/receipt-photos', requirePermission('visit:write'), 
     created_at: now,
     updated_at: now,
   });
-
   return c.json(
     {
       id,

@@ -1,6 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema.js';
+import type { SafeUser } from '../types.js';
 import { ConflictError, ForbiddenError, ValidationError } from '../lib/errors.js';
 import { deleteImageFromR2, isSafeImageKey } from './image-processing.js';
 
@@ -26,9 +27,17 @@ async function hasNewerCommittedSubmission(
   return (rows[0]?.count ?? 0) > 0;
 }
 
+const closedCycleColumns = {
+  id: schema.consignment_cycles.id,
+};
+
+const droppedCycleColumns = {
+  id: schema.consignment_cycles.id,
+};
+
 export async function voidVisit(
   db: DrizzleD1Database<typeof schema>,
-  actor: typeof schema.users.$inferSelect,
+  actor: SafeUser,
   idempotencyKey: string,
   reason: string,
   bucket?: R2Bucket
@@ -38,6 +47,7 @@ export async function voidVisit(
   }
   const trimmedReason = reason.trim();
   if (!trimmedReason) throw new ValidationError('Alasan pembatalan wajib diisi');
+
   const now = nowUtcIso();
 
   // Atomic check-and-set: only void if the submission still exists as committed
@@ -66,7 +76,11 @@ export async function voidVisit(
     // The atomic update rejected the void. Inspect current state to produce a
     // precise, actionable error message.
     const submissionRows = await db
-      .select()
+      .select({
+        status: schema.visit_submissions.status,
+        outlet_id: schema.visit_submissions.outlet_id,
+        created_at: schema.visit_submissions.created_at,
+      })
       .from(schema.visit_submissions)
       .where(eq(schema.visit_submissions.idempotency_key, idempotencyKey))
       .limit(1);
@@ -93,28 +107,30 @@ export async function voidVisit(
     throw new ConflictError('Kunjungan tidak dapat dibatalkan');
   }
 
-  const closedCycles = await db
-    .select()
-    .from(schema.consignment_cycles)
-    .where(
-      and(
-        eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
-        eq(schema.consignment_cycles.status, 'closed')
-      )
-    );
-  const droppedCycles = await db
-    .select()
-    .from(schema.consignment_cycles)
-    .where(
-      and(
-        eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
-        eq(schema.consignment_cycles.status, 'open')
-      )
-    );
+  const [closedCycles, droppedCycles] = await Promise.all([
+    db
+      .select(closedCycleColumns)
+      .from(schema.consignment_cycles)
+      .where(
+        and(
+          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
+          eq(schema.consignment_cycles.status, 'closed')
+        )
+      ),
+    db
+      .select(droppedCycleColumns)
+      .from(schema.consignment_cycles)
+      .where(
+        and(
+          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
+          eq(schema.consignment_cycles.status, 'open')
+        )
+      ),
+  ]);
 
-  const statements: unknown[] = [];
+  const cycleStatements: unknown[] = [];
   for (const cycle of closedCycles) {
-    statements.push(
+    cycleStatements.push(
       db
         .update(schema.consignment_cycles)
         .set({
@@ -135,7 +151,7 @@ export async function voidVisit(
     );
   }
   for (const cycle of droppedCycles) {
-    statements.push(
+    cycleStatements.push(
       db
         .update(schema.consignment_cycles)
         .set({ status: 'voided', updated_at: now })
@@ -147,29 +163,41 @@ export async function voidVisit(
         )
     );
   }
-  if (statements.length > 0) {
-    await db.batch(statements as never);
+
+  if (cycleStatements.length > 0) {
+    await db.batch(cycleStatements as never);
   }
 
   // Clean up photos attached to this submission before removing the DB rows.
   // We do this after the status is flipped to voided so concurrent uploads
   // cannot add new photos while we are deleting.
-  const photos = await db
-    .select({ photo_key: schema.visit_photos.photo_key })
-    .from(schema.visit_photos)
-    .where(eq(schema.visit_photos.visit_id, idempotencyKey));
-  const receipts = await db
-    .select({ photo_key: schema.receipt_photos.photo_key })
-    .from(schema.receipt_photos)
-    .where(eq(schema.receipt_photos.visit_id, idempotencyKey));
+  const [photos, receipts] = await Promise.all([
+    db
+      .select({ photo_key: schema.visit_photos.photo_key })
+      .from(schema.visit_photos)
+      .where(eq(schema.visit_photos.visit_id, idempotencyKey)),
+    db
+      .select({ photo_key: schema.receipt_photos.photo_key })
+      .from(schema.receipt_photos)
+      .where(eq(schema.receipt_photos.visit_id, idempotencyKey)),
+  ]);
 
-  if (bucket) {
+  if (bucket && (photos.length > 0 || receipts.length > 0)) {
+    const r2Deletions: Promise<unknown>[] = [];
     for (const { photo_key } of [...photos, ...receipts]) {
       if (photo_key && isSafeImageKey(photo_key)) {
-        await deleteImageFromR2(bucket, photo_key);
+        r2Deletions.push(deleteImageFromR2(bucket, photo_key));
       }
     }
+    if (r2Deletions.length > 0) {
+      await Promise.all(r2Deletions);
+    }
   }
-  await db.delete(schema.visit_photos).where(eq(schema.visit_photos.visit_id, idempotencyKey));
-  await db.delete(schema.receipt_photos).where(eq(schema.receipt_photos.visit_id, idempotencyKey));
+
+  if (photos.length > 0 || receipts.length > 0) {
+    await db.batch([
+      db.delete(schema.visit_photos).where(eq(schema.visit_photos.visit_id, idempotencyKey)),
+      db.delete(schema.receipt_photos).where(eq(schema.receipt_photos.visit_id, idempotencyKey)),
+    ] as never);
+  }
 }

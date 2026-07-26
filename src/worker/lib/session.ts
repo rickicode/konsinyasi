@@ -4,6 +4,7 @@ import type { Context, MiddlewareHandler } from 'hono';
 import { createClient } from '../db/client.js';
 import { sessions, users } from '../db/schema.js';
 import { AuthError } from './errors.js';
+import type { SafeUser } from '../types.js';
 
 export type Database = ReturnType<typeof createClient>;
 
@@ -94,12 +95,26 @@ export async function cleanupExpiredSessions(db: Database): Promise<number> {
   return (result as unknown as { meta?: { changes?: number } }).meta?.changes ?? 0;
 }
 
+const sessionUserColumns = {
+  session: { id: sessions.id, expires_at: sessions.expires_at },
+  user: {
+    id: users.id,
+    email: users.email,
+    username: users.username,
+    name: users.name,
+    role: users.role,
+    status: users.status,
+    created_at: users.created_at,
+    updated_at: users.updated_at,
+  },
+};
+
 export async function getSessionUser(
   db: Database,
   sessionId: string
-): Promise<typeof users.$inferSelect | null> {
+): Promise<SafeUser | null> {
   const rows = await db
-    .select({ session: sessions, user: users })
+    .select(sessionUserColumns)
     .from(sessions)
     .innerJoin(users, eq(sessions.user_id, users.id))
     .where(eq(sessions.id, sessionId))
@@ -114,7 +129,6 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
   const sessionId = getSessionId(c);
   if (!sessionId) throw new AuthError('Session required');
   if (isRefreshToken(sessionId)) throw new AuthError('Refresh token cannot be used for access');
-
   const db = createClient(c.env);
   const user = await getSessionUser(db, sessionId);
   if (!user) throw new AuthError('Session invalid or expired');
@@ -122,7 +136,6 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
 
   const now = new Date();
   const lastSeen = now.toISOString();
-
   // Only web/cookie sessions get a sliding 14-day expiration.
   // Mobile access sessions have a fixed short lifetime set at creation time.
   if (isAccessToken(sessionId)) {

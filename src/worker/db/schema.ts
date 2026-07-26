@@ -260,8 +260,10 @@ export const visit_submissions = sqliteTable(
     geofence_radius_m: integer('geofence_radius_m').notNull(),
     geofence_override: integer('geofence_override', { mode: 'boolean' }).notNull().default(false),
     geofence_override_reason: text('geofence_override_reason'),
-    notes: text('notes'),
-    status: text('status', { enum: ['committed', 'voided'] })
+notes: text('notes'),
+amount_collected_total: integer('amount_collected_total').notNull().default(0),
+qty_sold_total: integer('qty_sold_total').notNull().default(0),
+status: text('status', { enum: ['committed', 'voided'] })
       .notNull()
       .default('committed'),
     voided_at: text('voided_at'),
@@ -275,9 +277,10 @@ export const visit_submissions = sqliteTable(
     check('chk_visit_distance', sql`distance_m >= 0`),
     check('chk_visit_radius', sql`geofence_radius_m > 0`),
     index('idx_visit_submissions_outlet').on(t.outlet_id),
-		index('idx_visit_submissions_user').on(t.user_id),
-		index('idx_visit_submissions_created_at').on(t.created_at),
-		index('idx_visit_submissions_outlet_created_at').on(t.outlet_id, t.created_at),
+index('idx_visit_submissions_user').on(t.user_id),
+index('idx_visit_submissions_created_at').on(t.created_at),
+index('idx_visit_submissions_outlet_created_at').on(t.outlet_id, t.created_at),
+index('idx_visit_submissions_status_created_at').on(t.status, t.created_at),
   ]
 );
 

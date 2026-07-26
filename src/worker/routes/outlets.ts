@@ -58,7 +58,42 @@ const updateSchema = z.object({
 
 const outletsRoute = new Hono<Env>();
 
-function pickOutlet(row: typeof outlets.$inferSelect) {
+export const outletColumns = {
+  id: outlets.id,
+  name: outlets.name,
+  address: outlets.address,
+  latitude: outlets.latitude,
+  longitude: outlets.longitude,
+  location_accuracy_m: outlets.location_accuracy_m,
+  location_captured_at: outlets.location_captured_at,
+  photo_key: outlets.photo_key,
+  notes: outlets.notes,
+  status: outlets.status,
+  deleted_at: outlets.deleted_at,
+  created_at: outlets.created_at,
+  updated_at: outlets.updated_at,
+  last_visit_at: outlets.last_visit_at,
+};
+
+export type OutletListRow = Pick<
+  typeof outlets.$inferSelect,
+  | 'id'
+  | 'name'
+  | 'address'
+  | 'latitude'
+  | 'longitude'
+  | 'location_accuracy_m'
+  | 'location_captured_at'
+  | 'photo_key'
+  | 'notes'
+  | 'status'
+  | 'deleted_at'
+  | 'created_at'
+  | 'updated_at'
+  | 'last_visit_at'
+>;
+
+function pickOutlet(row: OutletListRow) {
   return {
     id: row.id,
     name: row.name,
@@ -78,37 +113,39 @@ function pickOutlet(row: typeof outlets.$inferSelect) {
 }
 
 outletsRoute.get('/', async (c) => {
-	const db = createClient(c.env);
-	const pagination = parsePaginationParams(c.req.query());
-	const where = isNull(outlets.deleted_at);
+  const db = createClient(c.env);
+  const pagination = parsePaginationParams(c.req.query());
+  const where = isNull(outlets.deleted_at);
 
-	if (pagination) {
-		const countResult = await db
-			.select({ count: sql<number>`count(*)` })
-			.from(outlets)
-			.where(where);
-		const total = countResult[0]?.count ?? 0;
-		const rows = await db
-			.select()
-			.from(outlets)
-			.where(where)
-			.orderBy(outlets.name)
-			.limit(pagination.limit)
-			.offset((pagination.page - 1) * pagination.limit);
-		return c.json(
-			buildPaginatedResponse(rows.map(pickOutlet), pagination.page, pagination.limit, total)
-		);
-	}
+  if (pagination) {
+    const countQuery = db.select({ count: sql<number>`count(*)` }).from(outlets).where(where);
+    const rowsQuery = db
+      .select(outletColumns)
+      .from(outlets)
+      .where(where)
+      .orderBy(outlets.name)
+      .limit(pagination.limit)
+      .offset((pagination.page - 1) * pagination.limit);
+    const [[countResult], rows] = await Promise.all([countQuery, rowsQuery]);
+    const total = countResult?.count ?? 0;
+    return c.json(
+      buildPaginatedResponse(rows.map(pickOutlet), pagination.page, pagination.limit, total)
+    );
+  }
 
-	const rows = await db.select().from(outlets).where(where).orderBy(outlets.name);
-	return c.json(rows.map(pickOutlet));
+  const rows = await db
+    .select(outletColumns)
+    .from(outlets)
+    .where(where)
+    .orderBy(outlets.name);
+  return c.json(rows.map(pickOutlet));
 });
 
 outletsRoute.get('/:id', async (c) => {
   const id = c.req.param('id');
   const db = createClient(c.env);
   const existing = await db
-    .select()
+    .select(outletColumns)
     .from(outlets)
     .where(and(eq(outlets.id, id), isNull(outlets.deleted_at)))
     .limit(1);
@@ -144,7 +181,11 @@ outletsRoute.post('/', async (c) => {
     created_at: now,
     updated_at: now,
   });
-  const rows = await db.select().from(outlets).where(eq(outlets.id, id)).limit(1);
+  const rows = await db
+    .select(outletColumns)
+    .from(outlets)
+    .where(eq(outlets.id, id))
+    .limit(1);
   return c.json(pickOutlet(rows[0]), 201);
 });
 
@@ -158,7 +199,7 @@ outletsRoute.patch('/:id', async (c) => {
   const data = parsed.data;
   const db = createClient(c.env);
   const existing = await db
-    .select()
+    .select(outletColumns)
     .from(outlets)
     .where(and(eq(outlets.id, id), isNull(outlets.deleted_at)))
     .limit(1);
@@ -172,6 +213,7 @@ outletsRoute.patch('/:id', async (c) => {
   ) {
     throw new ValidationError('Koordinat tidak valid (0,0)');
   }
+
   const setValues: Partial<typeof outlets.$inferInsert> = {};
   if (data.name !== undefined) setValues.name = data.name;
   if (data.address !== undefined) setValues.address = data.address;
@@ -186,9 +228,14 @@ outletsRoute.patch('/:id', async (c) => {
   if (Object.keys(setValues).length === 0) {
     throw new ValidationError('Tidak ada field yang diperbarui');
   }
+
   setValues.updated_at = new Date().toISOString();
   await db.update(outlets).set(setValues).where(eq(outlets.id, id));
-  const rows = await db.select().from(outlets).where(eq(outlets.id, id)).limit(1);
+  const rows = await db
+    .select(outletColumns)
+    .from(outlets)
+    .where(eq(outlets.id, id))
+    .limit(1);
   return c.json(pickOutlet(rows[0]));
 });
 
@@ -196,7 +243,7 @@ outletsRoute.delete('/:id', async (c) => {
   const id = c.req.param('id');
   const db = createClient(c.env);
   const existing = await db
-    .select()
+    .select(outletColumns)
     .from(outlets)
     .where(and(eq(outlets.id, id), isNull(outlets.deleted_at)))
     .limit(1);
@@ -229,7 +276,7 @@ outletsRoute.post('/:id/photo', async (c) => {
   }
   const db = createClient(c.env);
   const existing = await db
-    .select()
+    .select(outletColumns)
     .from(outlets)
     .where(and(eq(outlets.id, id), isNull(outlets.deleted_at)))
     .limit(1);
@@ -237,6 +284,7 @@ outletsRoute.post('/:id/photo', async (c) => {
     throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
   }
   const previousPhotoKey = existing[0].photo_key;
+
   const body = await c.req.parseBody({ all: true });
   const rawPhoto = body.photo;
   const file =
@@ -245,14 +293,12 @@ outletsRoute.post('/:id/photo', async (c) => {
       : Array.isArray(rawPhoto) && rawPhoto[0] instanceof File
         ? rawPhoto[0]
         : null;
-
   const uploaded = await processImageUpload({
     bucket,
     file: file as File,
     scope: `outlets/${id}`,
     oldKey: previousPhotoKey,
   });
-
   const updateValues: Partial<typeof outlets.$inferInsert> = {
     photo_key: uploaded.key,
     updated_at: new Date().toISOString(),

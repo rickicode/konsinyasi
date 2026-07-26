@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, eq, gte, lte, isNull, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, lte, sql } from 'drizzle-orm';
 import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
 import { consignment_cycles, outlets, products, users, visit_submissions } from '../db/schema.js';
@@ -35,7 +35,6 @@ reportsRoute.get('/', async (c) => {
   const toDate = parseDateParam(to, new Date());
   const toTimestamp = toDate + 'T23:59:59.999Z';
 
-  // ---- Summary: visit counts and override count ----
   const visitConditions = and(
     gte(visit_submissions.created_at, fromDate),
     lte(visit_submissions.created_at, toTimestamp),
@@ -43,7 +42,14 @@ reportsRoute.get('/', async (c) => {
     user_id ? eq(visit_submissions.user_id, user_id) : undefined
   );
 
-  const [visitAgg] = await db
+  const cycleDateConditions = and(
+    gte(consignment_cycles.created_at, fromDate),
+    lte(consignment_cycles.created_at, toTimestamp),
+    sql`${consignment_cycles.status} != 'voided'`
+  );
+
+  // ---- Summaries (independent) ----
+  const visitAggPromise = db
     .select({
       visit_count: sql<number>`count(*)`,
       override_count: sql<number>`coalesce(sum(${visit_submissions.geofence_override}), 0)`,
@@ -51,51 +57,41 @@ reportsRoute.get('/', async (c) => {
     .from(visit_submissions)
     .where(visitConditions);
 
-  // ---- Summary: financials from consignment_cycles ----
-  const cycleDateConditions = and(
-    gte(consignment_cycles.created_at, fromDate),
-    lte(consignment_cycles.created_at, toTimestamp),
-    sql`${consignment_cycles.status} != 'voided'`
-  );
-
-  let cycleAgg: { total_revenue: number; total_hpp_used: number; total_waste: number };
-  if (user_id) {
-    const [row] = await db
-      .select({
-        total_revenue: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
-        total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
-        total_waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
-      })
-      .from(consignment_cycles)
-      .innerJoin(
-        visit_submissions,
-        and(
-          eq(consignment_cycles.visit_submission_id, visit_submissions.idempotency_key),
-          eq(visit_submissions.user_id, user_id)
+  const cycleAggPromise = user_id
+    ? db
+        .select({
+          total_revenue: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
+          total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+          total_waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
+        })
+        .from(consignment_cycles)
+        .innerJoin(
+          visit_submissions,
+          and(
+            eq(consignment_cycles.visit_submission_id, visit_submissions.idempotency_key),
+            eq(visit_submissions.user_id, user_id)
+          )
         )
-      )
-      .where(cycleDateConditions);
-    cycleAgg = row;
-  } else {
-    const [row] = await db
-      .select({
-        total_revenue: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
-        total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
-        total_waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
-      })
-      .from(consignment_cycles)
-      .where(cycleDateConditions);
-    cycleAgg = row;
-  }
+        .where(cycleDateConditions)
+    : db
+        .select({
+          total_revenue: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
+          total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+          total_waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
+        })
+        .from(consignment_cycles)
+        .where(cycleDateConditions);
+
+  const [[visitAgg], [cycleAgg]] = await Promise.all([visitAggPromise, cycleAggPromise]);
 
   const totalRevenue = cycleAgg?.total_revenue ?? 0;
   const totalHppUsed = cycleAgg?.total_hpp_used ?? 0;
   const totalWaste = cycleAgg?.total_waste ?? 0;
   const totalMargin = totalRevenue - totalHppUsed;
 
-  // ---- Breakdown: by outlet ----
-  const byOutletRows = user_id
-    ? await db
+  // ---- Breakdowns (independent) ----
+  const byOutletQuery = user_id
+    ? db
         .select({
           id: outlets.id,
           name: outlets.name,
@@ -110,15 +106,9 @@ reportsRoute.get('/', async (c) => {
           visit_submissions,
           eq(consignment_cycles.visit_submission_id, visit_submissions.idempotency_key)
         )
-        .where(
-          and(
-            cycleDateConditions,
-            isNull(outlets.deleted_at),
-            eq(visit_submissions.user_id, user_id)
-          )
-        )
+        .where(and(cycleDateConditions, isNull(outlets.deleted_at), eq(visit_submissions.user_id, user_id)))
         .groupBy(outlets.id, outlets.name)
-    : await db
+    : db
         .select({
           id: outlets.id,
           name: outlets.name,
@@ -132,9 +122,8 @@ reportsRoute.get('/', async (c) => {
         .where(and(cycleDateConditions, isNull(outlets.deleted_at)))
         .groupBy(outlets.id, outlets.name);
 
-  // ---- Breakdown: by product ----
-  const byProductRows = user_id
-    ? await db
+  const byProductQuery = user_id
+    ? db
         .select({
           id: products.id,
           name: products.name,
@@ -151,7 +140,7 @@ reportsRoute.get('/', async (c) => {
         )
         .where(and(cycleDateConditions, eq(visit_submissions.user_id, user_id)))
         .groupBy(products.id, products.name)
-    : await db
+    : db
         .select({
           id: products.id,
           name: products.name,
@@ -165,14 +154,14 @@ reportsRoute.get('/', async (c) => {
         .where(cycleDateConditions)
         .groupBy(products.id, products.name);
 
-  // ---- Breakdown: by user ----
   const byUserWhere = and(
     gte(visit_submissions.created_at, fromDate),
     lte(visit_submissions.created_at, toTimestamp),
     eq(visit_submissions.status, 'committed'),
     user_id ? eq(visit_submissions.user_id, user_id) : undefined
   );
-  const byUserRows = await db
+
+  const byUserQuery = db
     .select({
       id: users.id,
       name: users.name,
@@ -192,6 +181,12 @@ reportsRoute.get('/', async (c) => {
     .innerJoin(users, eq(visit_submissions.user_id, users.id))
     .where(byUserWhere)
     .groupBy(users.id, users.name);
+
+  const [byOutletRows, byProductRows, byUserRows] = await Promise.all([
+    byOutletQuery,
+    byProductQuery,
+    byUserQuery,
+  ]);
 
   const payload = {
     from: fromDate,
@@ -219,6 +214,7 @@ reportsRoute.get('/', async (c) => {
     })),
   };
 
+  c.header('Cache-Control', 'private, max-age=30');
   return c.json(reportResponseSchema.parse(payload));
 });
 

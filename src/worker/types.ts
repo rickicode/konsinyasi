@@ -1,9 +1,14 @@
 import type { D1Database, Fetcher } from '@cloudflare/workers-types';
 import type { users } from './db/schema.js';
 
+export type SafeUser = Pick<
+  typeof users.$inferSelect,
+  'id' | 'email' | 'name' | 'role' | 'status' | 'username' | 'created_at' | 'updated_at'
+>;
+
 declare module 'hono' {
   interface ContextVariableMap {
-    user: typeof users.$inferSelect;
+    user: SafeUser;
     sessionId: string;
   }
 }

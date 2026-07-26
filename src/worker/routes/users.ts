@@ -28,7 +28,23 @@ const resetPasswordSchema = z.object({
 
 const usersRoute = new Hono<Env>();
 
-function pickUser(user: typeof users.$inferSelect) {
+export const userColumns = {
+  id: users.id,
+  email: users.email,
+  username: users.username,
+  name: users.name,
+  role: users.role,
+  status: users.status,
+  created_at: users.created_at,
+  updated_at: users.updated_at,
+};
+
+export type UserListRow = Pick<
+  typeof users.$inferSelect,
+  'id' | 'email' | 'username' | 'name' | 'role' | 'status' | 'created_at' | 'updated_at'
+>;
+
+function pickUser(user: UserListRow) {
   return {
     id: user.id,
     email: user.email,
@@ -46,18 +62,18 @@ usersRoute.get('/', async (c) => {
   const pagination = parsePaginationParams(c.req.query());
 
   if (pagination) {
-    const total = await db.$count(users);
-    const rows = await db
-      .select()
+    const rowsQuery = db
+      .select(userColumns)
       .from(users)
       .limit(pagination.limit)
       .offset((pagination.page - 1) * pagination.limit);
+    const [total, rows] = await Promise.all([db.$count(users), rowsQuery]);
     return c.json(
       buildPaginatedResponse(rows.map(pickUser), pagination.page, pagination.limit, total)
     );
   }
 
-  const rows = await db.select().from(users);
+  const rows = await db.select(userColumns).from(users);
   return c.json(rows.map(pickUser));
 });
 
@@ -67,10 +83,8 @@ usersRoute.post('/', async (c) => {
   if (!parsed.success) {
     throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
-
   const db = createClient(c.env);
   const passwordHash = await hashPassword(parsed.data.password);
-
   try {
     await db.insert(users).values({
       id: crypto.randomUUID(),
@@ -86,8 +100,11 @@ usersRoute.post('/', async (c) => {
     }
     throw err;
   }
-
-  const rows = await db.select().from(users).where(eq(users.email, parsed.data.email)).limit(1);
+  const rows = await db
+    .select(userColumns)
+    .from(users)
+    .where(eq(users.email, parsed.data.email))
+    .limit(1);
   return c.json(pickUser(rows[0]), 201);
 });
 
@@ -98,9 +115,8 @@ usersRoute.patch('/:id', async (c) => {
   if (!parsed.success) {
     throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
-
   const db = createClient(c.env);
-  const existing = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  const existing = await db.select(userColumns).from(users).where(eq(users.id, id)).limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Pengguna tidak ditemukan');
   }
@@ -119,7 +135,6 @@ usersRoute.patch('/:id', async (c) => {
   if (parsed.data.name !== undefined) setValues.name = parsed.data.name;
   if (parsed.data.role !== undefined) setValues.role = parsed.data.role;
   if (parsed.data.status !== undefined) setValues.status = parsed.data.status;
-
   if (Object.keys(setValues).length === 0) {
     throw new ValidationError('Tidak ada field yang diperbarui');
   }
@@ -131,7 +146,7 @@ usersRoute.patch('/:id', async (c) => {
     await db.delete(sessions).where(eq(sessions.user_id, id));
   }
 
-  const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  const rows = await db.select(userColumns).from(users).where(eq(users.id, id)).limit(1);
   return c.json(pickUser(rows[0]));
 });
 
@@ -142,9 +157,8 @@ usersRoute.post('/:id/reset-password', async (c) => {
   if (!parsed.success) {
     throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
-
   const db = createClient(c.env);
-  const existing = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  const existing = await db.select(userColumns).from(users).where(eq(users.id, id)).limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Pengguna tidak ditemukan');
   }
@@ -155,7 +169,6 @@ usersRoute.post('/:id/reset-password', async (c) => {
     .set({ password_hash: passwordHash, updated_at: new Date().toISOString() })
     .where(eq(users.id, id));
   await db.delete(sessions).where(eq(sessions.user_id, id));
-
   return c.json({ ok: true });
 });
 

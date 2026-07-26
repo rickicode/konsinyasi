@@ -36,6 +36,16 @@ const ACCESS_TOKEN_TTL_SECONDS = ACCESS_TOKEN_TTL_MINUTES * 60;
 
 const auth = new Hono<Env>();
 
+const userAuthColumns = {
+  id: users.id,
+  email: users.email,
+  username: users.username,
+  name: users.name,
+  role: users.role,
+  status: users.status,
+  password_hash: users.password_hash,
+};
+
 function tokenId(prefix: string): string {
   return prefix + crypto.randomUUID();
 }
@@ -73,7 +83,10 @@ async function createMobileRefreshSession(db: Database, userId: string): Promise
 }
 
 function mobileAuthPayload(
-  user: typeof users.$inferSelect,
+  user: Pick<
+    typeof users.$inferSelect,
+    'id' | 'email' | 'username' | 'name' | 'role'
+  >,
   accessToken: string,
   refreshToken: string
 ) {
@@ -98,40 +111,43 @@ async function rotateMobileSession(
   db: Database,
   refreshToken: string
 ): Promise<{
-  user: typeof users.$inferSelect;
+  user: Pick<typeof users.$inferSelect, 'id' | 'email' | 'username' | 'name' | 'role' | 'status'>;
   accessToken: string;
   refreshToken: string;
 }> {
   if (!refreshToken.startsWith(REFRESH_TOKEN_PREFIX)) {
     throw new AuthError('Invalid refresh token');
   }
-
   const rows = await db
-    .select({ session: sessions, user: users })
+    .select({
+      session: { id: sessions.id, expires_at: sessions.expires_at, user_id: sessions.user_id },
+      user: {
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        name: users.name,
+        role: users.role,
+        status: users.status,
+      },
+    })
     .from(sessions)
     .innerJoin(users, eq(sessions.user_id, users.id))
     .where(eq(sessions.id, refreshToken))
     .limit(1);
-
   const row = rows[0];
   if (!row) {
     throw new AuthError('Refresh token invalid');
   }
-
   if (new Date() > new Date(row.session.expires_at)) {
     throw new AuthError('Refresh token expired');
   }
-
   if (row.user.status !== 'active') {
     throw new AuthError('Pengguna tidak aktif');
   }
-
   // Rotate: old refresh token is invalidated before issuing new tokens.
   await db.delete(sessions).where(eq(sessions.id, refreshToken));
-
   const accessToken = await createMobileAccessSession(db, row.user.id);
   const newRefreshToken = await createMobileRefreshSession(db, row.user.id);
-
   return { user: row.user, accessToken, refreshToken: newRefreshToken };
 }
 
@@ -149,10 +165,9 @@ auth.post(
     if (!parsed.success) {
       throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
     }
-
     const db = createClient(c.env);
     const rows = await db
-      .select()
+      .select(userAuthColumns)
       .from(users)
       .where(eq(users.username, parsed.data.username))
       .limit(1);
@@ -160,24 +175,19 @@ auth.post(
     if (!user) {
       throw new AuthError('Username atau password salah');
     }
-
     const valid = await verifyPassword(parsed.data.password, user.password_hash);
     if (!valid) {
       throw new AuthError('Username atau password salah');
     }
-
     if (user.status !== 'active') {
       throw new AuthError('Pengguna tidak aktif');
     }
-
     const isMobile = parsed.data.device === 'mobile';
-
     if (isMobile) {
       const accessToken = await createMobileAccessSession(db, user.id);
       const refreshToken = await createMobileRefreshSession(db, user.id);
       return c.json(mobileAuthPayload(user, accessToken, refreshToken));
     }
-
     const sessionId = await createSession(db, user.id);
     setSessionCookie(c, sessionId);
     return c.json({
@@ -205,18 +215,15 @@ auth.post(
     } catch {
       throw new ValidationError('Request body must be valid JSON');
     }
-
     const parsed = refreshSchema.safeParse(body);
     if (!parsed.success) {
       throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
     }
-
     const db = createClient(c.env);
     const { user, accessToken, refreshToken } = await rotateMobileSession(
       db,
       parsed.data.refresh_token
     );
-
     return c.json(mobileAuthPayload(user, accessToken, refreshToken));
   }
 );
@@ -224,10 +231,6 @@ auth.post(
 auth.post('/logout', async (c) => {
   const sessionId = c.get('sessionId');
   const db = createClient(c.env);
-
-  if (sessionId) {
-    await deleteSession(db, sessionId);
-  }
 
   // Mobile clients may send their long-lived refresh token in the body
   // so it can be revoked alongside the access session.
@@ -239,8 +242,15 @@ auth.post('/logout', async (c) => {
     refreshToken = undefined;
   }
 
+  const deletions: Promise<unknown>[] = [];
+  if (sessionId) {
+    deletions.push(deleteSession(db, sessionId));
+  }
   if (typeof refreshToken === 'string' && refreshToken.length > 0) {
-    await db.delete(sessions).where(eq(sessions.id, refreshToken));
+    deletions.push(db.delete(sessions).where(eq(sessions.id, refreshToken)));
+  }
+  if (deletions.length > 0) {
+    await Promise.all(deletions);
   }
 
   clearSessionCookie(c);

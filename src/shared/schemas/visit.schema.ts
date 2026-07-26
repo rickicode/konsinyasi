@@ -76,6 +76,7 @@ export const visitResultSchema = z.object({
   geofence_radius_m: z.number(),
   geofence_override: z.boolean(),
   amount_collected_total: z.number(),
+  qty_sold_total: z.number(),
 });
 
 export type VisitResult = z.infer<typeof visitResultSchema>;

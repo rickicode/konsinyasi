@@ -39,10 +39,19 @@ mediaRoute.get('/*', async (c) => {
     throw new AppError(404, 'NOT_FOUND', 'Media tidak ditemukan');
   }
 
-  return c.body(object.body, 200, {
+  const headers: Record<string, string> = {
     'Content-Type': object.httpMetadata?.contentType ?? 'application/octet-stream',
     'Cache-Control': 'private, max-age=86400',
-  });
+  };
+
+  if (object.httpEtag) {
+    headers['ETag'] = object.httpEtag;
+  }
+  if (object.uploaded) {
+    headers['Last-Modified'] = object.uploaded.toUTCString();
+  }
+
+  return c.body(object.body, 200, headers);
 });
 
 export default mediaRoute;
