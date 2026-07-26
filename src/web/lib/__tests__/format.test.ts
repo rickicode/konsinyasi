@@ -21,7 +21,7 @@ describe('format utilities', () => {
 
   it('formats Rupiah with non-breaking space separator', () => {
     expect(formatRupiah(1500000)).toMatch(/^Rp\s1\.500\.000$/);
-    expect(formatRupiah(Number.NaN)).toBe('RpNaN');
+    expect(formatRupiah(Number.NaN)).toBe('Rp 0');
   });
 
   describe('formatDistance (meters)', () => {

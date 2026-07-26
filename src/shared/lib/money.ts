@@ -1,5 +1,4 @@
-const LOCALE = 'id-ID';
-const CURRENCY = 'IDR';
+import { LOCALE, CURRENCY } from './constants.js';
 
 /**
  * Format an integer amount as Indonesian Rupiah.
