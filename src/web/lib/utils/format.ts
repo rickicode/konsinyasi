@@ -1,5 +1,4 @@
-const LOCALE = 'id-ID';
-const CURRENCY = 'IDR';
+import { LOCALE } from '@shared/lib/constants.js';
 
 const defaultDateOptions: Intl.DateTimeFormatOptions = {
   day: '2-digit',
@@ -39,18 +38,7 @@ export function formatDateTime(
   return new Intl.DateTimeFormat(LOCALE, options).format(toDate(value));
 }
 
-/**
- * Format an integer amount as Indonesian Rupiah.
- * Accepts `number`, `bigint`, or a numeric string.
- */
-export function formatRupiah(amount: number | bigint | string): string {
-  const value = typeof amount === 'string' ? Number(amount) : amount;
-  return new Intl.NumberFormat(LOCALE, {
-    style: 'currency',
-    currency: CURRENCY,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+export { formatRupiah } from '@shared/lib/money.js';
 
 /**
  * Format a distance in meters as a human-readable string.

@@ -44,13 +44,13 @@ export function convertQuantity(
   const fromUnit = registry ? registry[from] : getLegacyUnit(from);
   const toUnit = registry ? registry[to] : getLegacyUnit(to);
   if (!fromUnit) {
-    throw new Error(`Unknown unit: ${from}`);
+    throw new Error(`Satuan tidak dikenal: ${from}`);
   }
   if (!toUnit) {
-    throw new Error(`Unknown unit: ${to}`);
+    throw new Error(`Satuan tidak dikenal: ${to}`);
   }
   if (fromUnit.dimension !== toUnit.dimension) {
-    throw new Error(`Incompatible units: ${from} and ${to}`);
+    throw new Error(`Satuan tidak kompatibel: ${from} dan ${to}`);
   }
   return (value * fromUnit.multiplier) / toUnit.multiplier;
 }
@@ -65,7 +65,7 @@ function getLegacyUnit(symbol: string): UomConversion {
     pcs: { dimension: 'count', multiplier: 1 },
   };
   const unit = map[symbol];
-  if (!unit) throw new Error(`Unknown unit: ${symbol}`);
+  if (!unit) throw new Error(`Satuan tidak dikenal: ${symbol}`);
   return unit;
 }
 

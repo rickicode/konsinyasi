@@ -1,7 +1,7 @@
 import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema.js';
-import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
+import { ConflictError, GeofenceError, ValidationError } from '../lib/errors.js';
 import type { SafeUser } from '../types.js';
 
 const EARTH_RADIUS_M = 6_371_000;
@@ -197,9 +197,7 @@ function checkGeofence(
   const ownerOverride =
     actor.role === 'owner' && override === true && Boolean(overrideReason?.trim());
   if (!ownerOverride) {
-    throw new AppError(
-      400,
-      'GEOFENCE_ERROR',
+    throw new GeofenceError(
       `Anda ${distanceM} m dari warung (batas ${radiusM} m)`
     );
   }

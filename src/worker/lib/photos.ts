@@ -1,5 +1,5 @@
 import type { R2Bucket } from '@cloudflare/workers-types';
-import { extensionFromFileName } from '@shared/lib/image.js';
+import { IMAGE_MAX_FILE_SIZE, extensionFromFileName } from '@shared/lib/image.js';
 import {
   buildImageKey,
   deleteImageFromR2,
@@ -7,7 +7,7 @@ import {
   validateImageFile,
 } from '../services/image-processing.js';
 
-export const MAX_PHOTO_SIZE = 2 * 1024 * 1024;
+export const MAX_PHOTO_SIZE = IMAGE_MAX_FILE_SIZE;
 export const ALLOWED_PHOTO_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'] as const;
 
 export type PhotoEntity = 'outlets' | 'products' | 'visits';
