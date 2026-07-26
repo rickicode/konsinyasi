@@ -296,7 +296,11 @@ productsRoute.patch('/:id', async (c) => {
     setValues.price_to_outlet = data.price_to_outlet;
   }
   if (owner && data.hpp_override !== undefined) {
-    // Only allow override when no recipe will exist after update.
+    // Only allow override when the product currently has no recipe lines.
+    const recipeCount = await db.$count(product_recipes, eq(product_recipes.product_id, id));
+    if (recipeCount > 0) {
+      throw new ConflictError('Produk dengan resep tidak boleh menggunakan HPP override');
+    }
     setValues.hpp_override = data.hpp_override;
   }
 
@@ -330,8 +334,16 @@ productsRoute.delete('/:id', async (c) => {
   }
 
   const [recipe, cycles] = await Promise.all([
-    db.select({ id: product_recipes.id }).from(product_recipes).where(eq(product_recipes.product_id, id)).limit(1),
-    db.select({ id: consignment_cycles.id }).from(consignment_cycles).where(eq(consignment_cycles.product_id, id)).limit(1),
+    db
+      .select({ id: product_recipes.id })
+      .from(product_recipes)
+      .where(eq(product_recipes.product_id, id))
+      .limit(1),
+    db
+      .select({ id: consignment_cycles.id })
+      .from(consignment_cycles)
+      .where(eq(consignment_cycles.product_id, id))
+      .limit(1),
   ]);
 
   if (recipe.length > 0) {

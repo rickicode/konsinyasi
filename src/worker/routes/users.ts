@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
+import { requirePermission } from '../lib/rbac.js';
 import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
 import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination.js';
@@ -27,6 +28,8 @@ const resetPasswordSchema = z.object({
 });
 
 const usersRoute = new Hono<Env>();
+// Enforce the same users:manage permission on the root path and all subpaths.
+usersRoute.use('*', requirePermission('users:manage'));
 
 export const userColumns = {
   id: users.id,

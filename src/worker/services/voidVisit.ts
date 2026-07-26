@@ -55,24 +55,101 @@ export async function voidVisit(
   // Collapsing the previous read-check-update sequence into a single UPDATE
   // eliminates the TOCTOU window where a newer submission could be committed
   // between the check and the write.
-  const lockResult = await db.run(sql`
-    UPDATE visit_submissions
-    SET status = 'voided',
-        voided_at = ${now},
-        voided_by = ${actor.id},
-        void_reason = ${trimmedReason}
-    WHERE idempotency_key = ${idempotencyKey}
-      AND status = 'committed'
-      AND NOT EXISTS (
-        SELECT 1
-        FROM visit_submissions AS newer
-        WHERE newer.outlet_id = visit_submissions.outlet_id
-          AND newer.status = 'committed'
-          AND newer.created_at > visit_submissions.created_at
+  const voidUpdate = db
+    .update(schema.visit_submissions)
+    .set({
+      status: 'voided',
+      voided_at: now,
+      voided_by: actor.id,
+      void_reason: trimmedReason,
+    })
+    .where(
+      and(
+        eq(schema.visit_submissions.idempotency_key, idempotencyKey),
+        eq(schema.visit_submissions.status, 'committed'),
+        sql`NOT EXISTS (
+          SELECT 1
+          FROM ${schema.visit_submissions} AS newer
+          WHERE newer.outlet_id = ${schema.visit_submissions.outlet_id}
+            AND newer.status = 'committed'
+            AND newer.created_at > ${schema.visit_submissions.created_at}
+        )`
       )
-  `);
+    );
 
-  if ((lockResult.meta?.changes ?? 0) === 0) {
+  const [closedCycles, droppedCycles] = await Promise.all([
+    db
+      .select(closedCycleColumns)
+      .from(schema.consignment_cycles)
+      .where(
+        and(
+          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
+          eq(schema.consignment_cycles.status, 'closed')
+        )
+      ),
+    db
+      .select(droppedCycleColumns)
+      .from(schema.consignment_cycles)
+      .where(
+        and(
+          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
+          eq(schema.consignment_cycles.status, 'open')
+        )
+      ),
+  ]);
+
+  const submissionVoided = sql`EXISTS (
+    SELECT 1
+    FROM ${schema.visit_submissions}
+    WHERE ${schema.visit_submissions.idempotency_key} = ${idempotencyKey}
+      AND ${schema.visit_submissions.status} = 'voided'
+  )`;
+
+  const cycleStatements: unknown[] = [];
+  for (const cycle of closedCycles) {
+    cycleStatements.push(
+      db
+        .update(schema.consignment_cycles)
+        .set({
+          qty_sold: 0,
+          qty_return_good: 0,
+          qty_return_damaged: 0,
+          amount_collected: 0,
+          picked_up_at: null,
+          status: 'open',
+          updated_at: now,
+        })
+        .where(
+          and(
+            eq(schema.consignment_cycles.id, cycle.id),
+            eq(schema.consignment_cycles.status, 'closed'),
+            submissionVoided
+          )
+        )
+    );
+  }
+  for (const cycle of droppedCycles) {
+    cycleStatements.push(
+      db
+        .update(schema.consignment_cycles)
+        .set({ status: 'voided', updated_at: now })
+        .where(
+          and(
+            eq(schema.consignment_cycles.id, cycle.id),
+            eq(schema.consignment_cycles.status, 'open'),
+            submissionVoided
+          )
+        )
+    );
+  }
+
+  // Execute the void and the cycle re-opening in the same batch so a crash
+  // after the submission update cannot leave cycles locked closed.
+  const batchResults = await db.batch([voidUpdate, ...cycleStatements] as never);
+  const lockChanges =
+    (batchResults[0] as unknown as { meta?: { changes?: number } }).meta?.changes ?? 0;
+
+  if (lockChanges === 0) {
     // The atomic update rejected the void. Inspect current state to produce a
     // precise, actionable error message.
     const submissionRows = await db
@@ -105,67 +182,6 @@ export async function voidVisit(
     // UPDATE and this diagnostic SELECT (e.g. a concurrent void invalidating
     // the status='committed' predicate).
     throw new ConflictError('Kunjungan tidak dapat dibatalkan');
-  }
-
-  const [closedCycles, droppedCycles] = await Promise.all([
-    db
-      .select(closedCycleColumns)
-      .from(schema.consignment_cycles)
-      .where(
-        and(
-          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
-          eq(schema.consignment_cycles.status, 'closed')
-        )
-      ),
-    db
-      .select(droppedCycleColumns)
-      .from(schema.consignment_cycles)
-      .where(
-        and(
-          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
-          eq(schema.consignment_cycles.status, 'open')
-        )
-      ),
-  ]);
-
-  const cycleStatements: unknown[] = [];
-  for (const cycle of closedCycles) {
-    cycleStatements.push(
-      db
-        .update(schema.consignment_cycles)
-        .set({
-          qty_sold: 0,
-          qty_return_good: 0,
-          qty_return_damaged: 0,
-          amount_collected: 0,
-          picked_up_at: null,
-          status: 'open',
-          updated_at: now,
-        })
-        .where(
-          and(
-            eq(schema.consignment_cycles.id, cycle.id),
-            eq(schema.consignment_cycles.status, 'closed')
-          )
-        )
-    );
-  }
-  for (const cycle of droppedCycles) {
-    cycleStatements.push(
-      db
-        .update(schema.consignment_cycles)
-        .set({ status: 'voided', updated_at: now })
-        .where(
-          and(
-            eq(schema.consignment_cycles.id, cycle.id),
-            eq(schema.consignment_cycles.status, 'open')
-          )
-        )
-    );
-  }
-
-  if (cycleStatements.length > 0) {
-    await db.batch(cycleStatements as never);
   }
 
   // Clean up photos attached to this submission before removing the DB rows.

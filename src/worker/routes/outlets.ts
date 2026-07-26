@@ -6,6 +6,7 @@ import { createClient } from '../db/client.js';
 import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination.js';
 import { consignment_cycles, outlets } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
+import { requirePermission } from '../lib/rbac.js';
 import { processImageUpload } from '../services/image-processing.js';
 
 function isCoordInvalid(lat: number, lng: number): boolean {
@@ -57,6 +58,8 @@ const updateSchema = z.object({
 });
 
 const outletsRoute = new Hono<Env>();
+// Enforce the same outlets:write permission on the root path and all subpaths.
+outletsRoute.use('*', requirePermission('outlets:write'));
 
 export const outletColumns = {
   id: outlets.id,
@@ -118,7 +121,10 @@ outletsRoute.get('/', async (c) => {
   const where = isNull(outlets.deleted_at);
 
   if (pagination) {
-    const countQuery = db.select({ count: sql<number>`count(*)` }).from(outlets).where(where);
+    const countQuery = db
+      .select({ count: sql<number>`count(*)` })
+      .from(outlets)
+      .where(where);
     const rowsQuery = db
       .select(outletColumns)
       .from(outlets)
@@ -133,11 +139,7 @@ outletsRoute.get('/', async (c) => {
     );
   }
 
-  const rows = await db
-    .select(outletColumns)
-    .from(outlets)
-    .where(where)
-    .orderBy(outlets.name);
+  const rows = await db.select(outletColumns).from(outlets).where(where).orderBy(outlets.name);
   return c.json(rows.map(pickOutlet));
 });
 
@@ -181,11 +183,7 @@ outletsRoute.post('/', async (c) => {
     created_at: now,
     updated_at: now,
   });
-  const rows = await db
-    .select(outletColumns)
-    .from(outlets)
-    .where(eq(outlets.id, id))
-    .limit(1);
+  const rows = await db.select(outletColumns).from(outlets).where(eq(outlets.id, id)).limit(1);
   return c.json(pickOutlet(rows[0]), 201);
 });
 
@@ -231,11 +229,7 @@ outletsRoute.patch('/:id', async (c) => {
 
   setValues.updated_at = new Date().toISOString();
   await db.update(outlets).set(setValues).where(eq(outlets.id, id));
-  const rows = await db
-    .select(outletColumns)
-    .from(outlets)
-    .where(eq(outlets.id, id))
-    .limit(1);
+  const rows = await db.select(outletColumns).from(outlets).where(eq(outlets.id, id)).limit(1);
   return c.json(pickOutlet(rows[0]));
 });
 

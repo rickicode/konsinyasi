@@ -6,6 +6,7 @@ import { createClient } from '../db/client.js';
 import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination.js';
 import { product_recipes, raw_materials as rawMaterials, uoms } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
+import { requirePermission } from '../lib/rbac.js';
 import { recalculateAllProductsUsingMaterial } from '../services/hpp.js';
 
 async function validateBaseUnit(
@@ -18,7 +19,9 @@ async function validateBaseUnit(
     .where(and(eq(uoms.symbol, symbol), isNull(uoms.deleted_at)))
     .limit(1);
   if (rows.length === 0) {
-    throw new ValidationError(`Satuan "${symbol}" tidak ditemukan. Tambahkan di menu Satuan terlebih dahulu.`);
+    throw new ValidationError(
+      `Satuan "${symbol}" tidak ditemukan. Tambahkan di menu Satuan terlebih dahulu.`
+    );
   }
 }
 
@@ -42,6 +45,8 @@ const updateSchema = z.object({
 });
 
 const rawMaterialsRoute = new Hono<Env>();
+// Enforce the same bom:write permission on the root path and all subpaths.
+rawMaterialsRoute.use('*', requirePermission('bom:write'));
 
 function pickRawMaterial(row: typeof rawMaterials.$inferSelect) {
   return {
@@ -125,8 +130,12 @@ rawMaterialsRoute.patch('/:id', async (c) => {
     throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
   }
   const db = createClient(c.env);
-  const existing = await db.select().from(rawMaterials).where(eq(rawMaterials.id, id)).limit(1);
-  if (!existing[0]) {
+  const existing = await db
+    .select()
+    .from(rawMaterials)
+    .where(and(eq(rawMaterials.id, id), isNull(rawMaterials.deleted_at)))
+    .limit(1);
+  if (!existing[0] || existing[0].deleted_at) {
     throw new AppError(404, 'NOT_FOUND', 'Bahan baku tidak ditemukan');
   }
   if (parsed.data.name !== undefined && parsed.data.name !== existing[0].name) {
@@ -172,7 +181,11 @@ rawMaterialsRoute.patch('/:id', async (c) => {
 rawMaterialsRoute.delete('/:id', async (c) => {
   const id = c.req.param('id');
   const db = createClient(c.env);
-  const existing = await db.select().from(rawMaterials).where(eq(rawMaterials.id, id)).limit(1);
+  const existing = await db
+    .select()
+    .from(rawMaterials)
+    .where(and(eq(rawMaterials.id, id), isNull(rawMaterials.deleted_at)))
+    .limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Bahan baku tidak ditemukan');
   }

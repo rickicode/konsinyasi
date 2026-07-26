@@ -15,7 +15,9 @@ export const uoms = sqliteTable(
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     symbol: text('symbol').notNull(),
-    dimension: text('dimension', { enum: ['vol', 'mass', 'count'] }).notNull().default('count'),
+    dimension: text('dimension', { enum: ['vol', 'mass', 'count'] })
+      .notNull()
+      .default('count'),
     multiplier: integer('multiplier').notNull().default(1),
     deleted_at: text('deleted_at'),
     created_at: text('created_at')
@@ -52,28 +54,28 @@ export const users = sqliteTable(
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
-		uniqueIndex('idx_users_username').on(t.username),
-		index('idx_users_status_role').on(t.status, t.role),
-	]
+    uniqueIndex('idx_users_username').on(t.username),
+    index('idx_users_status_role').on(t.status, t.role),
+  ]
 );
 
 export const sessions = sqliteTable(
-	'sessions',
-	{
-		id: text('id').primaryKey(),
-		user_id: text('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		expires_at: text('expires_at').notNull(),
-		last_seen_at: text('last_seen_at').notNull(),
-		created_at: text('created_at')
-			.notNull()
-			.default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
-	},
-	(t) => [
-		index('idx_sessions_user_id').on(t.user_id),
-		index('idx_sessions_expires_at').on(t.expires_at),
-	]
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expires_at: text('expires_at').notNull(),
+    last_seen_at: text('last_seen_at').notNull(),
+    created_at: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    index('idx_sessions_user_id').on(t.user_id),
+    index('idx_sessions_expires_at').on(t.expires_at),
+  ]
 );
 
 export const app_settings = sqliteTable('app_settings', {
@@ -127,11 +129,11 @@ export const products = sqliteTable(
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
-		check('chk_products_hpp', sql`hpp >= 0`),
-		check('chk_products_price', sql`price_to_outlet >= 0`),
-		index('idx_products_deleted_at_name').on(t.deleted_at, t.name),
-		index('idx_products_status_deleted_at_name').on(t.status, t.deleted_at, t.name),
-	]
+    check('chk_products_hpp', sql`hpp >= 0`),
+    check('chk_products_price', sql`price_to_outlet >= 0`),
+    index('idx_products_deleted_at_name').on(t.deleted_at, t.name),
+    index('idx_products_status_deleted_at_name').on(t.status, t.deleted_at, t.name),
+  ]
 );
 
 export const product_recipes = sqliteTable(
@@ -173,11 +175,11 @@ export const outlets = sqliteTable(
     photo_key: text('photo_key'),
     notes: text('notes'),
     status: text('status', { enum: ['active', 'inactive'] })
-		.notNull()
-		.default('active'),
-	deleted_at: text('deleted_at'),
-	last_visit_at: text('last_visit_at'),
-	created_at: text('created_at')
+      .notNull()
+      .default('active'),
+    deleted_at: text('deleted_at'),
+    last_visit_at: text('last_visit_at'),
+    created_at: text('created_at')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
     updated_at: text('updated_at')
@@ -189,9 +191,9 @@ export const outlets = sqliteTable(
     check('chk_outlets_longitude', sql`longitude BETWEEN -180 AND 180`),
     index('idx_outlets_geo').on(t.latitude, t.longitude),
     index('idx_outlets_active')
-			.on(t.status)
-			.where(sql`deleted_at IS NULL`),
-		index('idx_outlets_name').on(t.name),
+      .on(t.status)
+      .where(sql`deleted_at IS NULL`),
+    index('idx_outlets_name').on(t.name),
   ]
 );
 
@@ -217,7 +219,10 @@ export const consignment_cycles = sqliteTable(
     status: text('status', { enum: ['open', 'closed', 'voided'] })
       .notNull()
       .default('open'),
-    visit_submission_id: text('visit_submission_id'),
+    visit_submission_id: text('visit_submission_id').references(
+      () => visit_submissions.idempotency_key,
+      { onDelete: 'set null' }
+    ),
     notes: text('notes'),
     created_at: text('created_at')
       .notNull()
@@ -235,10 +240,10 @@ export const consignment_cycles = sqliteTable(
     check('chk_cycles_qty_return_damaged', sql`qty_return_damaged >= 0`),
     check('chk_cycles_amount', sql`amount_collected >= 0`),
     index('idx_cycles_outlet_status_picked').on(t.outlet_id, t.status, t.picked_up_at),
-		index('idx_cycles_dropped_at').on(t.dropped_at),
-		index('idx_cycles_product').on(t.product_id),
-		index('idx_consignment_cycles_visit_submission_id').on(t.visit_submission_id),
-		index('idx_consignment_cycles_created_at').on(t.created_at),
+    index('idx_cycles_dropped_at').on(t.dropped_at),
+    index('idx_cycles_product').on(t.product_id),
+    index('idx_consignment_cycles_visit_submission_id').on(t.visit_submission_id),
+    index('idx_consignment_cycles_created_at').on(t.created_at),
   ]
 );
 
@@ -260,10 +265,10 @@ export const visit_submissions = sqliteTable(
     geofence_radius_m: integer('geofence_radius_m').notNull(),
     geofence_override: integer('geofence_override', { mode: 'boolean' }).notNull().default(false),
     geofence_override_reason: text('geofence_override_reason'),
-notes: text('notes'),
-amount_collected_total: integer('amount_collected_total').notNull().default(0),
-qty_sold_total: integer('qty_sold_total').notNull().default(0),
-status: text('status', { enum: ['committed', 'voided'] })
+    notes: text('notes'),
+    amount_collected_total: integer('amount_collected_total').notNull().default(0),
+    qty_sold_total: integer('qty_sold_total').notNull().default(0),
+    status: text('status', { enum: ['committed', 'voided'] })
       .notNull()
       .default('committed'),
     voided_at: text('voided_at'),
@@ -277,10 +282,11 @@ status: text('status', { enum: ['committed', 'voided'] })
     check('chk_visit_distance', sql`distance_m >= 0`),
     check('chk_visit_radius', sql`geofence_radius_m > 0`),
     index('idx_visit_submissions_outlet').on(t.outlet_id),
-index('idx_visit_submissions_user').on(t.user_id),
-index('idx_visit_submissions_created_at').on(t.created_at),
-index('idx_visit_submissions_outlet_created_at').on(t.outlet_id, t.created_at),
-index('idx_visit_submissions_status_created_at').on(t.status, t.created_at),
+    index('idx_visit_submissions_user').on(t.user_id),
+    index('idx_visit_submissions_created_at').on(t.created_at),
+    index('idx_visit_submissions_outlet_created_at').on(t.outlet_id, t.created_at),
+    index('idx_visit_submissions_status_created_at').on(t.status, t.created_at),
+    index('idx_visit_submissions_outlet_status_created_at').on(t.outlet_id, t.status, t.created_at),
   ]
 );
 
@@ -304,7 +310,7 @@ export const visit_photos = sqliteTable(
   },
   (t) => [
     index('idx_visit_photos_visit_id').on(t.visit_id),
-    index('idx_visit_photos_sequence').on(t.visit_id, t.sequence),
+    uniqueIndex('idx_visit_photos_sequence').on(t.visit_id, t.sequence),
   ]
 );
 
