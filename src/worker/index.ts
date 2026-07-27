@@ -43,6 +43,7 @@ app.use(
         'data:',
         'blob:',
         'https://konsi.rickicode.workers.dev',
+        'https://cdn.kopi.hijitoko.com',
         'https://*.tile.openstreetmap.org',
         'https://server.arcgisonline.com',
       ],

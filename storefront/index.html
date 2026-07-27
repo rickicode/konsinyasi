@@ -338,6 +338,12 @@
         justify-content: center;
         flex-shrink: 0;
         font-size: 24px;
+        overflow: hidden;
+      }
+      .card-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
       .card-info {
         flex: 1;
@@ -513,6 +519,13 @@
         background: var(--coffee-200);
         border-radius: 2px;
         margin: 0 auto 16px;
+      }
+      .detail-photo {
+        width: 100%;
+        height: 160px;
+        object-fit: cover;
+        border-radius: 16px;
+        margin-bottom: 16px;
       }
       .detail-title {
         font-size: 20px;
@@ -764,6 +777,7 @@
     <div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
       <div class="detail" id="detail">
         <div class="detail-handle"></div>
+        <img class="detail-photo" id="d-photo" src="" alt="" style="display:none" />
         <h2 class="detail-title" id="d-title">-</h2>
         <p class="detail-addr" id="d-addr">-</p>
         <p class="detail-dist" id="d-dist"></p>
@@ -929,9 +943,12 @@
           const tags = w.products
             .map((p) => `<span class="tag">${p.name}<b>×${p.available_qty}</b></span>`)
             .join('');
+          const iconHtml = w.photo_url
+            ? `<img src="${esc(w.photo_url)}" alt="${esc(w.name)}" loading="lazy" onerror="this.parentElement.innerHTML='🏪'">`
+            : '🏪';
           h += `<div class="card" onclick="openDetail('${w.id}')">
           <div class="card-top">
-            <div class="card-icon">🏪</div>
+            <div class="card-icon">${iconHtml}</div>
             <div class="card-info">
               <div class="card-name">${esc(w.name)}</div>
               <div class="card-addr">
