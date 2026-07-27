@@ -8,6 +8,8 @@
     formatAccuracy,
   } from '$lib/stores/geolocation.svelte.js';
   import { useToast } from '$lib/stores/toast.svelte.js';
+  import { LOCALE } from '@shared/lib/constants.js';
+  import { formatRupiah } from '$lib/utils/format.js';
   import { queryKeys } from '$lib/api/query-keys.js';
   import { outletDetailQueryOptions, deleteOutletMutationOptions } from '../api/index.js';
   import { visitsByOutletQueryOptions, voidVisitMutationOptions } from '../../visits/api/index.js';
@@ -238,7 +240,7 @@
               <div class="flex items-center justify-between">
                 <dt class="text-coffee-500">Diperbarui</dt>
                 <dd class="font-semibold text-coffee-900">
-                  {new Date(outlet.location_captured_at).toLocaleString('id-ID', {
+                  {new Date(outlet.location_captured_at).toLocaleString(LOCALE, {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   })}
@@ -306,7 +308,7 @@
                   </div>
                   <div class="flex min-w-0 flex-1 flex-col">
                     <span class="text-[13px] font-medium text-coffee-800">
-                      {new Date(visit.created_at).toLocaleDateString('id-ID', {
+                      {new Date(visit.created_at).toLocaleDateString(LOCALE, {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
@@ -315,7 +317,7 @@
                     <span class="text-xs text-coffee-400">
                       {visit.status === 'voided'
                         ? 'Dibatalkan'
-                        : `Rp ${(visit.amount_collected_total ?? 0).toLocaleString('id-ID')}`}
+                        : formatRupiah(visit.amount_collected_total ?? 0)}
                     </span>
                   </div>
                   {#if visit.status !== 'voided' && canVoid}

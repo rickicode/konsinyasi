@@ -14,6 +14,7 @@ export const errorCodes = {
   NETWORK_ERROR: 'Gagal terhubung ke server. Periksa koneksi internet Anda.',
   PARSE_ERROR: 'Gagal membaca respons server.',
   UPLOAD_ERROR: 'Gagal mengunggah file.',
+RATE_LIMITED: 'Terlalu banyak percobaan. Silakan coba lagi nanti.',
 } as const;
 
 export type ErrorCode = keyof typeof errorCodes;
