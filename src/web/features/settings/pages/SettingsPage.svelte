@@ -78,18 +78,12 @@
       return;
     }
     try {
-      await updateBrandMutation.mutateAsync(
-        { brand_name: trimmed },
-        {
-          onSuccess: async (data) => {
-            appConfig.setBrandName(data.brand_name);
-            setBrandTitle(data.brand_name);
-            toast.add(`Nama brand diperbarui menjadi ${data.brand_name}`, 'success');
-            await queryClient.invalidateQueries({ queryKey: queryKeys.settings.all });
-            await queryClient.invalidateQueries({ queryKey: queryKeys.settings.brand });
-          },
-        }
-      );
+      const data = await updateBrandMutation.mutateAsync({ brand_name: trimmed });
+      appConfig.setBrandName(data.brand_name);
+      setBrandTitle(data.brand_name);
+      toast.add(`Nama brand diperbarui menjadi ${data.brand_name}`, 'success');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.settings.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.settings.brand });
     } catch (err) {
       toast.add(err instanceof Error ? err.message : 'Gagal memperbarui brand', 'error');
     }
@@ -113,20 +107,14 @@
       return;
     }
     try {
-      await uploadLogoMutation.mutateAsync(
-        { logo: logoFile },
-        {
-          onSuccess: async (data) => {
-            appConfig.setBrandLogoUrl(data.logo_url);
-            updateFavicon(data.logo_url);
-            toast.add('Logo brand diperbarui', 'success');
-            await queryClient.invalidateQueries({ queryKey: queryKeys.settings.all });
-            await queryClient.invalidateQueries({ queryKey: queryKeys.settings.brand });
-            logoFile = null;
-            if (logoInput) logoInput.value = '';
-          },
-        }
-      );
+      const data = await uploadLogoMutation.mutateAsync({ logo: logoFile });
+      appConfig.setBrandLogoUrl(data.logo_url);
+      updateFavicon(data.logo_url);
+      toast.add('Logo brand diperbarui', 'success');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.settings.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.settings.brand });
+      logoFile = null;
+      if (logoInput) logoInput.value = '';
     } catch (err) {
       toast.add(err instanceof Error ? err.message : 'Gagal mengunggah logo', 'error');
     }
@@ -134,21 +122,18 @@
 
   async function handleLogoDelete() {
     try {
-      await deleteLogoMutation.mutateAsync(undefined, {
-        onSuccess: async () => {
-          appConfig.setBrandLogoUrl(null);
-          updateFavicon(null);
-          toast.add('Logo brand dihapus', 'success');
-          await queryClient.invalidateQueries({ queryKey: queryKeys.settings.all });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.settings.brand });
-          if (logoPreview && logoPreview.startsWith('blob:')) {
-            URL.revokeObjectURL(logoPreview);
-          }
-          logoFile = null;
-          logoPreview = null;
-          if (logoInput) logoInput.value = '';
-        },
-      });
+      await deleteLogoMutation.mutateAsync();
+      appConfig.setBrandLogoUrl(null);
+      updateFavicon(null);
+      toast.add('Logo brand dihapus', 'success');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.settings.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.settings.brand });
+      if (logoPreview && logoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(logoPreview);
+      }
+      logoFile = null;
+      logoPreview = null;
+      if (logoInput) logoInput.value = '';
     } catch (err) {
       toast.add(err instanceof Error ? err.message : 'Gagal menghapus logo', 'error');
     }

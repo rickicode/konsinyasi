@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formatRupiah, formatRupiahNumber, parseRupiah } from '../money.js';
+import {
+  formatRupiah,
+  formatRupiahNumber,
+  parseRupiah,
+  toWholeRupiah,
+} from '../money.js';
 
 describe('formatRupiah', () => {
   it('formats whole Rupiah with grouping separator', () => {
@@ -24,6 +29,17 @@ describe('formatRupiahNumber', () => {
 
   it('falls back to 0 for invalid values', () => {
     expect(formatRupiahNumber(Number.NaN)).toBe('0');
+  });
+});
+
+describe('toWholeRupiah', () => {
+  it('rounds fractional amounts to whole Rupiah', () => {
+    expect(toWholeRupiah(1500.4)).toBe(1500);
+    expect(toWholeRupiah(1500.5)).toBe(1501);
+  });
+  it('returns 0 for non-finite values', () => {
+    expect(toWholeRupiah(Number.NaN)).toBe(0);
+    expect(toWholeRupiah(Number.POSITIVE_INFINITY)).toBe(0);
   });
 });
 

@@ -45,7 +45,7 @@ class MemoryStore {
     this.map.set(key, entry);
 
     // Best-effort eviction to prevent unbounded growth in long-lived Worker instances.
-    if (this.map.size % 100 === 0) {
+    if (this.map.size >= 100) {
       this.evictExpired(now);
     }
 

@@ -151,7 +151,8 @@ app.onError((err, c) => {
   if (err instanceof AppError) {
     return c.json({ code: err.code, message: err.message }, err.status as 200);
   }
-  console.error(err);
+  // Log a redacted summary in production; avoid leaking full stack traces.
+  console.error({ code: 'INTERNAL_ERROR', message: err.message ?? 'Terjadi kesalahan server' });
   return c.json({ code: 'INTERNAL_ERROR', message: 'Terjadi kesalahan server' }, 500);
 });
 

@@ -21,11 +21,18 @@
     class?: string;
   }
 
+  function generateInputId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
   let {
     label,
     error,
     helper,
-    id = crypto.randomUUID(),
+    id = generateInputId(),
     name,
     type = 'text',
     inputmode,

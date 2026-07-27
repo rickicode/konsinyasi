@@ -37,5 +37,6 @@ export function parseRupiah(value: string): number {
  * Convert a numeric value into whole Rupiah, rounding away from fractional rupiah.
  */
 export function toWholeRupiah(amount: number): number {
+  if (!Number.isFinite(amount)) return 0;
   return Math.round(amount);
 }
