@@ -78,6 +78,7 @@ export const productResponseSchema = z.object({
   hpp_override: z.number().nullable().optional(),
   price_to_outlet: z.number().optional(),
   photo_key: z.string().nullable().optional(),
+  photo_url: z.string().nullable().optional(),
   deleted_at: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),

@@ -99,6 +99,8 @@ export interface ProcessImageInput {
   scope: string;
   /** Optional previously stored key to remove after a successful upload. */
   oldKey?: string | null;
+  /** Optional base URL for the returned public URL (e.g. R2 custom domain). */
+  publicUrlBase?: string;
   validation?: ImageValidationOptions;
   compression?: CompressionOptions;
 }
@@ -348,9 +350,13 @@ export function buildImageKey(scope: string, extension: string): string {
 
 /**
  * Build the public media URL for a stored R2 key.
+ *
+ * @param baseUrl Optional custom base URL (e.g. an R2 public/custom domain).
+ *        Falls back to the worker's `/api/media/` proxy when not provided.
  */
-export function buildImageUrl(key: string): string {
-  return `${IMAGE_CONFIG.urlPrefix}${key}`;
+export function buildImageUrl(key: string, baseUrl?: string): string {
+  const prefix = (baseUrl ?? IMAGE_CONFIG.urlPrefix).replace(/\/$/, '');
+  return `${prefix}/${key.replace(/^\/+/, '')}`;
 }
 
 /**
@@ -412,7 +418,7 @@ export async function deleteImageFromR2(bucket: R2Bucket, key: string): Promise<
  * This is the main entry point for photo uploads in route handlers.
  */
 export async function processImageUpload(input: ProcessImageInput): Promise<ProcessedImage> {
-  const { bucket, file, scope, oldKey } = input;
+  const { bucket, file, scope, oldKey, publicUrlBase } = input;
 
   validateImageFile(file, input.validation);
 
@@ -431,7 +437,7 @@ export async function processImageUpload(input: ProcessImageInput): Promise<Proc
   const meta = await extractImageMetadata(compressed);
   return {
     key: result.key,
-    url: buildImageUrl(result.key),
+    url: buildImageUrl(result.key, publicUrlBase),
     width: meta.width,
     height: meta.height,
     size: result.size,

@@ -92,7 +92,7 @@ const uomsQuery = createQuery(() => uomsQueryOptions());
           unit: l.unit,
         })) ?? [];
       photoFile = null;
-      photoPreviewUrl = product.photo_key ? `/api/media/${product.photo_key}` : null;
+      photoPreviewUrl = product.photo_url ?? null;
       formError = null;
       fieldErrors = {};
     }

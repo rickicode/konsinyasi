@@ -34,6 +34,11 @@ mediaRoute.get('/*', async (c) => {
     throw new AppError(404, 'NOT_FOUND', 'Media tidak ditemukan');
   }
 
+  const cdnBase = c.env.PUBLIC_R2_CDN_URL;
+  if (cdnBase) {
+    return c.redirect(`${cdnBase.replace(/\/$/, '')}/${key}`, 302);
+  }
+
   const object = await bucket.get(key);
   if (!object) {
     throw new AppError(404, 'NOT_FOUND', 'Media tidak ditemukan');

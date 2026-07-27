@@ -100,7 +100,7 @@
       accuracy = outlet.location_accuracy_m;
       status = outlet.status;
       notes = outlet.notes ?? '';
-      photoPreviewUrl = outlet.photo_key ? `/api/media/${outlet.photo_key}` : null;
+      photoPreviewUrl = outlet.photo_url ?? null;
       formError = null;
     }
   });

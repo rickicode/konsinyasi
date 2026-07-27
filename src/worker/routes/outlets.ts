@@ -7,7 +7,7 @@ import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination
 import { consignment_cycles, outlets } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
-import { processImageUpload } from '../services/image-processing.js';
+import { buildImageUrl, processImageUpload } from '../services/image-processing.js';
 
 function isCoordInvalid(lat: number, lng: number): boolean {
   return Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001;
@@ -96,7 +96,7 @@ export type OutletListRow = Pick<
   | 'last_visit_at'
 >;
 
-function pickOutlet(row: OutletListRow) {
+function pickOutlet(row: OutletListRow, cdnBase?: string) {
   return {
     id: row.id,
     name: row.name,
@@ -106,6 +106,7 @@ function pickOutlet(row: OutletListRow) {
     location_accuracy_m: row.location_accuracy_m,
     location_captured_at: row.location_captured_at,
     photo_key: row.photo_key,
+    photo_url: row.photo_key ? buildImageUrl(row.photo_key, cdnBase) : null,
     notes: row.notes,
     status: row.status,
     deleted_at: row.deleted_at,
@@ -134,13 +135,20 @@ outletsRoute.get('/', async (c) => {
       .offset((pagination.page - 1) * pagination.limit);
     const [[countResult], rows] = await Promise.all([countQuery, rowsQuery]);
     const total = countResult?.count ?? 0;
+    const cdnBase = c.env.PUBLIC_R2_CDN_URL;
     return c.json(
-      buildPaginatedResponse(rows.map(pickOutlet), pagination.page, pagination.limit, total)
+      buildPaginatedResponse(
+        rows.map((row) => pickOutlet(row, cdnBase)),
+        pagination.page,
+        pagination.limit,
+        total
+      )
     );
   }
 
   const rows = await db.select(outletColumns).from(outlets).where(where).orderBy(outlets.name);
-  return c.json(rows.map(pickOutlet));
+  const cdnBase = c.env.PUBLIC_R2_CDN_URL;
+  return c.json(rows.map((row) => pickOutlet(row, cdnBase)));
 });
 
 outletsRoute.get('/:id', async (c) => {
@@ -154,7 +162,8 @@ outletsRoute.get('/:id', async (c) => {
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
   }
-  return c.json(pickOutlet(existing[0]));
+  const cdnBase = c.env.PUBLIC_R2_CDN_URL;
+  return c.json(pickOutlet(existing[0], cdnBase));
 });
 
 outletsRoute.post('/', async (c) => {
@@ -184,7 +193,8 @@ outletsRoute.post('/', async (c) => {
     updated_at: now,
   });
   const rows = await db.select(outletColumns).from(outlets).where(eq(outlets.id, id)).limit(1);
-  return c.json(pickOutlet(rows[0]), 201);
+  const cdnBase = c.env.PUBLIC_R2_CDN_URL;
+  return c.json(pickOutlet(rows[0], cdnBase), 201);
 });
 
 outletsRoute.patch('/:id', async (c) => {
@@ -230,7 +240,8 @@ outletsRoute.patch('/:id', async (c) => {
   setValues.updated_at = new Date().toISOString();
   await db.update(outlets).set(setValues).where(eq(outlets.id, id));
   const rows = await db.select(outletColumns).from(outlets).where(eq(outlets.id, id)).limit(1);
-  return c.json(pickOutlet(rows[0]));
+  const cdnBase = c.env.PUBLIC_R2_CDN_URL;
+  return c.json(pickOutlet(rows[0], cdnBase));
 });
 
 outletsRoute.delete('/:id', async (c) => {
@@ -292,6 +303,7 @@ outletsRoute.post('/:id/photo', async (c) => {
     file: file as File,
     scope: `outlets/${id}`,
     oldKey: previousPhotoKey,
+    publicUrlBase: c.env.PUBLIC_R2_CDN_URL,
   });
   const updateValues: Partial<typeof outlets.$inferInsert> = {
     photo_key: uploaded.key,

@@ -36,11 +36,22 @@ app.use(
   secureHeaders({
     contentSecurityPolicy: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'blob:'],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
+      imgSrc: [
+        "'self'",
+        'data:',
+        'blob:',
+        'https://konsi.rickicode.workers.dev',
+        'https://*.tile.openstreetmap.org',
+        'https://server.arcgisonline.com',
+      ],
+      connectSrc: [
+        "'self'",
+        'https://konsi.rickicode.workers.dev',
+        'https://nominatim.openstreetmap.org',
+      ],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],

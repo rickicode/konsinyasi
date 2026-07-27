@@ -54,6 +54,7 @@ export const outletResponseSchema = z.object({
   location_accuracy_m: z.number().nullable(),
   location_captured_at: z.string().nullable(),
   photo_key: z.string().nullable(),
+  photo_url: z.string().nullable().optional(),
   notes: z.string().nullable(),
   status: outletStatusSchema,
   deleted_at: z.string().nullable(),

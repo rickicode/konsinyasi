@@ -71,7 +71,7 @@ settings.get('/', async (c) => {
   return c.json({
     geofence_radius_m: Number(geofenceValue),
     brand_name: brandValue,
-    logo_url: logoKey ? buildImageUrl(logoKey) : null,
+    logo_url: logoKey ? buildImageUrl(logoKey, c.env.PUBLIC_R2_CDN_URL) : null,
   });
 });
 
@@ -101,7 +101,7 @@ settings.put('/geofence', async (c) => {
   return c.json({
     geofence_radius_m: parsed.data.radius_m,
     brand_name: brandValue,
-    logo_url: logoKey ? buildImageUrl(logoKey) : null,
+    logo_url: logoKey ? buildImageUrl(logoKey, c.env.PUBLIC_R2_CDN_URL) : null,
   });
 });
 
@@ -131,7 +131,7 @@ settings.put('/brand', async (c) => {
   return c.json({
     geofence_radius_m: Number(geofenceValue),
     brand_name: parsed.data.brand_name,
-    logo_url: logoKey ? buildImageUrl(logoKey) : null,
+    logo_url: logoKey ? buildImageUrl(logoKey, c.env.PUBLIC_R2_CDN_URL) : null,
   });
 });
 

@@ -19,6 +19,8 @@ export type Bindings = {
   SESSION_SECRET?: string;
   PHOTOS?: R2Bucket;
   PUBLIC_API_BASE_URL?: string;
+  /** Public R2 custom domain (or public URL) for direct image serving. */
+  PUBLIC_R2_CDN_URL?: string;
 };
 
 export type Env = {

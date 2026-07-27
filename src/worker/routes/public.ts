@@ -3,6 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
 import { app_settings, consignment_cycles, outlets, products } from '../db/schema.js';
+import { buildImageUrl } from '../services/image-processing.js';
 
 /**
  * Public storefront API - No authentication required
@@ -17,10 +18,10 @@ publicRoute.get('/brand', async (c) => {
     db.select().from(app_settings).where(eq(app_settings.key, 'brand_logo_key')).limit(1),
   ]);
   const logoKey = logoRows[0]?.value;
-  const apiBase = c.env.PUBLIC_API_BASE_URL || '';
+  const cdnBase = c.env.PUBLIC_R2_CDN_URL || c.env.PUBLIC_API_BASE_URL || '';
   return c.json({
     brand_name: brandRows[0]?.value || 'Konsi',
-    logo_url: logoKey ? `${apiBase}/api/media/${logoKey}` : null,
+    logo_url: logoKey ? buildImageUrl(logoKey, cdnBase || undefined) : null,
   });
 });
 
@@ -57,6 +58,7 @@ publicRoute.get('/warungs', async (c) => {
     .innerJoin(products, eq(consignment_cycles.product_id, products.id))
     .where(and(eq(consignment_cycles.status, 'open'), isNull(products.deleted_at)));
 
+  const cdnBase = c.env.PUBLIC_R2_CDN_URL || c.env.PUBLIC_API_BASE_URL || '';
   // Group cycles by outlet
   const cyclesByOutlet = new Map<string, typeof openCycles>();
   for (const cycle of openCycles) {
@@ -98,6 +100,7 @@ publicRoute.get('/warungs', async (c) => {
         latitude: outlet.latitude,
         longitude: outlet.longitude,
         photo_key: outlet.photo_key,
+        photo_url: outlet.photo_key ? buildImageUrl(outlet.photo_key, cdnBase || undefined) : null,
         total_available: totalAvailable,
         products: availableProducts,
       };
@@ -151,6 +154,7 @@ publicRoute.get('/warungs/:id', async (c) => {
       )
     );
 
+  const cdnBase = c.env.PUBLIC_R2_CDN_URL || c.env.PUBLIC_API_BASE_URL || '';
   // Build products list
   const productsList = openCycles
     .map((cycle) => {
@@ -168,6 +172,7 @@ publicRoute.get('/warungs/:id', async (c) => {
   return c.json({
     warung: {
       ...outlet,
+      photo_url: outlet.photo_key ? buildImageUrl(outlet.photo_key, cdnBase || undefined) : null,
       products: productsList,
       total_available: productsList.reduce((sum, p) => sum + p.available_qty, 0),
     },

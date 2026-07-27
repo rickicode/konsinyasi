@@ -261,7 +261,7 @@
                     >
                       {#if outlet.photo_key}
                         <img
-                          src="/api/media/{outlet.photo_key}"
+                          src={outlet.photo_url ?? ""}
                           alt={outlet.name}
                           class="h-full w-full object-cover"
                           loading="lazy"

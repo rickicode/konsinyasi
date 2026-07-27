@@ -6,6 +6,7 @@ import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination
 import { consignment_cycles, product_recipes, products } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
 import {
+  buildImageUrl,
   deleteImageFromR2,
   isSafeImageKey,
   processImageUpload,
@@ -100,6 +101,7 @@ type ProductResponse = {
   name: string;
   status: 'active' | 'inactive';
   photo_key?: string | null;
+  photo_url?: string | null;
   recipe_lines?: EnrichedRecipeLine[];
   hpp?: number;
   hpp_override?: number | null;
@@ -112,13 +114,15 @@ type ProductResponse = {
 function pickProduct(
   row: ProductListRow,
   recipeLines: EnrichedRecipeLine[],
-  includeFinancial: boolean
+  includeFinancial: boolean,
+  cdnBase?: string
 ): ProductResponse {
   const response: ProductResponse = {
     id: row.id,
     name: row.name,
     status: row.status as 'active' | 'inactive',
     photo_key: row.photo_key,
+    photo_url: row.photo_key ? buildImageUrl(row.photo_key, cdnBase) : null,
     deleted_at: row.deleted_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -139,11 +143,12 @@ function isOwner(user: { role: string }): boolean {
 async function buildProductResponses(
   db: Parameters<typeof fetchRecipeLinesForProducts>[0],
   rows: ProductListRow[],
-  owner: boolean
+  owner: boolean,
+  cdnBase?: string
 ): Promise<ProductResponse[]> {
   const productIds = rows.map((row) => row.id);
   const recipeLinesByProductId = await fetchRecipeLinesForProducts(db, productIds);
-  return rows.map((row) => pickProduct(row, recipeLinesByProductId.get(row.id) ?? [], owner));
+  return rows.map((row) => pickProduct(row, recipeLinesByProductId.get(row.id) ?? [], owner, cdnBase));
 }
 
 productsRoute.get('/', async (c) => {
@@ -162,7 +167,7 @@ productsRoute.get('/', async (c) => {
       .limit(pagination.limit)
       .offset((pagination.page - 1) * pagination.limit);
     const [total, rows] = await Promise.all([db.$count(products, where), rowsQuery]);
-    const result = await buildProductResponses(db, rows, owner);
+    const result = await buildProductResponses(db, rows, owner, c.env.PUBLIC_R2_CDN_URL);
     return c.json(buildPaginatedResponse(result, pagination.page, pagination.limit, total));
   }
 
@@ -171,7 +176,7 @@ productsRoute.get('/', async (c) => {
     .from(products)
     .where(where)
     .orderBy(products.name);
-  const result = await buildProductResponses(db, rows, owner);
+  const result = await buildProductResponses(db, rows, owner, c.env.PUBLIC_R2_CDN_URL);
   return c.json(result);
 });
 
@@ -199,7 +204,7 @@ productsRoute.get('/:id', async (c) => {
     throw new AppError(404, 'NOT_FOUND', 'Produk tidak ditemukan');
   }
   const [recipeLines] = await Promise.all([fetchRecipeLines(db, id)]);
-  return c.json(pickProduct(existing[0], recipeLines, owner));
+  return c.json(pickProduct(existing[0], recipeLines, owner, c.env.PUBLIC_R2_CDN_URL));
 });
 
 productsRoute.post('/', async (c) => {
@@ -261,7 +266,7 @@ productsRoute.post('/', async (c) => {
     fetchRecipeLines(db, id),
   ]);
   const row = rowResult[0];
-  return c.json(pickProduct(row!, recipeLines, owner), 201);
+  return c.json(pickProduct(row!, recipeLines, owner, c.env.PUBLIC_R2_CDN_URL), 201);
 });
 
 productsRoute.patch('/:id', async (c) => {
@@ -318,7 +323,7 @@ productsRoute.patch('/:id', async (c) => {
     fetchRecipeLines(db, id),
   ]);
   const row = rowResult[0];
-  return c.json(pickProduct(row!, recipeLines, owner));
+  return c.json(pickProduct(row!, recipeLines, owner, c.env.PUBLIC_R2_CDN_URL));
 });
 
 productsRoute.delete('/:id', async (c) => {
