@@ -6,6 +6,63 @@ import 'package:konsi_mobile/data/datasources/remote/auth_api.dart';
 import 'package:konsi_mobile/data/models/user_model.dart';
 import 'package:konsi_mobile/data/repositories/auth_repository.dart';
 
+/// Capability constants aligned with the web app.
+class Capability {
+  Capability._();
+
+  static const String auth = 'auth';
+  static const String dashboardRead = 'dashboard:read';
+  static const String visitRead = 'visit:read';
+  static const String visitWrite = 'visit:write';
+  static const String visitVoid = 'visit:void';
+  static const String visitOverride = 'visit:override';
+  static const String outletsWrite = 'outlets:write';
+  static const String settingsRead = 'settings:read';
+  static const String settingsWrite = 'settings:write';
+  static const String reportsRead = 'reports:read';
+  static const String productsRead = 'products:read';
+  static const String productsWrite = 'products:write';
+  static const String bomWrite = 'bom:write';
+  static const String rawMaterialsRead = 'raw_materials:read';
+  static const String rawMaterialsWrite = 'raw_materials:write';
+  static const String usersManage = 'users:manage';
+  static const String masterDelete = 'master:delete';
+
+  static const List<String> _all = [
+    auth,
+    dashboardRead,
+    visitRead,
+    visitWrite,
+    visitVoid,
+    visitOverride,
+    outletsWrite,
+    settingsRead,
+    settingsWrite,
+    reportsRead,
+    productsRead,
+    productsWrite,
+    bomWrite,
+    rawMaterialsRead,
+    rawMaterialsWrite,
+    usersManage,
+    masterDelete,
+  ];
+
+  static Set<String> forRole(String? role) {
+    if (role == 'owner') return Set<String>.of(_all);
+    return const {
+      auth,
+      dashboardRead,
+      visitRead,
+      visitWrite,
+      outletsWrite,
+      settingsRead,
+      productsRead,
+      productsWrite,
+    };
+  }
+}
+
 // Core providers
 final secureStorageProvider = Provider<SecureStorage>((ref) {
   return SecureStorage();
@@ -46,6 +103,15 @@ class AuthState {
   bool get isAuthenticated => user != null;
   bool get isOwner => user?.isOwner ?? false;
   bool get isStaff => user?.isStaff ?? false;
+
+  /// Current user's role slug, or null when logged out.
+  String? get role => user?.role;
+
+  /// Capability set for the current user (empty when logged out).
+  Set<String> get capabilities => Capability.forRole(user?.role);
+
+  /// Check whether the current user has a capability.
+  bool can(String capability) => capabilities.contains(capability);
 
   AuthState copyWith({
     UserModel? user,

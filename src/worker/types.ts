@@ -21,6 +21,8 @@ export type Bindings = {
   PUBLIC_API_BASE_URL?: string;
   /** Public R2 custom domain (or public URL) for direct image serving. */
   PUBLIC_R2_CDN_URL?: string;
+  /** Set to '1' to return full stack traces in 500 responses. */
+  DEBUG?: string;
 };
 
 export type Env = {

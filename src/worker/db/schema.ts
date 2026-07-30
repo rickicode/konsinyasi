@@ -197,6 +197,18 @@ export const outlets = sqliteTable(
   ]
 );
 
+export const outlet_visit_locks = sqliteTable(
+  'outlet_visit_locks',
+  {
+    outlet_id: text('outlet_id')
+      .primaryKey()
+      .references(() => outlets.id, { onDelete: 'cascade' }),
+    visit_id: text('visit_id').notNull(),
+    locked_at: text('locked_at').notNull(),
+  },
+  (t) => [index('idx_outlet_visit_locks_locked_at').on(t.locked_at)]
+);
+
 export const consignment_cycles = sqliteTable(
   'consignment_cycles',
   {

@@ -38,8 +38,27 @@ export type DashboardItem = z.infer<typeof dashboardItemSchema>;
 /**
  * Full /api/dashboard response.
  */
+export const dashboardTodaySchema = z.object({
+  visits: z.number().int(),
+  revenue: z.number(),
+  bottles_sold: z.number().int(),
+  active_staff: z.number().int(),
+});
+export type DashboardToday = z.infer<typeof dashboardTodaySchema>;
+
+export const dashboardRecentVisitSchema = z.object({
+  id: z.string(),
+  outlet_name: z.string().nullable(),
+  amount: z.number(),
+  qty: z.number(),
+  created_at: z.string(),
+});
+export type DashboardRecentVisit = z.infer<typeof dashboardRecentVisitSchema>;
+
 export const dashboardReportSchema = z.object({
   summary: dashboardSummarySchema,
+  today: dashboardTodaySchema.optional(),
+  recent_visits: z.array(dashboardRecentVisitSchema).optional(),
   items: z.array(dashboardItemSchema),
 });
 export type DashboardReport = z.infer<typeof dashboardReportSchema>;

@@ -102,8 +102,7 @@
       bind:value={notes}
     />
 
-    <div class="grid grid-cols-2 gap-3 pt-2">
-      <Button type="button" variant="secondary" fullWidth onclick={handleClose}>Batal</Button>
+    <div class="pt-2">
       <Button type="button" variant="primary" fullWidth onclick={handleAdd}>Tambah</Button>
     </div>
   </div>

@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
-import { consignment_cycles, outlets } from '../db/schema.js';
+import { consignment_cycles, outlets, visit_submissions, users } from '../db/schema.js';
 import { ageHours } from '../services/visit.js';
 import { requirePermission } from '../lib/rbac.js';
 
@@ -123,6 +123,57 @@ dashboardRoute.get('/', async (c) => {
     return b.max_age_hours - a.max_age_hours;
   });
 
+  // ── Today's stats (for owner) ──
+  let todayStats = { visits: 0, revenue: 0, bottles_sold: 0, active_staff: 0 };
+  if (includeFinancial) {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayIso = todayStart.toISOString();
+
+    const [todayRow] = await db
+      .select({
+        visits: sql<number>`count(*)`.as('visits'),
+        revenue: sql<number>`coalesce(sum(${visit_submissions.amount_collected_total}), 0)`.as('revenue'),
+        bottles_sold: sql<number>`coalesce(sum(${visit_submissions.qty_sold_total}), 0)`.as('bottles_sold'),
+      })
+      .from(visit_submissions)
+      .where(
+        and(
+          eq(visit_submissions.status, 'committed'),
+          gte(visit_submissions.created_at, todayIso)
+        )
+      );
+
+    const [staffRow] = await db
+      .select({ count: sql<number>`count(*)`.as('count') })
+      .from(users)
+      .where(and(eq(users.role, 'staff'), eq(users.status, 'active')));
+
+    todayStats = {
+      visits: todayRow?.visits ?? 0,
+      revenue: todayRow?.revenue ?? 0,
+      bottles_sold: todayRow?.bottles_sold ?? 0,
+      active_staff: staffRow?.count ?? 0,
+    };
+  }
+
+  // ── Recent visits (last 5) ──
+  const recentVisits = includeFinancial
+    ? await db
+        .select({
+          id: visit_submissions.idempotency_key,
+          outlet_name: outlets.name,
+          amount: visit_submissions.amount_collected_total,
+          qty: visit_submissions.qty_sold_total,
+          created_at: visit_submissions.created_at,
+        })
+        .from(visit_submissions)
+        .leftJoin(outlets, eq(visit_submissions.outlet_id, outlets.id))
+        .where(eq(visit_submissions.status, 'committed'))
+        .orderBy(sql`${visit_submissions.created_at} DESC`)
+        .limit(5)
+    : [];
+
   c.header('Cache-Control', 'private, max-age=60');
   return c.json({
     summary: {
@@ -131,6 +182,8 @@ dashboardRoute.get('/', async (c) => {
       estimated_bill: includeFinancial ? estimatedBill : undefined,
       urgent_count: items.filter((i) => i.color === 'red').length,
     },
+    today: todayStats,
+    recent_visits: recentVisits,
     items,
   });
 });

@@ -346,9 +346,6 @@
 
     <!-- Buttons -->
     <div class="flex gap-3 pt-2">
-      <Button variant="secondary" class="flex-1" onclick={onClose} disabled={isSaving}>
-        Batal
-      </Button>
       <Button
         type="submit"
         class="flex-1"

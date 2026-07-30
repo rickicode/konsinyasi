@@ -87,7 +87,7 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
       if (mounted) {
         _showSnack(id == null ? 'Produk berhasil dibuat' : 'Produk berhasil diperbarui');
         ref.invalidate(productListProvider);
-        context.go('/master/products');
+        context.go('/master/produk');
       }
     } catch (e) {
       if (mounted) {

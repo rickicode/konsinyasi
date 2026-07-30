@@ -42,6 +42,11 @@ export const staffRoutes = {
     conditions: [requireAuth],
   }),
 
+  // Laporan staff
+  '/laporan-staff': lazy(() => import('./features/reports/pages/StaffReportsPage.svelte'), {
+    conditions: [requireAuth],
+  }),
+
   // Catch-all
   '*': lazy(() => import('./features/shell/pages/NotFoundPage.svelte')),
 };
@@ -103,6 +108,17 @@ export const ownerRoutes = {
 
   // Laporan keuangan
   '/laporan': lazy(() => import('./features/reports/pages/ReportsPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
+
+  // Analitik keuangan
+  '/analytics': lazy(() => import('./features/analytics/pages/AnalyticsPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
+  '/analytics/outlet/:id': lazy(() => import('./features/analytics/pages/OutletAnalyticsPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
+  '/analytics/product/:id': lazy(() => import('./features/analytics/pages/ProductAnalyticsPage.svelte'), {
     conditions: [requireAuth, requireOwner],
   }),
 

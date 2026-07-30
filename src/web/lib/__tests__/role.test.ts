@@ -16,6 +16,7 @@ describe('role-aware UI helpers', () => {
       'master',
       'admin',
       'laporan',
+      'analytics',
       'pengaturan',
       'pengguna',
     ]);
@@ -33,7 +34,7 @@ describe('role-aware UI helpers', () => {
 
   it('lets owner access all master sections', () => {
     const sections = allowedMasterSections('owner').map((s) => s.key);
-    expect(sections).toEqual(['bahan', 'produk', 'warung']);
+    expect(sections).toEqual(['produk', 'bahan', 'warung']);
   });
 
   it('identifies owner correctly', () => {

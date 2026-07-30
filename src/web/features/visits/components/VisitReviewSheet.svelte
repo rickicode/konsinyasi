@@ -16,6 +16,7 @@
     radiusM: number;
     disabled?: boolean;
     isPending?: boolean;
+    error?: string | null;
   };
 
   let {
@@ -28,6 +29,7 @@
     radiusM,
     disabled = false,
     isPending = false,
+    error = null,
   }: Props = $props();
 
   const isInside = $derived(distanceM !== null && distanceM <= radiusM);
@@ -159,6 +161,16 @@
       </div>
     {/if}
 
+    <!-- Error from submit -->
+    {#if error}
+      <div
+        class="rounded-xl border border-danger bg-danger-bg px-4 py-3 text-sm text-danger"
+        role="alert"
+      >
+        {error}
+      </div>
+    {/if}
+
     <!-- Actions -->
     <div class="grid grid-cols-2 gap-3 pt-2">
       <Button type="button" variant="secondary" fullWidth onclick={onClose} disabled={isPending}>
@@ -173,7 +185,7 @@
         disabled={disabled || isPending}
         haptic
       >
-        {isPending ? 'Menyimpan…' : 'Simpan Kunjungan'}
+        {isPending ? 'Menyimpan…' : 'Simpan'}
       </Button>
     </div>
   </div>

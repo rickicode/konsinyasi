@@ -8,6 +8,8 @@ interface Props {
 file?: File | null;
 previewUrl?: string | null;
 photoAlt?: string;
+square?: boolean;
+disabled?: boolean;
 class?: string;
 onChange?: (file: File | null) => void;
 }
@@ -16,6 +18,8 @@ let {
 file = $bindable<File | null>(null),
 previewUrl = $bindable<string | null>(null),
 photoAlt = 'Foto',
+square = false,
+disabled = false,
 class: className = '',
 onChange,
 }: Props = $props();
@@ -73,7 +77,14 @@ if (input) input.value = '';
 <div class={cn('space-y-3', className)}>
 {#if displayUrl}
 <div class="relative overflow-hidden rounded-2xl border border-coffee-200 bg-cream">
-<img src={displayUrl} alt={photoAlt} class="h-48 w-full object-cover" loading="lazy" />
+<img
+src={displayUrl}
+alt={photoAlt}
+class="{square
+? 'aspect-square w-full max-w-64 object-cover rounded-2xl'
+: 'h-48 w-full object-cover rounded-2xl'} mx-auto"
+loading="lazy"
+/>
 <div
 class="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-coffee-950/70 to-transparent px-3 py-2"
 >
@@ -90,6 +101,7 @@ variant="ghost"
 size="sm"
 onclick={clear}
 class="text-white hover:bg-white/20"
+{disabled}
 >
 <Icon name="trash-2" size={18} />
 <span class="sr-only">Hapus foto</span>
@@ -98,11 +110,11 @@ class="text-white hover:bg-white/20"
 </div>
 {:else}
 <label
-aria-disabled={isLoading}
+aria-disabled={isLoading || disabled}
 class={cn(
 'relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border-2 border-dashed border-coffee-200 bg-cream p-6 transition-colors',
-'hover:border-coffee-300 hover:bg-coffee-50 active:scale-[0.99]',
-isLoading && 'pointer-events-none opacity-60'
+!disabled && 'hover:border-coffee-300 hover:bg-coffee-50 active:scale-[0.99]',
+(isLoading || disabled) && 'pointer-events-none opacity-60'
 )}
 >
 <input
@@ -111,7 +123,8 @@ id={inputId}
 type="file"
 accept="image/*"
 onchange={handleChange}
-class="absolute inset-0 z-10 block h-full w-full cursor-pointer opacity-0"
+disabled={isLoading || disabled}
+class="absolute inset-0 z-10 block h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
 aria-label="Ambil atau pilih foto"
 />
 {#if isLoading}

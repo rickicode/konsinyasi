@@ -77,59 +77,62 @@
                 <h3 class="font-bold text-coffee-900">{cycle.product_name}</h3>
 
                 <!-- Visual Summary -->
-                <div class="mt-2 flex items-center gap-2 text-xs">
-                  <div class="flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1">
-                    <span class="font-medium text-blue-700">Dititip:</span>
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <div
+                    class="flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1"
+                    title="Jumlah barang yang dititipkan ke warung sejak awal"
+                  >
+                    <span class="font-medium text-blue-700">Stok dititip:</span>
                     <span class="font-bold text-blue-900">{cycle.qty_dropped}</span>
                   </div>
-                  <span class="text-coffee-400">→</span>
-                  <div class="flex items-center gap-1 rounded-lg bg-green-50 px-2 py-1">
+                  <div
+                    class="flex items-center gap-1 rounded-lg bg-green-50 px-2 py-1"
+                    title="Stok yang sudah habis terjual di warung (stok dititip - ditarik)"
+                  >
                     <span class="font-medium text-green-700">Terjual:</span>
                     <span class="font-bold text-green-900">{sold}</span>
                   </div>
-                  <span class="text-coffee-400">→</span>
-                  <div class="flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1">
-                    <span class="font-medium text-amber-700">Sisa:</span>
+                  <div
+                    class="flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1"
+                    title="Sisa stok yang perlu ditarik kembali dari warung"
+                  >
+                    <span class="font-medium text-amber-700">Sisa ditarik:</span>
                     <span class="font-bold text-amber-900">{remaining}</span>
                   </div>
                 </div>
+                <p class="mt-1 text-[10px] text-coffee-500">
+                  Terjual dihitung otomatis dari stok dititip dikurangi kondisi bagus dan kondisi
+                  rusak yang kamu isi di bawah.
+                </p>
               </div>
 
               <!-- Pickup Input -->
               {#if editable}
-                <div class="rounded-xl bg-coffee-50 p-3">
-                  <p class="mb-2 text-xs font-semibold text-coffee-700">
-                    Berapa unit yang ditarik dari warung?
-                  </p>
-
-                  <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1.5">
-                      <div class="flex items-center gap-1">
-                        <span class="text-xs font-medium text-coffee-700">Kondisi Bagus</span>
-                        <span class="text-[10px] text-coffee-400">(layak jual)</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <QtyStepper
-                          value={input.good}
-                          onChange={(value) => draft.setPickup(cycle.id, 'good', value)}
-                          disabled={!editable}
-                        />
-                      </div>
+                <div class="space-y-2 rounded-xl bg-coffee-50 p-3">
+                  <!-- Good condition row -->
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-coffee-900">Kondisi Bagus</p>
+                      <p class="text-[10px] text-coffee-500">Barang layak jual kembali</p>
                     </div>
+                    <QtyStepper
+                      value={input.good}
+                      onChange={(value) => draft.setPickup(cycle.id, 'good', value)}
+                      disabled={!editable}
+                    />
+                  </div>
 
-                    <div class="flex flex-col gap-1.5">
-                      <div class="flex items-center gap-1">
-                        <span class="text-xs font-medium text-coffee-700">Kondisi Rusak</span>
-                        <span class="text-[10px] text-coffee-400">(tidak layak)</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <QtyStepper
-                          value={input.damaged}
-                          onChange={(value) => draft.setPickup(cycle.id, 'damaged', value)}
-                          disabled={!editable}
-                        />
-                      </div>
+                  <!-- Damaged condition row -->
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-coffee-900">Kondisi Rusak</p>
+                      <p class="text-[10px] text-coffee-500">Barang tidak layak jual</p>
                     </div>
+                    <QtyStepper
+                      value={input.damaged}
+                      onChange={(value) => draft.setPickup(cycle.id, 'damaged', value)}
+                      disabled={!editable}
+                    />
                   </div>
 
                   <!-- Validation Summary -->
@@ -138,7 +141,7 @@
                       Total ditarik: <span class="font-bold">{input.good + input.damaged}</span>
                     </span>
                     <span class="text-xs text-coffee-600">
-                      Tersisa di warung: <span class="font-bold"
+                      Belum diinput: <span class="font-bold"
                         >{remaining - input.good - input.damaged}</span
                       >
                     </span>

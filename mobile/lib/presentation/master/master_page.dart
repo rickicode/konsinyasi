@@ -1,118 +1,83 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:konsi_mobile/config/theme.dart';
+import 'package:konsi_mobile/presentation/master/product_list_page.dart';
+import 'package:konsi_mobile/presentation/master/raw_materials_page.dart';
+import 'package:konsi_mobile/presentation/outlets/outlet_list_page.dart';
 
-class MasterPage extends StatelessWidget {
+/// Tabbed master data page matching the web MasterTabs layout.
+class MasterPage extends StatefulWidget {
   const MasterPage({super.key});
+
+  @override
+  State<MasterPage> createState() => _MasterPageState();
+}
+
+class _MasterPageState extends State<MasterPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  final List<_MasterTab> _tabs = [
+    _MasterTab(label: 'Bahan Baku', child: RawMaterialsPage()),
+    _MasterTab(label: 'Produk', child: ProductListPage()),
+    _MasterTab(label: 'Warung', child: OutletListPage()),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _tabs.length, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Master Data'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      backgroundColor: KonsiColors.coffeeCream,
+      body: Column(
         children: [
-          _MasterTile(
-            icon: Icons.local_drink_outlined,
-            label: 'Produk',
-            description: 'Kelola daftar produk kopi susu botolan.',
-            color: KonsiColors.caramel,
-            onTap: () => context.go('/master/products'),
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: KonsiColors.coffeeWhite,
+              borderRadius: BorderRadius.circular(KonsiShapes.radiusMd),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: KonsiColors.darkCoffee,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              labelColor: KonsiColors.coffeeWhite,
+              unselectedLabelColor: KonsiColors.mediumCoffee,
+              labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+              unselectedLabelStyle: Theme.of(context).textTheme.labelLarge,
+              dividerHeight: 0,
+              tabs: _tabs.map((t) => Tab(text: t.label)).toList(),
+            ),
           ),
-          const SizedBox(height: 12),
-          _MasterTile(
-            icon: Icons.inventory_2_outlined,
-            label: 'Bahan Baku',
-            description: 'Resep dan bahan baku (web only).',
-            color: KonsiColors.mintLeaf,
-            onTap: () => context.go('/master/raw-materials'),
-          ),
-          const SizedBox(height: 12),
-          _MasterTile(
-            icon: Icons.people_outline,
-            label: 'Pengguna',
-            description: 'Manajemen akun staff/owner (web only).',
-            color: KonsiColors.darkCoffee,
-            onTap: () => context.go('/master/users'),
-          ),
-          const SizedBox(height: 12),
-          _MasterTile(
-            icon: Icons.settings_outlined,
-            label: 'Pengaturan',
-            description: 'Radius geofence dan konfigurasi (web only).',
-            color: KonsiColors.mediumCoffee,
-            onTap: () => context.go('/master/settings'),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: _tabs.map((t) => t.child).toList(),
+            ),
           ),
         ],
       ),
     );
   }
-
 }
 
-class _MasterTile extends StatelessWidget {
-  const _MasterTile({
-    required this.icon,
-    required this.label,
-    required this.description,
-    required this.color,
-    required this.onTap,
-  });
+class _MasterTab {
+  const _MasterTab({required this.label, required this.child});
 
-  final IconData icon;
   final String label;
-  final String description;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: KonsiShapes.medium,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  borderRadius: KonsiShapes.medium,
-                ),
-                child: Icon(icon, color: color),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: KonsiColors.espresso,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color: KonsiColors.lightCoffee,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  final Widget child;
 }

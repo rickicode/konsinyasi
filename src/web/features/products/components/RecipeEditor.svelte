@@ -43,7 +43,7 @@ function unitSelectOptions(materialId: string) {
 }
 
 function addLine() {
-  lines = [...lines, { raw_material_id: '', quantity: 0, unit: '' }];
+  lines = [{ raw_material_id: '', quantity: 0, unit: '' }, ...lines];
 }
 
 function removeLine(index: number) {

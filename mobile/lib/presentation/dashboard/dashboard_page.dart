@@ -1,41 +1,67 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:konsi_mobile/config/constants.dart';
 import 'package:konsi_mobile/config/theme.dart';
+import 'package:konsi_mobile/core/location/location_service.dart';
 import 'package:konsi_mobile/data/models/dashboard_model.dart';
 import 'package:konsi_mobile/providers/auth_provider.dart';
 import 'package:konsi_mobile/providers/dashboard_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-class DashboardPage extends ConsumerWidget {
+class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authNotifierProvider);
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<DashboardPage> {
+  Position? _position;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(dashboardProvider.notifier).refresh();
+      _refreshLocation();
+    });
+  }
+
+  Future<void> _refreshLocation() async {
+    try {
+      final service = ref.read(locationServiceProvider);
+      _position = await service.getCurrentPosition();
+    } on LocationServiceException {
+      _position = null;
+    } catch (_) {
+      _position = null;
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _refresh() async {
+    await _refreshLocation();
+    await ref.read(dashboardProvider.notifier).refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final dashboard = ref.watch(dashboardProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Beranda'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authNotifierProvider.notifier).logout(),
-          ),
-        ],
-      ),
+      backgroundColor: KonsiColors.coffeeCream,
       body: dashboard.when(
         data: (report) => _DashboardBody(
           report: report,
-          isOwner: auth.isOwner,
-          onRefresh: () => ref.refresh(dashboardProvider.future),
+          position: _position,
+          onRefresh: _refresh,
         ),
         loading: () => const _DashboardSkeleton(),
         error: (error, _) => _DashboardError(
           message: error.toString(),
-          onRetry: () => ref.refresh(dashboardProvider.future),
+          onRetry: _refresh,
         ),
       ),
     );
@@ -45,19 +71,32 @@ class DashboardPage extends ConsumerWidget {
 class _DashboardBody extends StatelessWidget {
   const _DashboardBody({
     required this.report,
-    required this.isOwner,
+    required this.position,
     required this.onRefresh,
   });
 
   final DashboardReportModel report;
-  final bool isOwner;
+  final Position? position;
   final Future<void> Function() onRefresh;
+
+  static const _colorRank = {
+    DashboardColor.red: 0,
+    DashboardColor.yellow: 1,
+    DashboardColor.green: 2,
+    DashboardColor.none: 3,
+  };
+
+  List<DashboardItemModel> get _sortedItems {
+    return [...report.items]..sort((a, b) {
+        final rankDiff = _colorRank[a.color]! - _colorRank[b.color]!;
+        if (rankDiff != 0) return rankDiff;
+        return b.maxAgeHours - a.maxAgeHours;
+      });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final summary = report.summary;
-
     return RefreshIndicator(
       onRefresh: onRefresh,
       color: KonsiColors.caramel,
@@ -70,26 +109,45 @@ class _DashboardBody extends StatelessWidget {
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 Text(
-                  'Ringkasan Hari Ini',
-                  style: theme.textTheme.displayMedium,
+                  'Dashboard Owner',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: KonsiColors.espresso,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Ringkasan bisnis dan keuangan',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: KonsiColors.mediumCoffee,
+                      ),
                 ),
                 const SizedBox(height: 16),
-                _SummaryGrid(
-                  summary: summary,
-                  isOwner: isOwner,
-                ),
+                _SummaryGrid(summary: summary),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Daftar Warung',
-                      style: theme.textTheme.displayMedium,
+                      'Prioritas Warung',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    Text(
-                      '${report.items.length} warung',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: KonsiColors.mediumCoffee,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: KonsiColors.coffeeFoam,
+                        borderRadius:
+                            BorderRadius.circular(KonsiShapes.radiusSm),
+                      ),
+                      child: Text(
+                        '${_sortedItems.length}',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: KonsiColors.mediumCoffee,
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                   ],
@@ -99,30 +157,26 @@ class _DashboardBody extends StatelessWidget {
             ),
           ),
           if (report.items.isEmpty)
-            const SliverFillRemaining(
-              child: _EmptyState(),
-            )
+            const SliverFillRemaining(child: _EmptyState())
           else
             SliverPadding(
               padding: const EdgeInsets.symmetric(
                 horizontal: KonsiConstants.screenPadding,
               ),
               sliver: SliverList.separated(
-                itemCount: report.items.length,
+                itemCount: _sortedItems.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
-                  final item = report.items[index];
+                  final item = _sortedItems[index];
                   return _OutletCard(
                     item: item,
-                    isOwner: isOwner,
+                    position: position,
                   );
                 },
               ),
             ),
           const SliverPadding(
-            padding: EdgeInsets.only(
-              bottom: KonsiConstants.screenPadding,
-            ),
+            padding: EdgeInsets.only(bottom: KonsiConstants.screenPadding),
           ),
         ],
       ),
@@ -131,13 +185,9 @@ class _DashboardBody extends StatelessWidget {
 }
 
 class _SummaryGrid extends StatelessWidget {
-  const _SummaryGrid({
-    required this.summary,
-    required this.isOwner,
-  });
+  const _SummaryGrid({required this.summary});
 
   final DashboardSummaryModel summary;
-  final bool isOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -154,13 +204,12 @@ class _SummaryGrid extends StatelessWidget {
         icon: Icons.local_drink_outlined,
         color: KonsiColors.mediumCoffee,
       ),
-      if (isOwner)
-        _SummaryCard(
-          label: 'Estimasi Tagihan',
-          value: _formatMoney(summary.estimatedBill),
-          icon: Icons.account_balance_wallet_outlined,
-          color: KonsiColors.caramel,
-        ),
+      _SummaryCard(
+        label: 'Estimasi Tagihan',
+        value: _formatMoney(summary.estimatedBill),
+        icon: Icons.account_balance_wallet_outlined,
+        color: KonsiColors.caramel,
+      ),
       _SummaryCard(
         label: 'Jumlah Urgent',
         value: _formatInteger(summary.urgentCount),
@@ -168,18 +217,13 @@ class _SummaryGrid extends StatelessWidget {
         color: KonsiColors.berry,
       ),
     ];
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = (constraints.maxWidth - 12) / 2;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: cards
-              .map(
-                (card) => SizedBox(width: width, child: card),
-              )
-              .toList(),
+          children: cards.map((card) => SizedBox(width: width, child: card)).toList(),
         );
       },
     );
@@ -201,7 +245,6 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -216,15 +259,15 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               value,
-              style: theme.textTheme.displayMedium?.copyWith(
-                color: KonsiColors.espresso,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                    color: KonsiColors.espresso,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: theme.textTheme.bodySmall,
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
@@ -236,22 +279,21 @@ class _SummaryCard extends StatelessWidget {
 class _OutletCard extends StatelessWidget {
   const _OutletCard({
     required this.item,
-    required this.isOwner,
+    required this.position,
   });
 
   final DashboardItemModel item;
-  final bool isOwner;
+  final Position? position;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final badgeColor = StockStatusColors.foreground(item.color.name);
     final badgeBg = StockStatusColors.background(item.color.name);
-
+    final distance = _distanceText();
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _showOutletDetails(context),
+        onTap: () => context.go('/warung/${item.id}'),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -275,9 +317,9 @@ class _OutletCard extends StatelessWidget {
                   children: [
                     Text(
                       item.name,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -285,11 +327,11 @@ class _OutletCard extends StatelessWidget {
                     if (item.address != null && item.address!.isNotEmpty)
                       Text(
                         item.address!,
-                        style: theme.textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodySmall,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         _DetailChip(
@@ -301,6 +343,13 @@ class _OutletCard extends StatelessWidget {
                           icon: Icons.all_inbox_outlined,
                           text: '${item.openCyclesCount} siklus',
                         ),
+                        if (distance != null) ...[
+                          const SizedBox(width: 8),
+                          _DetailChip(
+                            icon: Icons.near_me_outlined,
+                            text: distance,
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -311,13 +360,13 @@ class _OutletCard extends StatelessWidget {
                 children: [
                   Text(
                     _formatInteger(item.totalQtyDropped),
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   Text(
                     'botol',
-                    style: theme.textTheme.bodySmall,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
@@ -328,154 +377,18 @@ class _OutletCard extends StatelessWidget {
     );
   }
 
-  IconData _statusIcon(DashboardColor color) {
-    return switch (color) {
-      DashboardColor.red => Icons.warning_amber_rounded,
-      DashboardColor.yellow => Icons.watch_later_outlined,
-      DashboardColor.green => Icons.check_circle_outline,
-      DashboardColor.none => Icons.storefront_outlined,
-    };
-  }
-
-  String _formatAge(int hours) {
-    if (hours < 0) return '-';
-    if (hours < 24) return '$hours jam';
-    final days = hours ~/ 24;
-    final remaining = hours % 24;
-    if (remaining == 0) return '$days hari';
-    return '$days h ${remaining}j';
-  }
-
-  void _showOutletDetails(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: KonsiColors.coffeeWhite,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(KonsiShapes.radiusLg),
-        ),
-      ),
-      builder: (context) {
-        final theme = Theme.of(context);
-        final badgeColor = StockStatusColors.foreground(item.color.name);
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(KonsiConstants.screenPadding),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: KonsiColors.coffeeMilk,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: StockStatusColors.background(item.color.name),
-                        borderRadius:
-                            BorderRadius.circular(KonsiShapes.radiusMd),
-                      ),
-                      child: Icon(_statusIcon(item.color), color: badgeColor),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.name,
-                            style: theme.textTheme.displaySmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item.address ?? 'Alamat belum diisi',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: KonsiColors.mediumCoffee,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                _DetailRow(
-                  label: 'Stok di pasar',
-                  value: '${_formatInteger(item.totalQtyDropped)} botol',
-                ),
-                _DetailRow(
-                  label: 'Siklus terbuka',
-                  value: '${item.openCyclesCount} siklus',
-                ),
-                _DetailRow(
-                  label: 'Usia stok tertua',
-                  value: _formatAge(item.maxAgeHours),
-                ),
-                if (isOwner && item.estimatedBill != null)
-                  _DetailRow(
-                    label: 'Estimasi tagihan',
-                    value: _formatMoney(item.estimatedBill),
-                  ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close),
-                        label: const Text('Tutup'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _openMaps(),
-                        icon: const Icon(Icons.map_outlined),
-                        label: const Text('Buka Maps'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  String? _distanceText() {
+    final pos = position;
+    if (pos == null) return null;
+    final service = LocationService();
+    final meters = service.haversineMeters(
+      pos.latitude,
+      pos.longitude,
+      item.latitude,
+      item.longitude,
     );
-  }
-
-  Future<void> _openMaps() async {
-    final uri = Uri.parse(
-      'geo:${item.latitude},${item.longitude}?q=${item.latitude},${item.longitude}(${Uri.encodeComponent(item.name)})',
-    );
-    try {
-      if (await canLaunchUrl(uri) && await launchUrl(uri)) {
-        return;
-      }
-
-      final fallback = Uri.parse(
-        'https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}',
-      );
-      if (await canLaunchUrl(fallback)) {
-        await launchUrl(fallback, mode: LaunchMode.externalApplication);
-      }
-    } catch (_) {
-      // Ignore launch failures. The user can still see the coordinates in the
-      // detail sheet.
-    }
+    if (meters < 1000) return '${meters.round()} m';
+    return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 }
 
@@ -487,7 +400,6 @@ class _DetailChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -495,43 +407,29 @@ class _DetailChip extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           text,
-          style: theme.textTheme.bodySmall,
+          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );
   }
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+IconData _statusIcon(DashboardColor color) {
+  return switch (color) {
+    DashboardColor.red => Icons.warning_amber_rounded,
+    DashboardColor.yellow => Icons.watch_later_outlined,
+    DashboardColor.green => Icons.check_circle_outline,
+    DashboardColor.none => Icons.storefront_outlined,
+  };
+}
 
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: KonsiColors.mediumCoffee,
-            ),
-          ),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+String _formatAge(int hours) {
+  if (hours < 0) return '-';
+  if (hours < 24) return '$hours jam';
+  final days = hours ~/ 24;
+  final remaining = hours % 24;
+  if (remaining == 0) return '$days hari';
+  return '$days h ${remaining}j';
 }
 
 class _EmptyState extends StatelessWidget {
@@ -597,8 +495,8 @@ class _DashboardError extends StatelessWidget {
             Text(
               message,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: KonsiColors.mediumCoffee,
-              ),
+                    color: KonsiColors.mediumCoffee,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),

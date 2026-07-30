@@ -41,7 +41,7 @@ class _ProductListPageState extends ConsumerState<ProductListPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => context.go('/master/products/form'),
+            onPressed: () => context.go('/master/produk/form'),
           ),
         ],
         bottom: PreferredSize(
@@ -67,7 +67,7 @@ class _ProductListPageState extends ConsumerState<ProductListPage> {
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'product_add_fab',
-        onPressed: () => context.go('/master/products/form'),
+        onPressed: () => context.go('/master/produk/form'),
         child: const Icon(Icons.add),
       ),
     );
@@ -136,7 +136,7 @@ class _ProductListPageState extends ConsumerState<ProductListPage> {
         return _ProductCard(
           product: product,
           currency: _currency,
-          onTap: () => context.go('/master/products/form?id=${product.id}'),
+          onTap: () => context.go('/master/produk/form?id=${product.id}'),
         );
       },
     );

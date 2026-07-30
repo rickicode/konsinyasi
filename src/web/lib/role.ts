@@ -1,5 +1,5 @@
 export type TabKey =
-  'beranda' | 'kunjungan' | 'warung' | 'master' | 'admin' | 'laporan' | 'pengguna' | 'pengaturan';
+  'beranda' | 'kunjungan' | 'warung' | 'master' | 'admin' | 'laporan' | 'analytics' | 'pengguna' | 'pengaturan' | 'laporan-staff';
 
 export type Tab = { key: TabKey; label: string; roles: string[] };
 
@@ -10,6 +10,7 @@ export const allTabs: Tab[] = [
   { key: 'master', label: 'Master', roles: ['owner'] },
   { key: 'admin', label: 'Admin', roles: ['owner'] },
   { key: 'laporan', label: 'Laporan', roles: ['owner'] },
+  { key: 'analytics', label: 'Analitik', roles: ['owner'] },
   { key: 'pengaturan', label: 'Pengaturan', roles: ['owner'] },
   { key: 'pengguna', label: 'Pengguna', roles: ['owner'] },
 ];
@@ -23,8 +24,8 @@ export type MasterSection = 'bahan' | 'produk' | 'warung';
 export type MasterSectionDef = { key: MasterSection; label: string; roles: string[] };
 
 export const allMasterSections: MasterSectionDef[] = [
-  { key: 'bahan', label: 'Bahan Baku', roles: ['owner'] },
   { key: 'produk', label: 'Produk', roles: ['owner'] },
+  { key: 'bahan', label: 'Bahan Baku', roles: ['owner'] },
   { key: 'warung', label: 'Warung', roles: ['owner'] },
 ];
 
@@ -50,7 +51,11 @@ export type AppNavItem = {
     | 'users'
     | 'settings'
     | 'file-text'
-    | 'shield';
+    | 'shield'
+    | 'bar-chart-3'
+    | 'bar-chart'
+    | 'clipboard-check';
+
   roles: ('owner' | 'staff')[];
   position: 'bottom' | 'top';
 };
@@ -116,6 +121,14 @@ const ownerNavItems: AppNavItem[] = [
     position: 'top',
   },
   {
+    key: 'analytics',
+    path: '/analytics',
+    label: 'Analitik',
+    icon: 'bar-chart-3',
+    roles: ['owner'],
+    position: 'top',
+  },
+  {
     key: 'pengguna',
     path: '/pengguna',
     label: 'Pengguna',
@@ -174,6 +187,15 @@ const staffNavItems: AppNavItem[] = [
     path: '/profil',
     label: 'Profil',
     icon: 'user',
+    roles: ['staff'],
+    position: 'top',
+  },
+  // Top bar - staff reports
+  {
+    key: 'laporan-staff',
+    path: '/laporan-staff',
+    label: 'Laporan',
+    icon: 'clipboard-list',
     roles: ['staff'],
     position: 'top',
   },

@@ -1,16 +1,17 @@
 import { z } from 'zod';
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
 import { users, sessions } from '../db/schema.js';
 import { AuthError, ValidationError } from '../lib/errors.js';
-import { verifyPassword } from '../lib/password.js';
+import { hashPassword, verifyPassword } from '../lib/password.js';
 import {
   createSession,
   deleteSession,
   setSessionCookie,
   clearSessionCookie,
+  requireAuth,
   ACCESS_TOKEN_PREFIX,
   REFRESH_TOKEN_PREFIX,
   type Database,
@@ -268,6 +269,118 @@ auth.get('/me', async (c) => {
     role: user.role,
     status: user.status,
   });
+});
+
+const updateProfileSchema = z.object({
+  name: z.string().min(1, 'Nama wajib diisi'),
+  username: z.string().min(3, 'Username minimal 3 karakter'),
+  email: z.string().email('Format email tidak valid'),
+});
+
+async function assertUniqueEmail(
+  db: ReturnType<typeof createClient>,
+  email: string,
+  excludeUserId: string
+): Promise<void> {
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.email, email), ne(users.id, excludeUserId)))
+    .limit(1);
+  if (existing[0]) {
+    throw new ValidationError('Email sudah digunakan pengguna lain');
+  }
+}
+
+async function assertUniqueUsername(
+  db: ReturnType<typeof createClient>,
+  username: string,
+  excludeUserId: string
+): Promise<void> {
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.username, username), ne(users.id, excludeUserId)))
+    .limit(1);
+  if (existing[0]) {
+    throw new ValidationError('Username sudah digunakan pengguna lain');
+  }
+}
+
+auth.patch('/me', requireAuth, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Session required');
+  const body = await c.req.json();
+  const parsed = updateProfileSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
+  }
+  const db = createClient(c.env);
+  await assertUniqueEmail(db, parsed.data.email, user.id);
+  await assertUniqueUsername(db, parsed.data.username, user.id);
+  const now = new Date().toISOString();
+  await db
+    .update(users)
+    .set({
+      name: parsed.data.name,
+      username: parsed.data.username,
+      email: parsed.data.email,
+      updated_at: now,
+    })
+    .where(eq(users.id, user.id));
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      username: users.username,
+      name: users.name,
+      role: users.role,
+      status: users.status,
+    })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+  const updated = rows[0];
+  return c.json(updated);
+});
+
+const changePasswordSchema = z
+  .object({
+    current_password: z.string().min(1, 'Password saat ini wajib diisi'),
+    new_password: z.string().min(8, 'Password baru minimal 8 karakter'),
+    confirm_password: z.string().min(1, 'Konfirmasi password wajib diisi'),
+  })
+  .refine((data) => data.new_password === data.confirm_password, {
+    message: 'Konfirmasi password tidak cocok',
+    path: ['confirm_password'],
+  });
+
+auth.post('/me/change-password', requireAuth, async (c) => {
+  const user = c.get('user');
+  if (!user) throw new AuthError('Session required');
+  const body = await c.req.json();
+  const parsed = changePasswordSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
+  }
+  const db = createClient(c.env);
+  const rows = await db
+    .select({ password_hash: users.password_hash })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+  const current = rows[0];
+  if (!current) throw new AuthError('Pengguna tidak ditemukan');
+  const valid = await verifyPassword(parsed.data.current_password, current.password_hash);
+  if (!valid) {
+    throw new ValidationError('Password saat ini tidak sesuai');
+  }
+  const newHash = await hashPassword(parsed.data.new_password);
+  await db
+    .update(users)
+    .set({ password_hash: newHash, updated_at: new Date().toISOString() })
+    .where(eq(users.id, user.id));
+  return c.json({ ok: true });
 });
 
 export default auth;

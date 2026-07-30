@@ -43,11 +43,30 @@ export const queryKeys = {
     summary: (filters: ReportFilters) => ['reports', filters] as const,
     export: (filters: ReportFilters) => ['reports', 'export', filters] as const,
   },
+  analytics: {
+    summary: (filters: AnalyticsFilters) => ['analytics', filters] as const,
+    outlet: (id: string, filters: Pick<AnalyticsFilters, 'from' | 'to'>) => ['analytics', 'outlet', id, filters] as const,
+    product: (id: string, filters: Pick<AnalyticsFilters, 'from' | 'to'>) => ['analytics', 'product', id, filters] as const,
+  },
+  staffReport: {
+    summary: (period: string) => ['staff-report', period] as const,
+  },
   media: (key: string) => ['media', key] as const,
 };
 
 export interface ReportFilters {
   from: string;
   to: string;
-  user_id?: string;
+  outlet_id?: string;
+}
+
+export interface AnalyticsFilters {
+  from: string;
+  to: string;
+  outlet_id?: string;
+  product_id?: string;
+}
+
+export interface StaffReportFilters {
+  period: 'today' | 'yesterday' | 'this-week' | 'this-month' | 'last-month';
 }

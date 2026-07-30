@@ -11,12 +11,17 @@
   import { haversineM } from '$lib/visit.js';
   import { formatDistance, formatRupiah } from '$lib/utils/format.js';
   import type { VisitResult } from '@shared/schemas/visit.schema.js';
-  import { visitPrepQueryOptions, submitVisitMutationOptions } from '../api/index.js';
+  import {
+    submitVisitMutationOptions,
+    uploadReceiptPhoto,
+    visitPrepQueryOptions,
+  } from '../api/index.js';
   import { createVisitDraftStore } from '../stores/visit-draft.svelte.js';
   import CyclePickupForm from '../components/CyclePickupForm.svelte';
   import DropSheet from '../components/DropSheet.svelte';
   import GeofenceStatus from '../components/GeofenceStatus.svelte';
   import VisitReviewSheet from '../components/VisitReviewSheet.svelte';
+  import VisitPhotoUploader from '../components/VisitPhotoUploader.svelte';
   import Button from '../../../shared/ui/Button.svelte';
   import Card from '../../../shared/ui/Card.svelte';
   import ErrorState from '../../../shared/ui/ErrorState.svelte';
@@ -44,6 +49,9 @@
   let showReview = $state(false);
   let visitResult = $state<VisitResult | null>(null);
   let formError = $state<string | null>(null);
+  let bonFile = $state<File | null>(null);
+  let bonNote = $state('');
+  let bonPreviewUrl = $state<string | null>(null);
   // Idempotency guard: only load prep data into the draft once per outlet.
   let loadedOutletId = $state('');
 
@@ -122,9 +130,28 @@
     );
     try {
       const result = await submitMutation.mutateAsync({ outletId, input: payload });
+
+      if (bonFile) {
+        try {
+          await uploadReceiptPhoto({
+            visitId: result.idempotency_key,
+            photo: bonFile,
+            note: bonNote || undefined,
+          });
+          toast.add('Foto bon berhasil diunggah', 'success');
+        } catch (photoErr) {
+          const photoMessage =
+            photoErr instanceof Error ? photoErr.message : 'Gagal mengunggah foto bon.';
+          toast.add(`Kunjungan tersimpan, tapi ${photoMessage}`, 'warning');
+        }
+      }
+
       visitResult = result;
       showReview = false;
       draft.clear();
+      bonFile = null;
+      bonNote = '';
+      bonPreviewUrl = null;
       toast.add('Kunjungan berhasil disimpan', 'success');
       await queryClient.invalidateQueries({ queryKey: queryKeys.visits.prep(outletId) });
     } catch (err) {
@@ -281,15 +308,6 @@
         </div>
       {/if}
 
-      {#if formError}
-        <div
-          class="rounded-xl border border-danger bg-danger-bg px-4 py-3 text-sm text-danger"
-          role="alert"
-        >
-          {formError}
-        </div>
-      {/if}
-
       <GeofenceStatus
         {distanceM}
         {radiusM}
@@ -335,33 +353,85 @@
 
         {#if draft.drops.length > 0}
           <ul class="space-y-2" role="list">
-            {#each draft.drops as drop (drop.id)}
+            {#each draft.drops as drop, index (drop.id)}
               <li
-                class="flex items-center justify-between rounded-xl border border-coffee-100 bg-milk px-3 py-2 text-sm"
+                class="group relative flex items-center gap-3 rounded-xl border border-coffee-100 bg-white px-3 py-3 text-sm shadow-sm transition-all hover:border-coffee-200 hover:shadow-md"
               >
+                <!-- Number badge -->
+                <div
+                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-coffee-600 to-coffee-800 text-xs font-bold text-white shadow-sm"
+                >
+                  {index + 1}
+                </div>
+
+                <!-- Product info -->
                 <div class="min-w-0 flex-1">
-                  <p class="truncate font-medium text-coffee-900">
+                  <p class="truncate font-semibold text-coffee-900">
                     {drop.productName}
                   </p>
-                  <p class="truncate text-xs text-coffee-500">
-                    {drop.qty} unit{#if drop.notes}
-                      · {drop.notes}{/if}
-                  </p>
+                  <div class="mt-0.5 flex items-center gap-2">
+                    <span
+                      class="inline-flex items-center rounded-md bg-coffee-50 px-1.5 py-0.5 text-xs font-medium text-coffee-700"
+                    >
+                      {drop.qty} unit
+                    </span>
+                    {#if drop.price}
+                      <span class="text-xs text-coffee-400">
+                        · {formatRupiah(drop.price)}/unit
+                      </span>
+                    {/if}
+                  </div>
+                  {#if drop.notes}
+                    <p class="mt-1 truncate text-xs text-coffee-400 italic">
+                      {drop.notes}
+                    </p>
+                  {/if}
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onclick={() => handleRemoveDrop(drop.id)}
-                  disabled={submitMutation.isPending}
-                  aria-label="Hapus penitipan {drop.productName}"
-                >
-                  <Icon name="trash-2" size={18} />
-                </Button>
+
+                <!-- Total value + delete -->
+                <div class="flex shrink-0 items-center gap-2">
+                  {#if drop.price}
+                    <span class="text-right text-sm font-bold text-coffee-800">
+                      {formatRupiah(drop.qty * drop.price)}
+                    </span>
+                  {/if}
+                  <button
+                    type="button"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg text-coffee-300 transition-colors hover:bg-danger-bg hover:text-danger"
+                    onclick={() => handleRemoveDrop(drop.id)}
+                    disabled={submitMutation.isPending}
+                    aria-label="Hapus penitipan {drop.productName}"
+                  >
+                    <Icon name="trash-2" size={16} />
+                  </button>
+                </div>
               </li>
             {/each}
           </ul>
+
+          <!-- Total -->
+          <div
+            class="mt-2 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5"
+          >
+            <span class="text-sm font-medium text-amber-700">Total nilai titip</span>
+            <span class="text-base font-bold text-amber-900">
+              {formatRupiah(draft.drops.reduce((s, d) => s + d.qty * (d.price ?? 0), 0))}
+            </span>
+          </div>
         {/if}
+      </section>
+
+      <section class="space-y-2" aria-label="Foto bon">
+        <div>
+          <h2 class="text-sm font-bold text-coffee-900">Foto Bon</h2>
+          <p class="text-xs text-coffee-500">Foto bon dari warung jika ada (opsional)</p>
+        </div>
+        <VisitPhotoUploader
+          bind:file={bonFile}
+          bind:previewUrl={bonPreviewUrl}
+          bind:note={bonNote}
+          disabled={submitMutation.isPending}
+        />
       </section>
 
       <TextArea
@@ -399,4 +469,5 @@
   {radiusM}
   disabled={Boolean(submitDisabledReason)}
   isPending={submitMutation.isPending}
+  error={formError}
 />

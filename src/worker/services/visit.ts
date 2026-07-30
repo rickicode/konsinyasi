@@ -1,10 +1,11 @@
-import { and, eq, inArray, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, lt, type SQL } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema.js';
 import { ConflictError, GeofenceError, ValidationError } from '../lib/errors.js';
 import type { SafeUser } from '../types.js';
 
 const EARTH_RADIUS_M = 6_371_000;
+const VISIT_LOCK_STALE_MS = 5 * 60 * 1000;
 
 export function ageHours(droppedAt: string): number {
   return (Date.now() - Date.parse(droppedAt)) / 3_600_000;
@@ -116,6 +117,10 @@ function isUniqueConstraintError(err: unknown): boolean {
     return isUniqueConstraintError(err.cause);
   }
   return false;
+}
+
+function changesFrom(result: unknown): number {
+  return (result as unknown as { meta?: { changes?: number } }).meta?.changes ?? 0;
 }
 
 export async function loadOpenCycles(
@@ -430,6 +435,96 @@ async function verifyCyclesClosed(
   }
 }
 
+/**
+ * Internal rollback used when a race condition is detected after the main batch
+ * has already committed. It voids the freshly inserted submission and reverts
+ * any partial side effects (re-opening cycles we closed, voiding drops we
+ * inserted) without requiring owner privileges.
+ */
+async function rollbackVisitSubmission(
+  db: DrizzleD1Database<typeof schema>,
+  visitId: string,
+  actorId: string,
+  reason: string
+): Promise<void> {
+  const now = nowUtcIso();
+  await db.batch([
+    db
+      .update(schema.visit_submissions)
+      .set({
+        status: 'voided',
+        voided_at: now,
+        voided_by: actorId,
+        void_reason: reason,
+      })
+      .where(
+        and(
+          eq(schema.visit_submissions.idempotency_key, visitId),
+          eq(schema.visit_submissions.status, 'committed')
+        )
+      ),
+    db
+      .update(schema.consignment_cycles)
+      .set({
+        qty_sold: 0,
+        qty_return_good: 0,
+        qty_return_damaged: 0,
+        amount_collected: 0,
+        picked_up_at: null,
+        status: 'open',
+        updated_at: now,
+      })
+      .where(
+        and(
+          eq(schema.consignment_cycles.visit_submission_id, visitId),
+          eq(schema.consignment_cycles.status, 'closed')
+        )
+      ),
+    db
+      .update(schema.consignment_cycles)
+      .set({ status: 'voided', updated_at: now })
+      .where(
+        and(
+          eq(schema.consignment_cycles.visit_submission_id, visitId),
+          eq(schema.consignment_cycles.status, 'open')
+        )
+      ),
+  ] as never);
+}
+
+async function releaseOutletVisitLock(
+  db: DrizzleD1Database<typeof schema>,
+  outletId: string
+): Promise<void> {
+  await db
+    .delete(schema.outlet_visit_locks)
+    .where(eq(schema.outlet_visit_locks.outlet_id, outletId));
+}
+
+async function acquireOutletVisitLock(
+  db: DrizzleD1Database<typeof schema>,
+  outletId: string,
+  visitId: string
+): Promise<void> {
+  const staleThreshold = new Date(Date.now() - VISIT_LOCK_STALE_MS).toISOString();
+  await db
+    .delete(schema.outlet_visit_locks)
+    .where(lt(schema.outlet_visit_locks.locked_at, staleThreshold));
+
+  try {
+    await db.insert(schema.outlet_visit_locks).values({
+      outlet_id: outletId,
+      visit_id: visitId,
+      locked_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (isUniqueConstraintError(err)) {
+      throw new ConflictError('Sedang ada kunjungan lain untuk warung ini');
+    }
+    throw err;
+  }
+}
+
 export async function processVisit(input: ProcessVisitInput): Promise<VisitResult> {
   const {
     db,
@@ -454,49 +549,79 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
   const distanceM = haversineM(clientLat, clientLng, outlet.latitude, outlet.longitude);
   checkGeofence(distanceM, radiusM, actor, geofenceOverride, geofenceOverrideReason);
 
-  const openCycles = await loadOpenCycles(db, outlet.id);
-  validateOpenCycleCoverage(pickups, openCycles);
-
-  const timestamp = nowUtcIso();
-  const productIds = new Set<string>();
-  for (const cycle of openCycles) productIds.add(cycle.product_id);
-  for (const drop of drops) productIds.add(drop.product_id);
-
-  const { names, activeById } = await loadProductContext(db, [...productIds]);
-  const pickupOps = processPickups(db, pickups, openCycles, names, idempotencyKey, timestamp);
-  const dropOps = processDrops(db, drops, activeById, names, outlet.id, idempotencyKey, timestamp);
-
-  const result = buildVisitResult(
-    input,
-    distanceM,
-    radiusM,
-    pickupOps.summaries,
-    dropOps.summaries
-  );
-
-  const updateOutletLastVisit = input.db
-    .update(schema.outlets)
-    .set({ last_visit_at: timestamp })
-    .where(eq(schema.outlets.id, input.outlet.id));
-
-  const statements: unknown[] = [
-    ...pickupOps.statements,
-    ...dropOps.statements,
-    buildVisitSubmissionInsert(input, result, timestamp),
-    updateOutletLastVisit,
-  ];
+  // Serialize visit submissions per outlet. This prevents race conditions
+  // where two concurrent requests read the same open cycles and both try to
+  // close them in overlapping batches.
+  await acquireOutletVisitLock(db, outlet.id, idempotencyKey);
+  let lockReleased = false;
 
   try {
-    await db.batch(statements as never);
-  } catch (err) {
-    // Double-submit: if another request already inserted the idempotency key we
-    // return the stored response instead of a 500.
-    if (isUniqueConstraintError(err)) {
-      const conflict = await fetchExistingResult(db, idempotencyKey);
-      if (conflict) return conflict;
+    const openCycles = await loadOpenCycles(db, outlet.id);
+    validateOpenCycleCoverage(pickups, openCycles);
+
+    const timestamp = nowUtcIso();
+    const productIds = new Set<string>();
+    for (const cycle of openCycles) productIds.add(cycle.product_id);
+    for (const drop of drops) productIds.add(drop.product_id);
+
+    const { names, activeById } = await loadProductContext(db, [...productIds]);
+    const pickupOps = processPickups(db, pickups, openCycles, names, idempotencyKey, timestamp);
+    const dropOps = processDrops(db, drops, activeById, names, outlet.id, idempotencyKey, timestamp);
+
+    const result = buildVisitResult(
+      input,
+      distanceM,
+      radiusM,
+      pickupOps.summaries,
+      dropOps.summaries
+    );
+
+    const updateOutletLastVisit = input.db
+      .update(schema.outlets)
+      .set({ last_visit_at: timestamp })
+      .where(eq(schema.outlets.id, input.outlet.id));
+
+    const statements: unknown[] = [
+      buildVisitSubmissionInsert(input, result, timestamp),
+      ...pickupOps.statements,
+      ...dropOps.statements,
+      updateOutletLastVisit,
+    ];
+
+    let batchResults: unknown[];
+    try {
+      batchResults = (await db.batch(statements as never)) as unknown[];
+    } catch (err) {
+      // Double-submit: if another request already inserted the idempotency key we
+      // return the stored response instead of a 500.
+      if (isUniqueConstraintError(err)) {
+        const conflict = await fetchExistingResult(db, idempotencyKey);
+        if (conflict) return conflict;
+      }
+      throw err;
     }
-    throw err;
+
+    // Race-condition guard: each pickup update must affect exactly one row.
+    // If another concurrent visit closed the cycle first, the UPDATE affects 0
+    // rows. Because the rest of the batch may have already committed, we roll
+    // back the freshly inserted submission before reporting the conflict.
+    const raceReason = 'Siklus sudah ditutup oleh kunjungan lain';
+    for (let i = 0; i < pickups.length; i++) {
+      if (changesFrom(batchResults[i]) !== 1) {
+        await rollbackVisitSubmission(db, idempotencyKey, actor.id, raceReason);
+        throw new ConflictError(raceReason);
+      }
+    }
+
+    await verifyCyclesClosed(db, idempotencyKey, pickups);
+    await releaseOutletVisitLock(db, outlet.id);
+    lockReleased = true;
+    return result;
+  } finally {
+    if (!lockReleased) {
+      // Best-effort cleanup if anything went wrong between lock acquisition
+      // and the successful visit commit.
+      await releaseOutletVisitLock(db, outlet.id).catch(() => {});
+    }
   }
-  await verifyCyclesClosed(db, idempotencyKey, pickups);
-  return result;
 }

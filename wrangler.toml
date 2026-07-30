@@ -6,6 +6,7 @@ account_id = "f8ab5bbdd826db1b9aa1059d7842be75"
 [vars]
 PUBLIC_API_BASE_URL = "https://konsi.rickicode.workers.dev"
 PUBLIC_R2_CDN_URL = "https://cdn.kopi.hijitoko.com"
+DEBUG = "1"
 
 [dev]
 port = 8787

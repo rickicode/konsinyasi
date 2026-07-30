@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:konsi_mobile/config/theme.dart';
+import 'package:konsi_mobile/presentation/master/admin_hub_page.dart';
 import 'package:konsi_mobile/presentation/auth/login_page.dart';
 import 'package:konsi_mobile/presentation/auth/profile_page.dart';
 import 'package:konsi_mobile/presentation/dashboard/dashboard_page.dart';
-import 'package:konsi_mobile/presentation/onboarding/onboarding_page.dart';
-import 'package:konsi_mobile/presentation/splash/splash_page.dart';
 import 'package:konsi_mobile/presentation/dashboard/staff_dashboard_page.dart';
+import 'package:konsi_mobile/presentation/onboarding/onboarding_page.dart';
+import 'package:konsi_mobile/presentation/shell/main_shell.dart';
+import 'package:konsi_mobile/presentation/splash/splash_page.dart';
 import 'package:konsi_mobile/presentation/master/master_page.dart';
 import 'package:konsi_mobile/presentation/master/product_form_page.dart';
 import 'package:konsi_mobile/presentation/master/product_list_page.dart';
@@ -18,7 +20,10 @@ import 'package:konsi_mobile/presentation/outlets/outlet_detail_page.dart';
 import 'package:konsi_mobile/presentation/outlets/outlet_form_page.dart';
 import 'package:konsi_mobile/presentation/outlets/outlet_list_page.dart';
 import 'package:konsi_mobile/presentation/reports/reports_page.dart';
-import 'package:konsi_mobile/presentation/shell/main_shell.dart';
+import 'package:konsi_mobile/presentation/analytics/analytics_page.dart';
+import 'package:konsi_mobile/presentation/analytics/outlet_analytics_page.dart';
+import 'package:konsi_mobile/presentation/analytics/product_analytics_page.dart';
+import 'package:konsi_mobile/presentation/visits/place_coffee_page.dart';
 import 'package:konsi_mobile/presentation/visits/visit_drafts_page.dart';
 import 'package:konsi_mobile/presentation/visits/visit_form_page.dart';
 import 'package:konsi_mobile/presentation/visits/visit_list_page.dart';
@@ -48,7 +53,13 @@ final _routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isAuthenticated = auth.isAuthenticated;
       final isLoading = auth.isLoading;
-      final isLoginRoute = state.uri.path == '/login';
+      final path = state.uri.path;
+      final isLoginRoute = path == '/login';
+
+      // Allow public splash/onboarding routes.
+      if (path == '/splash' || path == '/onboarding') {
+        return null;
+      }
 
       if (isLoading) return null;
 
@@ -60,10 +71,17 @@ final _routerProvider = Provider<GoRouter>((ref) {
         return '/';
       }
 
-      // Owner-only routes guard.
+      // Owner-only routes guard (must match web route table).
       if (isAuthenticated && auth.isStaff) {
-        final ownerRoutes = ['/master', '/laporan', '/pengguna', '/pengaturan'];
-        if (ownerRoutes.any((route) => state.uri.path.startsWith(route))) {
+        const ownerRoutes = [
+          '/master',
+          '/laporan',
+          '/analytics',
+          '/pengguna',
+          '/pengaturan',
+          '/admin',
+        ];
+        if (ownerRoutes.any((route) => path.startsWith(route))) {
           return '/';
         }
       }
@@ -75,12 +93,26 @@ final _routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         builder: (context, state) => const LoginPage(),
       ),
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashPage(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingPage(),
+      ),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
           GoRoute(
             path: '/',
-            builder: (context, state) => const DashboardPage(),
+            builder: (context, state) => const PlaceCoffeePage(),
+          ),
+          GoRoute(
+            path: '/beranda',
+            builder: (context, state) => auth.isOwner
+                ? const DashboardPage()
+                : const StaffDashboardPage(),
           ),
           GoRoute(
             path: '/warung',
@@ -96,15 +128,15 @@ final _routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const OutletFormPage(),
           ),
           GoRoute(
+            path: '/kunjungan',
+            builder: (context, state) => const VisitListPage(),
+          ),
+          GoRoute(
             path: '/kunjungan/:id',
             builder: (context, state) => VisitFormPage(
               outletId: state.pathParameters['id']!,
               draftId: state.uri.queryParameters['draftId'],
             ),
-          ),
-          GoRoute(
-            path: '/kunjungan',
-            builder: (context, state) => const VisitListPage(),
           ),
           GoRoute(
             path: '/kunjungan/success',
@@ -115,32 +147,83 @@ final _routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ProfilePage(),
           ),
           GoRoute(
+            path: '/produk',
+            builder: (context, state) => const ProductListPage(),
+          ),
+          GoRoute(
+            path: '/admin',
+            builder: (context, state) => const AdminHubPage(),
+          ),
+          GoRoute(
             path: '/master',
             builder: (context, state) => const MasterPage(),
           ),
           GoRoute(
-            path: '/master/products',
+            path: '/master/produk',
             builder: (context, state) => const ProductListPage(),
           ),
           GoRoute(
-            path: '/master/products/form',
+            path: '/master/produk/form',
             builder: (context, state) => const ProductFormPage(),
           ),
           GoRoute(
-            path: '/master/raw-materials',
+            path: '/master/bahan',
             builder: (context, state) => const RawMaterialsPage(),
           ),
           GoRoute(
-            path: '/master/users',
-            builder: (context, state) => const UsersPage(),
-          ),
-          GoRoute(
-            path: '/master/settings',
-            builder: (context, state) => const MasterSettingsPage(),
+            path: '/master/warung',
+            builder: (context, state) => const OutletListPage(),
           ),
           GoRoute(
             path: '/laporan',
+          GoRoute(
+            path: '/laporan',
             builder: (context, state) => const ReportsPage(),
+          ),
+          GoRoute(
+            path: '/analytics',
+            builder: (context, state) => const AnalyticsPage(),
+          ),
+          GoRoute(
+            path: '/analytics/outlet/:id',
+            builder: (context, state) => OutletAnalyticsPage(
+              outletId: state.pathParameters['id']!,
+            ),
+          ),
+          GoRoute(
+            path: '/analytics/product/:id',
+            builder: (context, state) => ProductAnalyticsPage(
+              productId: state.pathParameters['id']!,
+            ),
+          ),
+          GoRoute(
+            path: '/pengguna',
+            builder: (context, state) => const UsersPage(),
+          ),
+          GoRoute(
+            path: '/pengaturan',
+            builder: (context, state) => const MasterSettingsPage(),
+          ),
+          // Backward-compatible aliases for old master paths.
+          GoRoute(
+            path: '/master/products',
+            redirect: (context, state) => '/master/produk',
+          ),
+          GoRoute(
+            path: '/master/products/form',
+            redirect: (context, state) => '/master/produk/form',
+          ),
+          GoRoute(
+            path: '/master/raw-materials',
+            redirect: (context, state) => '/master/bahan',
+          ),
+          GoRoute(
+            path: '/master/users',
+            redirect: (context, state) => '/pengguna',
+          ),
+          GoRoute(
+            path: '/master/settings',
+            redirect: (context, state) => '/pengaturan',
           ),
         ],
       ),

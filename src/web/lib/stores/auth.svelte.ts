@@ -3,8 +3,14 @@ import {
   getCurrentUser,
   login as apiLogin,
   logout as apiLogout,
+  updateProfile as apiUpdateProfile,
+  changePassword as apiChangePassword,
   type User,
 } from '../../features/auth/api/auth.api.js';
+import type {
+  ChangePasswordInput,
+  UpdateProfileInput,
+} from '@shared/schemas/auth.schema.js';
 import { queryClient } from '$lib/api/query-client.js';
 
 const AUTH_CONTEXT_KEY = Symbol('konsi-auth-context');
@@ -92,6 +98,10 @@ export interface AuthState {
   ensureLoaded(): Promise<void>;
   /** Refresh the current user from the server. */
   refresh(): Promise<void>;
+  /** Update the current user's profile (name, username, and email). */
+  updateProfile(input: UpdateProfileInput): Promise<AuthUser>;
+  /** Change the current user's password. */
+  changePassword(input: ChangePasswordInput): Promise<void>;
   /** Sign in with username and password. */
   login(username: string, password: string): Promise<AuthUser>;
   /** Sign out and clear local state. */
@@ -155,6 +165,16 @@ function createAuthState(): AuthState {
       return pending;
     },
     refresh,
+    async updateProfile(input: UpdateProfileInput): Promise<AuthUser> {
+      const updated = await apiUpdateProfile(input);
+      user = updated;
+      error = null;
+      return updated;
+    },
+    async changePassword(input: ChangePasswordInput): Promise<void> {
+      await apiChangePassword(input);
+      error = null;
+    },
     async login(username: string, password: string): Promise<AuthUser> {
       await apiLogin({ username, password });
       const refreshed = await getCurrentUser();

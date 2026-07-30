@@ -18,6 +18,7 @@ import dashboard from './routes/dashboard.js';
 import reports from './routes/reports.js';
 import uoms from './routes/uoms.js';
 import publicRoutes from './routes/public.js';
+import analytics from './routes/analytics.js';
 
 const app = new Hono<Env>({ strict: false });
 
@@ -138,7 +139,8 @@ app.put('/api/settings/geofence', requirePermission('settings:write'));
 
 app.use('/api/dashboard', requirePermission('dashboard:read'));
 app.use('/api/reports', requirePermission('reports:read'));
-app.use('/api/uoms/*', requirePermission('bom:write'));
+app.use('/api/analytics/*', requirePermission('reports:read'));
+app.use('/api/analytics', requirePermission('reports:read'));
 app.get('/api/uoms', requireAuth);
 
 app.use('/api/media/outlets/*', requireAuth);
@@ -158,13 +160,19 @@ app.route('/api/dashboard', dashboard);
 app.route('/api/reports', reports);
 app.route('/api/uoms', uoms);
 app.route('/api/public', publicRoutes);
+app.route('/api/analytics', analytics);
 
 app.onError((err, c) => {
   if (err instanceof AppError) {
     return c.json({ code: err.code, message: err.message }, err.status as 200);
   }
+  const isDebug = c.env.DEBUG === '1' || c.env.DEBUG === 'true';
+  const message = err.message ?? 'Terjadi kesalahan server';
   // Log a redacted summary in production; avoid leaking full stack traces.
-  console.error({ code: 'INTERNAL_ERROR', message: err.message ?? 'Terjadi kesalahan server' });
+  console.error({ code: 'INTERNAL_ERROR', message, stack: err.stack });
+  if (isDebug) {
+    return c.json({ code: 'INTERNAL_ERROR', message, stack: err.stack }, 500);
+  }
   return c.json({ code: 'INTERNAL_ERROR', message: 'Terjadi kesalahan server' }, 500);
 });
 

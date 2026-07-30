@@ -25,7 +25,14 @@ const PAGE_TITLES: Record<string, string> = {
   '/master/bahan': 'Bahan Baku',
   '/master/warung': 'Kelola Warung',
   // Reports (Owner only)
+  // Analytics (Owner only)
+  '/analytics': 'Analitik Keuangan',
+  '/analytics/outlet/:id': 'Detail Analitik Warung',
+  '/analytics/product/:id': 'Detail Analitik Produk',
+  // Reports (Owner only)
   '/laporan': 'Laporan Keuangan',
+  // Staff Reports
+  '/laporan-staff': 'Laporan Saya',
   // Users (Owner only)
   '/pengguna': 'Pengguna',
   // Settings (Owner only)

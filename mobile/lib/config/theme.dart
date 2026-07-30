@@ -28,6 +28,8 @@ class KonsiColors {
   static const Color roseSoft = Color(0xFFFFCDD2);
   static const Color matchaSoft = Color(0xFFC8E6C9);
   static const Color lemonSoft = Color(0xFFFFFDE7);
+  static const Color berrySoft = Color(0xFFFFEBEE);
+  static const Color mintSoft = Color(0xFFE8F5E9);
 }
 
 /// Status colors for consignment stock age.
@@ -95,10 +97,40 @@ class KonsiTypography {
         fontWeight: FontWeight.normal,
         color: KonsiColors.lightCoffee,
       ),
+      headlineSmall: GoogleFonts.roboto(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: KonsiColors.espresso,
+      ),
+      titleLarge: GoogleFonts.roboto(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: KonsiColors.espresso,
+      ),
+      titleMedium: GoogleFonts.roboto(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: KonsiColors.espresso,
+      ),
+      titleSmall: GoogleFonts.roboto(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: KonsiColors.espresso,
+      ),
       labelLarge: GoogleFonts.roboto(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: KonsiColors.espresso,
+      ),
+      labelMedium: GoogleFonts.roboto(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: KonsiColors.mediumCoffee,
+      ),
+      labelSmall: GoogleFonts.roboto(
+        fontSize: 10,
+        fontWeight: FontWeight.w500,
+        color: KonsiColors.lightCoffee,
       ),
     );
   }

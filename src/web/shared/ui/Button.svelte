@@ -13,7 +13,8 @@
     fullWidth?: boolean;
     loading?: boolean;
     disabled?: boolean;
-    type?: 'button' | 'submit';
+  type?: 'button' | 'submit';
+  form?: string;
     onclick?: (event: MouseEvent) => void;
     children?: import('svelte').Snippet;
     class?: string;
@@ -26,7 +27,8 @@
     fullWidth = false,
     loading = false,
     disabled = false,
-    type = 'button',
+  type = 'button',
+  form = undefined,
     onclick,
     children,
     class: className = '',
@@ -79,6 +81,7 @@
 
 <button
   {type}
+  {form}
   class={computedClasses}
   disabled={isDisabled}
   aria-disabled={isDisabled}

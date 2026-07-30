@@ -120,6 +120,14 @@ AFTER UPDATE ON product_recipes
 BEGIN
   UPDATE product_recipes SET updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = NEW.id;
 END;
+CREATE TABLE outlet_visit_locks (
+  outlet_id TEXT PRIMARY KEY REFERENCES outlets(id) ON DELETE CASCADE,
+  visit_id  TEXT NOT NULL,
+  locked_at TEXT NOT NULL
+);
+
+CREATE INDEX idx_outlet_visit_locks_locked_at ON outlet_visit_locks(locked_at);
+
 CREATE TABLE visit_photos (
   id TEXT PRIMARY KEY,
   visit_id TEXT NOT NULL,

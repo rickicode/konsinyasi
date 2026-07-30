@@ -222,15 +222,15 @@ class VisitFormState {
   bool get hasOpenCycles => (stateResponse?.cycles.isNotEmpty ?? false);
 
   /// Alasan tombol submit disabled. Null berarti bisa submit.
-  String? disabledReason({required bool isOwner}) {
+  String? disabledReason({required bool canOverride}) {
     if (isSubmitting) return 'Sedang mengirim...';
     if (isLoadingState) return 'Memuat data kunjungan...';
     if (!isOnline) return 'Tidak ada koneksi internet';
     if (!isGpsReady) return 'Menunggu sinyal GPS';
     final inside = isInsideRadius;
     if (inside == null) return 'Menghitung jarak ke warung';
-    if (!inside && !isOwner) return 'Anda di luar radius kunjungan';
-    if (!inside && isOwner && overrideReason.trim().isEmpty) {
+    if (!inside && !canOverride) return 'Anda di luar radius kunjungan';
+    if (!inside && canOverride && overrideReason.trim().isEmpty) {
       return 'Isi alasan override untuk submit di luar radius';
     }
     if (hasOpenCycles && pickups.isEmpty) {

@@ -48,6 +48,12 @@ class ApiConfig {
   static const String reports = '/reports';
   static const String reportsExportPdf = '/reports/export.pdf';
 
+  // Analytics
+  static const String analytics = '/analytics';
+  static String analyticsOutlet(String id) => '/analytics/outlet/$id';
+  static String analyticsProduct(String id) => '/analytics/product/$id';
+  static const String reportsExportPdf = '/reports/export.pdf';
+
   // Media
   static const String media = '/media';
 

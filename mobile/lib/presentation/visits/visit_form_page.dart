@@ -154,14 +154,14 @@ void _showProductPicker(VisitFormState state, VisitFormNotifier notifier) {
     final state = ref.watch(visitFormProvider(widget.outletId));
     final notifier = ref.read(visitFormProvider(widget.outletId).notifier);
     final auth = ref.watch(authNotifierProvider);
-    final isOwner = auth.isOwner;
+    final canOverride = auth.can(Capability.visitOverride);
     final currency = NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp',
       decimalDigits: 0,
     );
 
-    final disabledReason = state.disabledReason(isOwner: isOwner);
+    final disabledReason = state.disabledReason(canOverride: canOverride);
     final canSubmit = disabledReason == null;
 
     return Scaffold(
@@ -211,7 +211,7 @@ void _showProductPicker(VisitFormState state, VisitFormNotifier notifier) {
                             ),
                             const SizedBox(height: 16),
                             _NotesSection(controller: _notesController, notifier: notifier),
-                            if (isOwner) ...[
+                            if (canOverride) ...[
                               const SizedBox(height: 16),
                               _OwnerOverrideSection(
                                 state: state,

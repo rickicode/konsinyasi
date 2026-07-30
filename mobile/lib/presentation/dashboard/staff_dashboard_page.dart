@@ -1,39 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:konsi_mobile/config/constants.dart';
 import 'package:konsi_mobile/config/theme.dart';
+import 'package:konsi_mobile/core/location/location_service.dart';
 import 'package:konsi_mobile/data/models/dashboard_model.dart';
-import 'package:konsi_mobile/providers/auth_provider.dart';
 import 'package:konsi_mobile/providers/dashboard_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-class StaffDashboardPage extends ConsumerWidget {
+class StaffDashboardPage extends ConsumerStatefulWidget {
   const StaffDashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StaffDashboardPage> createState() => _StaffDashboardPageState();
+}
+
+class _StaffDashboardPageState extends ConsumerState<StaffDashboardPage> {
+  Position? _position;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(dashboardProvider.notifier).refresh();
+      _refreshLocation();
+    });
+  }
+
+  Future<void> _refreshLocation() async {
+    try {
+      final service = ref.read(locationServiceProvider);
+      _position = await service.getCurrentPosition();
+    } on LocationServiceException {
+      _position = null;
+    } catch (_) {
+      _position = null;
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _refresh() async {
+    await _refreshLocation();
+    await ref.read(dashboardProvider.notifier).refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final dashboard = ref.watch(dashboardProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Beranda'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            onPressed: () => Navigator.pushNamed(context, '/profil'),
-          ),
-        ],
-      ),
+      backgroundColor: KonsiColors.coffeeCream,
       body: dashboard.when(
         data: (report) => _StaffDashboardBody(
           report: report,
-          onRefresh: () => ref.refresh(dashboardProvider.future),
+          position: _position,
+          onRefresh: _refresh,
         ),
         loading: () => const _DashboardSkeleton(),
         error: (error, _) => _DashboardError(
           message: error.toString(),
-          onRetry: () => ref.refresh(dashboardProvider.future),
+          onRetry: _refresh,
         ),
       ),
     );
@@ -43,17 +70,32 @@ class StaffDashboardPage extends ConsumerWidget {
 class _StaffDashboardBody extends StatelessWidget {
   const _StaffDashboardBody({
     required this.report,
+    required this.position,
     required this.onRefresh,
   });
 
   final DashboardReportModel report;
+  final Position? position;
   final Future<void> Function() onRefresh;
+
+  static const _colorRank = {
+    DashboardColor.red: 0,
+    DashboardColor.yellow: 1,
+    DashboardColor.green: 2,
+    DashboardColor.none: 3,
+  };
+
+  List<DashboardItemModel> get _sortedItems {
+    return [...report.items]..sort((a, b) {
+        final rankDiff = _colorRank[a.color]! - _colorRank[b.color]!;
+        if (rankDiff != 0) return rankDiff;
+        return b.maxAgeHours - a.maxAgeHours;
+      });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final summary = report.summary;
-
     return RefreshIndicator(
       onRefresh: onRefresh,
       color: KonsiColors.caramel,
@@ -65,51 +107,46 @@ class _StaffDashboardBody extends StatelessWidget {
             padding: const EdgeInsets.all(KonsiConstants.screenPadding),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                // Role indicator
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius:
-                        BorderRadius.circular(KonsiShapes.radiusSm),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.engineering,
-                          size: 16, color: Colors.green[700]),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Mode Staff Lapangan',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.green[700],
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
                 Text(
-                  'Ringkasan Hari Ini',
-                  style: theme.textTheme.displayMedium,
+                  'Beranda',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: KonsiColors.espresso,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Ringkasan kunjungan hari ini',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: KonsiColors.mediumCoffee,
+                      ),
                 ),
                 const SizedBox(height: 16),
-                // Staff summary - no financial data
                 _StaffSummaryGrid(summary: summary),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Daftar Warung',
-                      style: theme.textTheme.displayMedium,
+                      'Prioritas Warung',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    Text(
-                      '${report.items.length} warung',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: KonsiColors.mediumCoffee,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: KonsiColors.coffeeFoam,
+                        borderRadius:
+                            BorderRadius.circular(KonsiShapes.radiusSm),
+                      ),
+                      child: Text(
+                        '${_sortedItems.length}',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: KonsiColors.mediumCoffee,
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                   ],
@@ -119,27 +156,26 @@ class _StaffDashboardBody extends StatelessWidget {
             ),
           ),
           if (report.items.isEmpty)
-            const SliverFillRemaining(
-              child: _EmptyState(),
-            )
+            const SliverFillRemaining(child: _EmptyState())
           else
             SliverPadding(
               padding: const EdgeInsets.symmetric(
                 horizontal: KonsiConstants.screenPadding,
               ),
               sliver: SliverList.separated(
-                itemCount: report.items.length,
+                itemCount: _sortedItems.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
-                  final item = report.items[index];
-                  return _StaffOutletCard(item: item);
+                  final item = _sortedItems[index];
+                  return _StaffOutletCard(
+                    item: item,
+                    position: position,
+                  );
                 },
               ),
             ),
           const SliverPadding(
-            padding: EdgeInsets.only(
-              bottom: KonsiConstants.screenPadding,
-            ),
+            padding: EdgeInsets.only(bottom: KonsiConstants.screenPadding),
           ),
         ],
       ),
@@ -147,7 +183,6 @@ class _StaffDashboardBody extends StatelessWidget {
   }
 }
 
-// Staff summary grid - no financial data
 class _StaffSummaryGrid extends StatelessWidget {
   const _StaffSummaryGrid({required this.summary});
 
@@ -175,40 +210,83 @@ class _StaffSummaryGrid extends StatelessWidget {
         color: KonsiColors.berry,
       ),
     ];
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = (constraints.maxWidth - 12) / 2;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: cards
-              .map(
-                (card) => SizedBox(width: width, child: card),
-              )
-              .toList(),
+          children: cards.map((card) => SizedBox(width: width, child: card)).toList(),
         );
       },
     );
   }
 }
 
-// Staff outlet card - no financial info
-class _StaffOutletCard extends StatelessWidget {
-  const _StaffOutletCard({required this.item});
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
 
-  final DashboardItemModel item;
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: color.withOpacity(0.12),
+              child: Icon(icon, size: 20, color: color),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                    color: KonsiColors.espresso,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StaffOutletCard extends StatelessWidget {
+  const _StaffOutletCard({
+    required this.item,
+    required this.position,
+  });
+
+  final DashboardItemModel item;
+  final Position? position;
+
+  @override
+  Widget build(BuildContext context) {
     final badgeColor = StockStatusColors.foreground(item.color.name);
     final badgeBg = StockStatusColors.background(item.color.name);
-
+    final distance = _distanceText();
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _showOutletDetails(context),
+        onTap: () => context.go('/warung/${item.id}'),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -232,9 +310,9 @@ class _StaffOutletCard extends StatelessWidget {
                   children: [
                     Text(
                       item.name,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -242,11 +320,11 @@ class _StaffOutletCard extends StatelessWidget {
                     if (item.address != null && item.address!.isNotEmpty)
                       Text(
                         item.address!,
-                        style: theme.textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodySmall,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         _DetailChip(
@@ -258,6 +336,13 @@ class _StaffOutletCard extends StatelessWidget {
                           icon: Icons.all_inbox_outlined,
                           text: '${item.openCyclesCount} siklus',
                         ),
+                        if (distance != null) ...[
+                          const SizedBox(width: 8),
+                          _DetailChip(
+                            icon: Icons.near_me_outlined,
+                            text: distance,
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -268,13 +353,13 @@ class _StaffOutletCard extends StatelessWidget {
                 children: [
                   Text(
                     _formatInteger(item.totalQtyDropped),
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   Text(
                     'botol',
-                    style: theme.textTheme.bodySmall,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
@@ -285,176 +370,18 @@ class _StaffOutletCard extends StatelessWidget {
     );
   }
 
-  IconData _statusIcon(DashboardColor color) {
-    return switch (color) {
-      DashboardColor.red => Icons.warning_amber_rounded,
-      DashboardColor.yellow => Icons.watch_later_outlined,
-      DashboardColor.green => Icons.check_circle_outline,
-      DashboardColor.none => Icons.storefront_outlined,
-    };
-  }
-
-  String _formatAge(int hours) {
-    if (hours < 0) return '-';
-    if (hours < 24) return '$hours jam';
-    final days = hours ~/ 24;
-    final remaining = hours % 24;
-    if (remaining == 0) return '$days hari';
-    return '$days h ${remaining}j';
-  }
-
-  void _showOutletDetails(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) {
-          return SingleChildScrollView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  item.name,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                if (item.address != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    item.address!,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-                const SizedBox(height: 16),
-                _InfoRow(
-                    label: 'Status',
-                    value: _statusText(item.color)),
-                _InfoRow(
-                    label: 'Umur stok',
-                    value: _formatAge(item.maxAgeHours)),
-                _InfoRow(
-                    label: 'Botol di pasar',
-                    value: '${item.totalQtyDropped}'),
-                _InfoRow(
-                    label: 'Siklus aktif',
-                    value: '${item.openCyclesCount}'),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      final url = Uri.parse(
-                          'https://www.google.com/maps?q=${item.latitude},${item.longitude}');
-                      launchUrl(url);
-                    },
-                    icon: const Icon(Icons.map),
-                    label: const Text('Buka di Maps'),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+  String? _distanceText() {
+    final pos = position;
+    if (pos == null) return null;
+    final service = LocationService();
+    final meters = service.haversineMeters(
+      pos.latitude,
+      pos.longitude,
+      item.latitude,
+      item.longitude,
     );
-  }
-
-  String _statusText(DashboardColor color) {
-    return switch (color) {
-      DashboardColor.red => 'Wajib tarik',
-      DashboardColor.yellow => 'Dekati H-4',
-      DashboardColor.green => 'Aman',
-      DashboardColor.none => 'Tanpa stok',
-    };
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          Text(value,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: color.withOpacity(0.12),
-              child: Icon(icon, size: 20, color: color),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: theme.textTheme.displayMedium?.copyWith(
-                color: KonsiColors.espresso,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
-        ),
-      ),
-    );
+    if (meters < 1000) return '${meters.round()} m';
+    return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 }
 
@@ -466,27 +393,36 @@ class _DetailChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: KonsiColors.coffeeWhite,
-        borderRadius: BorderRadius.circular(KonsiShapes.radiusSm),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: KonsiColors.mediumCoffee),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: KonsiColors.mediumCoffee,
-                ),
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: KonsiColors.lightCoffee),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
     );
   }
+}
+
+IconData _statusIcon(DashboardColor color) {
+  return switch (color) {
+    DashboardColor.red => Icons.warning_amber_rounded,
+    DashboardColor.yellow => Icons.watch_later_outlined,
+    DashboardColor.green => Icons.check_circle_outline,
+    DashboardColor.none => Icons.storefront_outlined,
+  };
+}
+
+String _formatAge(int hours) {
+  if (hours < 0) return '-';
+  if (hours < 24) return '$hours jam';
+  final days = hours ~/ 24;
+  final remaining = hours % 24;
+  if (remaining == 0) return '$days hari';
+  return '$days h ${remaining}j';
 }
 
 class _EmptyState extends StatelessWidget {
@@ -514,70 +450,6 @@ class _EmptyState extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: KonsiColors.mediumCoffee,
                 ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DashboardSkeleton extends StatelessWidget {
-  const _DashboardSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(KonsiConstants.screenPadding),
-      child: Column(
-        children: [
-          // Role indicator skeleton
-          Container(
-            height: 28,
-            width: 150,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(KonsiShapes.radiusSm),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Summary cards skeleton
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(KonsiShapes.radiusMd),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(KonsiShapes.radiusMd),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // List skeleton
-          ...List.generate(
-            3,
-            (index) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(KonsiShapes.radiusMd),
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -629,14 +501,98 @@ class _DashboardError extends StatelessWidget {
   }
 }
 
-String _formatInteger(int value) {
-  return NumberFormat('#,###').format(value);
+class _DashboardSkeleton extends StatelessWidget {
+  const _DashboardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(KonsiConstants.screenPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SkeletonBox(width: 140, height: 28),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Expanded(child: _SkeletonCard()),
+              const SizedBox(width: 12),
+              const Expanded(child: _SkeletonCard()),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Row(
+            children: [
+              Expanded(child: _SkeletonCard()),
+              SizedBox(width: 12),
+              Expanded(child: _SkeletonCard()),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _SkeletonBox(width: 140, height: 28),
+          const SizedBox(height: 12),
+          ...List.generate(
+            3,
+            (index) => const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: _SkeletonListTile(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-String _formatMoney(int value) {
-  return NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp',
-    decimalDigits: 0,
-  ).format(value);
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(KonsiShapes.radiusMd),
+      ),
+    );
+  }
+}
+
+class _SkeletonListTile extends StatelessWidget {
+  const _SkeletonListTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(KonsiShapes.radiusMd),
+      ),
+    );
+  }
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(KonsiShapes.radiusSm),
+      ),
+    );
+  }
+}
+
+String _formatInteger(int value) {
+  return NumberFormat('#,###').format(value);
 }

@@ -39,7 +39,7 @@ class ProfilePage extends ConsumerWidget {
                         color: KonsiColors.caramel),
                     title: const Text('Pengaturan Aplikasi'),
                     subtitle: const Text('Ubah base URL server, reset onboarding'),
-                    onTap: () => context.push('/master/settings'),
+                    onTap: () => context.push('/pengaturan'),
                   ),
                 ],
               ),

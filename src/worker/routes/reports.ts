@@ -233,4 +233,144 @@ reportsRoute.get('/', async (c) => {
   return c.json(reportResponseSchema.parse(payload));
 });
 
+// GET /reports/staff - Staff self-reports with period presets
+reportsRoute.get('/staff', async (c) => {
+  const user = c.get('user');
+  const db = createClient(c.env);
+  const { period } = c.req.query();
+
+  // Staff only - always self data
+  const effectiveUserId = user.id;
+
+  // Calculate date range from period preset
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  let fromDate: string;
+  let toDate: string;
+
+  switch (period) {
+    case 'today': {
+      fromDate = now.toISOString().slice(0, 10);
+      toDate = fromDate;
+      break;
+    }
+    case 'yesterday': {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      fromDate = yesterday.toISOString().slice(0, 10);
+      toDate = fromDate;
+      break;
+    }
+    case 'this-week': {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(now);
+      monday.setDate(diff);
+      fromDate = monday.toISOString().slice(0, 10);
+      toDate = now.toISOString().slice(0, 10);
+      break;
+    }
+    case 'this-month': {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      fromDate = firstDay.toISOString().slice(0, 10);
+      toDate = now.toISOString().slice(0, 10);
+      break;
+    }
+    case 'last-month': {
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+      fromDate = firstDay.toISOString().slice(0, 10);
+      toDate = lastDay.toISOString().slice(0, 10);
+      break;
+    }
+    default: {
+      // Default: this month
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      fromDate = firstDay.toISOString().slice(0, 10);
+      toDate = now.toISOString().slice(0, 10);
+    }
+  }
+
+  const toTimestamp = toDate + 'T23:59:59.999Z';
+
+  const visitConditions = and(
+    gte(visit_submissions.created_at, fromDate),
+    lte(visit_submissions.created_at, toTimestamp),
+    eq(visit_submissions.status, 'committed'),
+    eq(visit_submissions.user_id, effectiveUserId)
+  );
+
+  const cycleDateConditions = and(
+    gte(consignment_cycles.created_at, fromDate),
+    lte(consignment_cycles.created_at, toTimestamp),
+    not(eq(consignment_cycles.status, 'voided'))
+  );
+
+  // Summaries
+  const [[visitAgg], [cycleAgg]] = await Promise.all([
+    db
+      .select({
+        visit_count: sql<number>`count(*)`,
+        override_count: sql<number>`coalesce(sum(${visit_submissions.geofence_override}), 0)`,
+      })
+      .from(visit_submissions)
+      .where(visitConditions),
+    db
+      .select({
+        total_revenue: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
+        total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+        total_waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
+      })
+      .from(consignment_cycles)
+      .innerJoin(
+        visit_submissions,
+        and(
+          eq(consignment_cycles.visit_submission_id, visit_submissions.idempotency_key),
+          eq(visit_submissions.user_id, effectiveUserId)
+        )
+      )
+      .where(cycleDateConditions),
+  ]);
+
+  const totalRevenue = cycleAgg?.total_revenue ?? 0;
+  const totalHppUsed = cycleAgg?.total_hpp_used ?? 0;
+  const totalMargin = totalRevenue - totalHppUsed;
+
+  // Per visit breakdown
+  const visits = await db
+    .select({
+      id: visit_submissions.idempotency_key,
+      outlet_name: outlets.name,
+      created_at: visit_submissions.created_at,
+      amount_collected: visit_submissions.amount_collected_total,
+      qty_sold: visit_submissions.qty_sold_total,
+    })
+    .from(visit_submissions)
+    .leftJoin(outlets, eq(visit_submissions.outlet_id, outlets.id))
+    .where(visitConditions)
+    .orderBy(sql`${visit_submissions.created_at} desc`)
+    .limit(50);
+
+  const payload = {
+    from: fromDate,
+    to: toDate,
+    period: period || 'this-month',
+    summary: {
+      total_revenue: totalRevenue,
+      total_hpp_used: totalHppUsed,
+      total_margin: totalMargin,
+      total_waste: cycleAgg?.total_waste ?? 0,
+      visit_count: visitAgg?.visit_count ?? 0,
+      override_count: visitAgg?.override_count ?? 0,
+    },
+    visits: visits.map(v => ({
+      ...v,
+      margin: (v.amount_collected ?? 0) - 0, // simplified
+    })),
+  };
+
+  c.header('Cache-Control', 'private, max-age=30');
+  return c.json(payload);
+});
+
 export default reportsRoute;
