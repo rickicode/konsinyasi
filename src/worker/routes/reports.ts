@@ -64,7 +64,7 @@ reportsRoute.get('/', async (c) => {
     ? db
         .select({
           total_revenue: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
-          total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+          total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_sold}), 0)`,
           total_waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
         })
         .from(consignment_cycles)
@@ -79,7 +79,7 @@ reportsRoute.get('/', async (c) => {
     : db
         .select({
           total_revenue: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
-          total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+          total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_sold}), 0)`,
           total_waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
         })
         .from(consignment_cycles)
@@ -100,7 +100,7 @@ reportsRoute.get('/', async (c) => {
           name: outlets.name,
           qty_sold: sql<number>`coalesce(sum(${consignment_cycles.qty_sold}), 0)`,
           amount_collected: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
-          hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+          hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_sold}), 0)`,
           waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
         })
         .from(consignment_cycles)
@@ -123,7 +123,7 @@ reportsRoute.get('/', async (c) => {
           name: outlets.name,
           qty_sold: sql<number>`coalesce(sum(${consignment_cycles.qty_sold}), 0)`,
           amount_collected: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
-          hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+          hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_sold}), 0)`,
           waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
         })
         .from(consignment_cycles)
@@ -138,7 +138,7 @@ reportsRoute.get('/', async (c) => {
           name: products.name,
           qty_sold: sql<number>`coalesce(sum(${consignment_cycles.qty_sold}), 0)`,
           amount_collected: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
-          hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+          hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_sold}), 0)`,
           waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
         })
         .from(consignment_cycles)
@@ -161,7 +161,7 @@ reportsRoute.get('/', async (c) => {
           name: products.name,
           qty_sold: sql<number>`coalesce(sum(${consignment_cycles.qty_sold}), 0)`,
           amount_collected: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
-          hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+          hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_sold}), 0)`,
           waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
         })
         .from(consignment_cycles)
@@ -182,7 +182,7 @@ reportsRoute.get('/', async (c) => {
       name: users.name,
       qty_sold: sql<number>`coalesce(sum(${consignment_cycles.qty_sold}), 0)`,
       amount_collected: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
-      hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+      hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_sold}), 0)`,
       waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
     })
     .from(visit_submissions)
@@ -318,7 +318,7 @@ reportsRoute.get('/staff', async (c) => {
     db
       .select({
         total_revenue: sql<number>`coalesce(sum(${consignment_cycles.amount_collected}), 0)`,
-        total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_dropped}), 0)`,
+        total_hpp_used: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_sold}), 0)`,
         total_waste: sql<number>`coalesce(sum(${consignment_cycles.hpp_snapshot} * ${consignment_cycles.qty_return_damaged}), 0)`,
       })
       .from(consignment_cycles)

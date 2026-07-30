@@ -58,6 +58,7 @@ export interface ReportFilters {
   from: string;
   to: string;
   outlet_id?: string;
+  user_id?: string;
 }
 
 export interface AnalyticsFilters {

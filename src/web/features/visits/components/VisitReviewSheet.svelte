@@ -1,7 +1,10 @@
 <script lang="ts">
   import { formatDistance, formatRupiah } from '$lib/utils/format.js';
+  import {
+    MapPin, AlertTriangle, Package, ShoppingCart, ArrowUpRight,
+    CheckCircle, FileText, Shield,
+  } from 'lucide-svelte';
   import Button from '../../../shared/ui/Button.svelte';
-  import Card from '../../../shared/ui/Card.svelte';
   import Sheet from '../../../shared/ui/Sheet.svelte';
   import type { VisitCycleState } from '@shared/schemas/visit.schema.js';
   import type { VisitDraftStore } from '../stores/visit-draft.svelte.js';
@@ -20,16 +23,8 @@
   };
 
   let {
-    open,
-    onClose,
-    onSubmit,
-    cycles,
-    draft,
-    distanceM,
-    radiusM,
-    disabled = false,
-    isPending = false,
-    error = null,
+    open, onClose, onSubmit, cycles, draft, distanceM, radiusM,
+    disabled = false, isPending = false, error = null,
   }: Props = $props();
 
   const isInside = $derived(distanceM !== null && distanceM <= radiusM);
@@ -39,135 +34,132 @@
       const input = draft.pickups.get(cycle.id) ?? { good: 0, damaged: 0 };
       const sold = draft.computedSold(cycle.id, cycle.qty_dropped);
       return {
+        id: cycle.id,
         name: cycle.product_name,
         sold,
-        good: input.good,
-        damaged: input.damaged,
+        price: cycle.price_snapshot ?? 0,
+        revenue: sold * (cycle.price_snapshot ?? 0),
       };
     })
   );
 
-  const totalCollected = $derived(
-    cycles.reduce((sum, cycle) => {
-      const sold = draft.computedSold(cycle.id, cycle.qty_dropped);
-      return sum + sold * (cycle.price_snapshot ?? 0);
-    }, 0)
-  );
-
-  const totalDropValue = $derived(
-    draft.drops.reduce((sum, drop) => sum + drop.qty * (drop.price ?? 0), 0)
-  );
-
+  const totalCollected = $derived(closedSummaries.reduce((s, x) => s + x.revenue, 0));
+  const totalSold = $derived(closedSummaries.reduce((s, x) => s + x.sold, 0));
+  const totalDropValue = $derived(draft.drops.reduce((s, d) => s + d.qty * (d.price ?? 0), 0));
   const hasPickups = $derived(cycles.length > 0);
   const hasDrops = $derived(draft.drops.length > 0);
 </script>
 
-<Sheet
-  {open}
-  title="Ringkasan Kunjungan"
-  description="Periksa kembali penarikan dan penitipan sebelum menyimpan."
-  {onClose}
->
+<Sheet {open} title="Ringkasan Kunjungan" description="Periksa kembali sebelum menyimpan." {onClose}>
   <div class="space-y-4">
-    <!-- Distance -->
-    <div
-      class="flex items-center justify-between rounded-xl border border-coffee-100 bg-milk px-4 py-3 text-sm"
-    >
-      <span class="text-coffee-600">Jarak ke warung</span>
-      <span class="font-bold text-coffee-900">
-        {distanceM !== null ? formatDistance(distanceM) : '-'}
-      </span>
+
+    <!-- Lokasi -->
+    <div class="rounded-2xl border border-coffee-100 bg-milk p-4">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl {isInside ? 'bg-emerald-100' : 'bg-red-100'}">
+          <MapPin size={18} class={isInside ? 'text-emerald-600' : 'text-red-600'} />
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-bold text-coffee-900">{distanceM !== null ? formatDistance(distanceM) : '-'}</p>
+          <p class="text-xs text-coffee-500">Radius: {formatDistance(radiusM)}</p>
+        </div>
+        {#if isInside}
+          <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+            <CheckCircle size={12} /> Valid
+          </span>
+        {:else}
+          <span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">
+            <AlertTriangle size={12} /> Luar radius
+          </span>
+        {/if}
+      </div>
+      {#if !isInside && draft.override}
+        <div class="mt-3 flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2">
+          <Shield size={14} class="text-blue-600" />
+          <div>
+            <p class="text-xs font-semibold text-blue-700">Override aktif</p>
+            <p class="text-xs text-blue-600">{draft.overrideReason || '-'}</p>
+          </div>
+        </div>
+      {/if}
     </div>
 
-    <!-- Geofence Warning -->
-    {#if !isInside}
-      <div
-        class="rounded-xl border border-danger bg-danger-bg px-4 py-3 text-sm text-danger"
-        role="alert"
-      >
-        <p class="font-semibold">Anda di luar radius {formatDistance(radiusM)}.</p>
-        {#if draft.override}
-          <p class="mt-1">Override geofence aktif. Alasan: {draft.overrideReason || '-'}</p>
-        {/if}
+    <!-- Penarikan (Simple List) -->
+    {#if hasPickups}
+      <div class="rounded-2xl border border-coffee-100 bg-white p-4">
+        <div class="mb-3 flex items-center gap-2">
+          <ShoppingCart size={16} class="text-orange-500" />
+          <h3 class="text-sm font-bold text-coffee-900">Produk Ditarik</h3>
+        </div>
+
+        <div class="space-y-2">
+          {#each closedSummaries as item (item.id)}
+            <div class="flex items-center justify-between py-1">
+              <div class="flex items-center gap-2">
+                <Package size={14} class="text-coffee-400" />
+                <span class="text-sm text-coffee-800">{item.name}</span>
+                <span class="text-xs text-coffee-400">×{item.sold}</span>
+              </div>
+              <span class="text-sm font-semibold text-coffee-900">{formatRupiah(item.revenue)}</span>
+            </div>
+          {/each}
+        </div>
+
+        <div class="mt-3 flex items-center justify-between border-t border-coffee-100 pt-3">
+          <span class="text-sm font-medium text-coffee-600">Total Setoran</span>
+          <span class="text-lg font-extrabold text-coffee-900">{formatRupiah(totalCollected)}</span>
+        </div>
       </div>
     {/if}
 
-    <!-- Penarikan (Pickup) -->
-    {#if hasPickups}
-      <Card variant="visit" class="bg-milk">
-        {#snippet header()}
-          <h3 class="text-sm font-bold text-coffee-900">Penarikan</h3>
-        {/snippet}
-        <ul class="space-y-2">
-          {#each closedSummaries as summary (summary.name)}
-            <li class="flex items-center justify-between text-sm">
-              <span class="text-coffee-700">{summary.name}</span>
-              <span class="font-medium text-coffee-900">
-                {summary.sold} terjual · {summary.good} layak · {summary.damaged} rusak
-              </span>
-            </li>
-          {/each}
-        </ul>
-      </Card>
-    {/if}
-
-    <!-- Penitipan (Drop) -->
+    <!-- Penitipan (Simple List) -->
     {#if hasDrops}
-      <Card variant="product" class="bg-milk">
-        {#snippet header()}
-          <h3 class="text-sm font-bold text-coffee-900">Penitipan Baru</h3>
-        {/snippet}
-        <ul class="space-y-2">
+      <div class="rounded-2xl border border-coffee-100 bg-white p-4">
+        <div class="mb-3 flex items-center gap-2">
+          <ArrowUpRight size={16} class="text-green-500" />
+          <h3 class="text-sm font-bold text-coffee-900">Produk Dititip</h3>
+        </div>
+
+        <div class="space-y-2">
           {#each draft.drops as drop (drop.id)}
-            <li class="flex items-center justify-between text-sm">
-              <span class="text-coffee-700">{drop.productName}</span>
-              <span class="font-medium text-coffee-900">
-                {drop.qty} unit · {formatRupiah(drop.qty * (drop.price ?? 0))}
-              </span>
-            </li>
+            <div class="flex items-center justify-between py-1">
+              <div class="flex items-center gap-2">
+                <Package size={14} class="text-coffee-400" />
+                <span class="text-sm text-coffee-800">{drop.productName}</span>
+                <span class="text-xs text-coffee-400">×{drop.qty}</span>
+              </div>
+              <span class="text-sm font-semibold text-coffee-900">{formatRupiah(drop.qty * (drop.price ?? 0))}</span>
+            </div>
           {/each}
-        </ul>
-      </Card>
-    {/if}
-
-    <!-- Summary -->
-    {#if hasPickups}
-      <div class="rounded-xl border border-coffee-100 bg-milk px-4 py-3">
-        <div class="flex items-center justify-between">
-          <span class="text-coffee-600">Total setoran</span>
-          <span class="text-lg font-bold text-coffee-900">{formatRupiah(totalCollected)}</span>
         </div>
-        {#if totalCollected > 0}
-          <p class="mt-1 text-xs text-coffee-500">Uang yang dikumpulkan dari penjualan</p>
-        {/if}
+
+        <div class="mt-3 flex items-center justify-between border-t border-coffee-100 pt-3">
+          <span class="text-sm font-medium text-coffee-600">Total Penitipan</span>
+          <span class="text-lg font-extrabold text-green-700">{formatRupiah(totalDropValue)}</span>
+        </div>
       </div>
     {/if}
 
-    {#if hasDrops}
-      <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <div class="flex items-center justify-between">
-          <span class="text-amber-700">Nilai penitipan</span>
-          <span class="text-lg font-bold text-amber-900">{formatRupiah(totalDropValue)}</span>
-        </div>
-        <p class="mt-1 text-xs text-amber-600">Nilai stok yang dititipkan ke warung</p>
-      </div>
-    {/if}
-
-    <!-- Notes -->
+    <!-- Catatan -->
     {#if draft.notes}
-      <div class="rounded-xl border border-coffee-100 bg-milk px-4 py-3 text-sm">
-        <p class="text-coffee-600">Catatan</p>
-        <p class="mt-1 font-medium text-coffee-900">{draft.notes}</p>
+      <div class="rounded-2xl border border-coffee-100 bg-milk p-4">
+        <div class="flex items-start gap-3">
+          <FileText size={16} class="mt-0.5 text-coffee-400" />
+          <div>
+            <p class="text-xs font-semibold text-coffee-500">Catatan</p>
+            <p class="mt-1 text-sm text-coffee-900">{draft.notes}</p>
+          </div>
+        </div>
       </div>
     {/if}
 
-    <!-- Error from submit -->
+    <!-- Error -->
     {#if error}
-      <div
-        class="rounded-xl border border-danger bg-danger-bg px-4 py-3 text-sm text-danger"
-        role="alert"
-      >
-        {error}
+      <div class="rounded-xl border border-danger bg-danger-bg px-4 py-3 text-sm text-danger" role="alert">
+        <div class="flex items-center gap-2">
+          <AlertTriangle size={16} />
+          {error}
+        </div>
       </div>
     {/if}
 

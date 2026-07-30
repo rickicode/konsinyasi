@@ -26,6 +26,8 @@
   import Card from '../../../shared/ui/Card.svelte';
   import ErrorState from '../../../shared/ui/ErrorState.svelte';
   import Icon from '../../../shared/ui/icons/Icon.svelte';
+  import QtyStepper from '../../../shared/ui/QtyStepper.svelte';
+  import { Package, Trash2, Navigation } from 'lucide-svelte';
   import TextArea from '../../../shared/ui/TextArea.svelte';
 
   type Props = {
@@ -107,9 +109,6 @@
     draft.addDrop({ id: product.id, name: product.name, price: product.price }, qty, notes);
   }
 
-  function handleRemoveDrop(id: string) {
-    draft.removeDrop(id);
-  }
 
   function handleRefreshGps() {
     geolocation.refresh();
@@ -289,10 +288,19 @@
           >
             <Icon name="store" size={22} />
           </div>
-          <div>
+          <div class="min-w-0 flex-1">
             <h2 class="font-bold text-coffee-900">{outlet.name}</h2>
             <p class="text-xs text-coffee-500">{outlet.address || 'Tidak ada alamat'}</p>
           </div>
+          <a
+            href="https://www.google.com/maps?q={outlet.latitude},{outlet.longitude}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500 text-white transition-colors hover:bg-green-600"
+            aria-label="Buka di Maps"
+          >
+            <Navigation size={18} />
+          </a>
         </div>
       </Card>
 
@@ -352,67 +360,60 @@
         />
 
         {#if draft.drops.length > 0}
-          <ul class="space-y-2" role="list">
-            {#each draft.drops as drop, index (drop.id)}
-              <li
-                class="group relative flex items-center gap-3 rounded-xl border border-coffee-100 bg-white px-3 py-3 text-sm shadow-sm transition-all hover:border-coffee-200 hover:shadow-md"
-              >
-                <!-- Number badge -->
-                <div
-                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-coffee-600 to-coffee-800 text-xs font-bold text-white shadow-sm"
-                >
-                  {index + 1}
-                </div>
-
-                <!-- Product info -->
-                <div class="min-w-0 flex-1">
-                  <p class="truncate font-semibold text-coffee-900">
-                    {drop.productName}
-                  </p>
-                  <div class="mt-0.5 flex items-center gap-2">
-                    <span
-                      class="inline-flex items-center rounded-md bg-coffee-50 px-1.5 py-0.5 text-xs font-medium text-coffee-700"
-                    >
-                      {drop.qty} unit
-                    </span>
-                    {#if drop.price}
-                      <span class="text-xs text-coffee-400">
-                        · {formatRupiah(drop.price)}/unit
-                      </span>
-                    {/if}
+          <div class="space-y-2">
+            {#each draft.drops as drop (drop.id)}
+              <div class="rounded-2xl border border-coffee-100 bg-white p-4">
+                <!-- Header: nama + hapus -->
+                <div class="mb-3 flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <Package size={16} class="text-green-500" />
+                    <span class="text-sm font-bold text-coffee-900">{drop.productName}</span>
                   </div>
-                  {#if drop.notes}
-                    <p class="mt-1 truncate text-xs text-coffee-400 italic">
-                      {drop.notes}
-                    </p>
-                  {/if}
-                </div>
-
-                <!-- Total value + delete -->
-                <div class="flex shrink-0 items-center gap-2">
-                  {#if drop.price}
-                    <span class="text-right text-sm font-bold text-coffee-800">
-                      {formatRupiah(drop.qty * drop.price)}
-                    </span>
-                  {/if}
                   <button
                     type="button"
                     class="flex h-8 w-8 items-center justify-center rounded-lg text-coffee-300 transition-colors hover:bg-danger-bg hover:text-danger"
-                    onclick={() => handleRemoveDrop(drop.id)}
+                    onclick={() => draft.removeDrop(drop.id)}
                     disabled={submitMutation.isPending}
-                    aria-label="Hapus penitipan {drop.productName}"
+                    aria-label="Hapus {drop.productName}"
                   >
-                    <Icon name="trash-2" size={16} />
+                    <Trash2 size={16} />
                   </button>
                 </div>
-              </li>
+
+                <!-- Qty Stepper -->
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-xs text-coffee-500">Jumlah titip</p>
+                    {#if drop.price}
+                      <p class="text-xs text-coffee-400">@{formatRupiah(drop.price)}/unit</p>
+                    {/if}
+                  </div>
+                  <QtyStepper
+                    value={drop.qty}
+                    min={1}
+                    onChange={(val) => draft.updateDrop(drop.id, { qty: val })}
+                    disabled={submitMutation.isPending}
+                  />
+                </div>
+
+                <!-- Total -->
+                {#if drop.price}
+                  <div class="mt-2 flex items-center justify-between border-t border-coffee-50 pt-2">
+                    <span class="text-xs text-coffee-500">Total</span>
+                    <span class="text-sm font-bold text-coffee-900">{formatRupiah(drop.qty * drop.price)}</span>
+                  </div>
+                {/if}
+
+                <!-- Notes -->
+                {#if drop.notes}
+                  <p class="mt-2 text-xs text-coffee-400 italic">{drop.notes}</p>
+                {/if}
+              </div>
             {/each}
-          </ul>
+          </div>
 
           <!-- Total -->
-          <div
-            class="mt-2 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5"
-          >
+          <div class="mt-2 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
             <span class="text-sm font-medium text-amber-700">Total nilai titip</span>
             <span class="text-base font-bold text-amber-900">
               {formatRupiah(draft.drops.reduce((s, d) => s + d.qty * (d.price ?? 0), 0))}

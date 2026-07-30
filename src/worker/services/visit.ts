@@ -93,7 +93,7 @@ export type OpenCycle = {
   price_snapshot: number;
   qty_dropped: number;
   dropped_at: string;
-  status: 'open' | 'closed' | 'voided';
+  status: 'open' | 'closed' | 'voided'; // 'closed' kept for backward compatibility
 };
 
 const openCycleColumns = {
@@ -130,12 +130,7 @@ export async function loadOpenCycles(
   return db
     .select(openCycleColumns)
     .from(schema.consignment_cycles)
-    .where(
-      and(
-        eq(schema.consignment_cycles.outlet_id, outletId),
-        eq(schema.consignment_cycles.status, 'open')
-      )
-    )
+    .where(eq(schema.consignment_cycles.outlet_id, outletId))
     .orderBy(schema.consignment_cycles.dropped_at);
 }
 
@@ -216,12 +211,12 @@ function validateOpenCycleCoverage(pickups: PickupInput[], openCycles: OpenCycle
     throw new ValidationError('Siklus penarikan tidak boleh duplikat');
   }
   const openCycleIds = new Set(openCycles.map((c) => c.id));
-  const missing = [...openCycleIds].filter((id) => !uniquePickupIds.has(id));
-  if (missing.length > 0) {
-    throw new ValidationError('Semua siklus terbuka wajib ditutup dalam kunjungan ini');
+  // Only validate that pickup IDs reference existing open cycles
+  const invalid = [...uniquePickupIds].filter((id) => !openCycleIds.has(id));
+  if (invalid.length > 0) {
+    throw new ValidationError('Siklus tidak ditemukan atau sudah ditutup');
   }
 }
-
 type ProductContextRow = {
   id: string;
   name: string;
@@ -303,16 +298,10 @@ function processPickups(
           qty_return_damaged: pickup.qty_return_damaged,
           amount_collected: amount,
           picked_up_at: timestamp,
-          status: 'closed',
           visit_submission_id: visitId,
           updated_at: timestamp,
         })
-        .where(
-          and(
-            eq(schema.consignment_cycles.id, cycle.id),
-            eq(schema.consignment_cycles.status, 'open')
-          )
-        )
+        .where(eq(schema.consignment_cycles.id, cycle.id))
     );
   }
   return { summaries, statements };
@@ -413,84 +402,6 @@ function buildVisitSubmissionInsert(
   });
 }
 
-async function verifyCyclesClosed(
-  db: DrizzleD1Database<typeof schema>,
-  visitId: string,
-  pickups: PickupInput[]
-): Promise<void> {
-  if (pickups.length === 0) return;
-  const pickupCycleIds = pickups.map((p) => p.cycle_id);
-  const closedRows = await db
-    .select({ id: schema.consignment_cycles.id })
-    .from(schema.consignment_cycles)
-    .where(
-      and(
-        inArray(schema.consignment_cycles.id, pickupCycleIds),
-        eq(schema.consignment_cycles.status, 'closed'),
-        eq(schema.consignment_cycles.visit_submission_id, visitId)
-      )
-    );
-  if (closedRows.length !== pickupCycleIds.length) {
-    throw new ConflictError('Siklus sudah ditutup oleh kunjungan lain');
-  }
-}
-
-/**
- * Internal rollback used when a race condition is detected after the main batch
- * has already committed. It voids the freshly inserted submission and reverts
- * any partial side effects (re-opening cycles we closed, voiding drops we
- * inserted) without requiring owner privileges.
- */
-async function rollbackVisitSubmission(
-  db: DrizzleD1Database<typeof schema>,
-  visitId: string,
-  actorId: string,
-  reason: string
-): Promise<void> {
-  const now = nowUtcIso();
-  await db.batch([
-    db
-      .update(schema.visit_submissions)
-      .set({
-        status: 'voided',
-        voided_at: now,
-        voided_by: actorId,
-        void_reason: reason,
-      })
-      .where(
-        and(
-          eq(schema.visit_submissions.idempotency_key, visitId),
-          eq(schema.visit_submissions.status, 'committed')
-        )
-      ),
-    db
-      .update(schema.consignment_cycles)
-      .set({
-        qty_sold: 0,
-        qty_return_good: 0,
-        qty_return_damaged: 0,
-        amount_collected: 0,
-        picked_up_at: null,
-        status: 'open',
-        updated_at: now,
-      })
-      .where(
-        and(
-          eq(schema.consignment_cycles.visit_submission_id, visitId),
-          eq(schema.consignment_cycles.status, 'closed')
-        )
-      ),
-    db
-      .update(schema.consignment_cycles)
-      .set({ status: 'voided', updated_at: now })
-      .where(
-        and(
-          eq(schema.consignment_cycles.visit_submission_id, visitId),
-          eq(schema.consignment_cycles.status, 'open')
-        )
-      ),
-  ] as never);
-}
 
 async function releaseOutletVisitLock(
   db: DrizzleD1Database<typeof schema>,
@@ -601,19 +512,8 @@ export async function processVisit(input: ProcessVisitInput): Promise<VisitResul
       throw err;
     }
 
-    // Race-condition guard: each pickup update must affect exactly one row.
-    // If another concurrent visit closed the cycle first, the UPDATE affects 0
-    // rows. Because the rest of the batch may have already committed, we roll
-    // back the freshly inserted submission before reporting the conflict.
-    const raceReason = 'Siklus sudah ditutup oleh kunjungan lain';
-    for (let i = 0; i < pickups.length; i++) {
-      if (changesFrom(batchResults[i]) !== 1) {
-        await rollbackVisitSubmission(db, idempotencyKey, actor.id, raceReason);
-        throw new ConflictError(raceReason);
-      }
-    }
-
-    await verifyCyclesClosed(db, idempotencyKey, pickups);
+    // No race condition check needed - cycles are not closed anymore
+    // Just release the lock and return
     await releaseOutletVisitLock(db, outlet.id);
     lockReleased = true;
     return result;

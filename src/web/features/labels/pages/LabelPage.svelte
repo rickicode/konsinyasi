@@ -28,6 +28,7 @@
   let showPrintModal = $state(false);
   let selectedBatch = $state<ProductBatch | null>(null);
   let printTemplate = $state<'a4' | 'thermal'>('a4');
+  let hideTitle = $state(false);
 
   // Form state
   let formProductId = $state('');
@@ -100,8 +101,10 @@
     const width = isThermal ? 'width:58mm;' : '';
 
     const labelContent = [
+      hideTitle ? '' : `<div style="font-size:${fontSize};font-weight:800;margin-bottom:6px;line-height:1.2">${batch.product_name}</div>`,
+      batch.batch_number ? `<div style="font-size:${smallFont};font-weight:600;margin-bottom:4px;color:#222">${batch.batch_number}</div>` : '',
       `<div style="font-size:${fontSize};font-weight:800;margin-bottom:6px;line-height:1.2">${batch.product_name}</div>`,
-      batch.batch_number ? `<div style="font-size:${smallFont};font-weight:600;margin-bottom:4px;color:#222">Batch: ${batch.batch_number}</div>` : '',
+      batch.batch_number ? `<div style="font-size:${smallFont};font-weight:600;margin-bottom:4px;color:#222">${batch.batch_number}</div>` : '',
       `<div style="font-size:${smallFont};font-weight:600;color:#222;line-height:1.5">Prod: ${prodDate}</div>`,
       `<div style="font-size:${smallFont};font-weight:600;color:#222;line-height:1.5">Exp: ${expDate}</div>`,
     ].join('');
@@ -258,6 +261,12 @@
             </button>
           </div>
         </div>
+
+        <!-- Hide Title Option -->
+        <label class="mb-5 flex items-center gap-2">
+          <input type="checkbox" bind:checked={hideTitle} class="h-4 w-4 rounded border-coffee-300 text-coffee-700 focus:ring-coffee-500">
+          <span class="text-sm text-coffee-700">Sembunyikan nama produk</span>
+        </label>
 
         <button
           onclick={handlePrint}

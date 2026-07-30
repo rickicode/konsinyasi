@@ -187,7 +187,7 @@ describe('processVisit', () => {
     expect(db.calls.filter((c: { op: string }) => c.op === 'delete')).toHaveLength(2);
   });
 
-  it('rolls back the submission when a cycle was closed by another concurrent visit', async () => {
+  it('completes visit even when cycle was picked up before (no auto-rollback)', async () => {
     const db = new StubDb([
       [], // fetchExistingResult
       [{ value: '100' }], // loadGeofenceRadiusM
@@ -196,14 +196,9 @@ describe('processVisit', () => {
       [openCycle], // loadOpenCycles
       [productRow], // loadProductContext
       [
-        changes(0), // pickup update: cycle no longer open (concurrent visit won)
-        changes(1), // visit_submission insert (already committed)
-        changes(1), // outlet last_visit update (already committed)
-      ],
-      [
-        changes(1), // rollback: mark visit_submission voided
-        changes(0), // rollback: no cycles to reopen (we closed none)
-        changes(0), // rollback: no drops to void
+        changes(1), // pickup update succeeds (no status check)
+        changes(1), // visit_submission insert
+        changes(1), // outlet last_visit update
       ],
       [], // release visit lock (finally)
     ]);
@@ -220,14 +215,8 @@ describe('processVisit', () => {
       ],
     });
 
-    await expect(processVisit(input)).rejects.toBeInstanceOf(ConflictError);
-
-    const batchCalls = db.calls.filter((c: { op: string }) => c.op === 'batch');
-    expect(batchCalls).toHaveLength(2);
-    // Main batch has pickup update + submission insert + outlet update.
-    expect(batchCalls[0]?.args).toBe(3);
-    // Rollback batch voids submission and any cycles tied to it.
-    expect(batchCalls[1]?.args).toBe(3);
+    const result = await processVisit(input);
+    expect(result.amount_collected_total).toBe(50000);
   });
 
   it('rejects concurrent visits to the same outlet with a lock conflict', async () => {

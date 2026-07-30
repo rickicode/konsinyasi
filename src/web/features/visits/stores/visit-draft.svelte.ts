@@ -284,7 +284,13 @@ export function createVisitDraftStore() {
     },
 
     allPickupsValid(cycles: VisitCycleState[]): boolean {
-      return cycles.every((cycle) => this.isPickupValid(cycle.id, cycle.qty_dropped));
+      // Only validate cycles that staff has started picking (good + damaged > 0)
+      // Skip cycles with no input (staff chose to leave them at outlet)
+      return cycles.every((cycle) => {
+        const input = pickups.get(cycle.id) ?? { good: 0, damaged: 0 };
+        if (input.good === 0 && input.damaged === 0) return true; // not started, ok
+        return this.isPickupValid(cycle.id, cycle.qty_dropped);
+      });
     },
 
     addDrop(product: { id: string; name: string; price: number }, qty: number, notesValue = '') {

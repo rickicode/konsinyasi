@@ -27,14 +27,6 @@ async function hasNewerCommittedSubmission(
   return (rows[0]?.count ?? 0) > 0;
 }
 
-const closedCycleColumns = {
-  id: schema.consignment_cycles.id,
-};
-
-const droppedCycleColumns = {
-  id: schema.consignment_cycles.id,
-};
-
 export async function voidVisit(
   db: DrizzleD1Database<typeof schema>,
   actor: SafeUser,
@@ -52,9 +44,6 @@ export async function voidVisit(
 
   // Atomic check-and-set: only void if the submission still exists as committed
   // and no newer committed submission exists for the same outlet.
-  // Collapsing the previous read-check-update sequence into a single UPDATE
-  // eliminates the TOCTOU window where a newer submission could be committed
-  // between the check and the write.
   const voidUpdate = db
     .update(schema.visit_submissions)
     .set({
@@ -77,26 +66,20 @@ export async function voidVisit(
       )
     );
 
-  const [closedCycles, droppedCycles] = await Promise.all([
-    db
-      .select(closedCycleColumns)
-      .from(schema.consignment_cycles)
-      .where(
-        and(
-          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
-          eq(schema.consignment_cycles.status, 'closed')
-        )
-      ),
-    db
-      .select(droppedCycleColumns)
-      .from(schema.consignment_cycles)
-      .where(
-        and(
-          eq(schema.consignment_cycles.visit_submission_id, idempotencyKey),
-          eq(schema.consignment_cycles.status, 'open')
-        )
-      ),
-  ]);
+  // Find cycles associated with this visit
+  // We need to differentiate between:
+  // 1. Cycles that were PICKED UP (have picked_up_at set) - should be un-picked
+  // 2. Cycles that were DROPPED (created by this visit) - should be voided
+  const allCycles = await db
+    .select({
+      id: schema.consignment_cycles.id,
+      picked_up_at: schema.consignment_cycles.picked_up_at,
+    })
+    .from(schema.consignment_cycles)
+    .where(eq(schema.consignment_cycles.visit_submission_id, idempotencyKey));
+
+  const pickedUpCycles = allCycles.filter(c => c.picked_up_at !== null);
+  const droppedCycles = allCycles.filter(c => c.picked_up_at === null);
 
   const submissionVoided = sql`EXISTS (
     SELECT 1
@@ -106,7 +89,9 @@ export async function voidVisit(
   )`;
 
   const cycleStatements: unknown[] = [];
-  for (const cycle of closedCycles) {
+
+  // 1. Un-pickup cycles: reset pickup data, keep them 'open'
+  for (const cycle of pickedUpCycles) {
     cycleStatements.push(
       db
         .update(schema.consignment_cycles)
@@ -116,18 +101,19 @@ export async function voidVisit(
           qty_return_damaged: 0,
           amount_collected: 0,
           picked_up_at: null,
-          status: 'open',
+          visit_submission_id: null,
           updated_at: now,
         })
         .where(
           and(
             eq(schema.consignment_cycles.id, cycle.id),
-            eq(schema.consignment_cycles.status, 'closed'),
             submissionVoided
           )
         )
     );
   }
+
+  // 2. Void dropped cycles: mark as 'voided'
   for (const cycle of droppedCycles) {
     cycleStatements.push(
       db
@@ -136,15 +122,13 @@ export async function voidVisit(
         .where(
           and(
             eq(schema.consignment_cycles.id, cycle.id),
-            eq(schema.consignment_cycles.status, 'open'),
             submissionVoided
           )
         )
     );
   }
 
-  // Execute the void and the cycle re-opening in the same batch so a crash
-  // after the submission update cannot leave cycles locked closed.
+  // Execute the void and the cycle updates in the same batch
   const batchResults = await db.batch([voidUpdate, ...cycleStatements] as never);
   const lockChanges =
     (batchResults[0] as unknown as { meta?: { changes?: number } }).meta?.changes ?? 0;
@@ -178,15 +162,10 @@ export async function voidVisit(
         'Tidak dapat membatalkan kunjungan karena sudah ada kunjungan lebih baru di warung ini'
       );
     }
-    // Defensive fallback. Should only be reached if the row changed between the
-    // UPDATE and this diagnostic SELECT (e.g. a concurrent void invalidating
-    // the status='committed' predicate).
     throw new ConflictError('Kunjungan tidak dapat dibatalkan');
   }
 
   // Clean up photos attached to this submission before removing the DB rows.
-  // We do this after the status is flipped to voided so concurrent uploads
-  // cannot add new photos while we are deleting.
   const [photos, receipts] = await Promise.all([
     db
       .select({ photo_key: schema.visit_photos.photo_key })
