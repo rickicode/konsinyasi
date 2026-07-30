@@ -37,6 +37,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/pengguna': 'Pengguna',
   // Settings (Owner only)
   '/pengaturan': 'Pengaturan',
+  '/labels': 'Label',
   // Public
   '/kategori': 'Kategori',
   '/keranjang': 'Keranjang',

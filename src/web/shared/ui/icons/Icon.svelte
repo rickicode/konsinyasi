@@ -42,6 +42,7 @@
     Shield,
     Smartphone,
     Store,
+    Tag,
     Trash2,
     Upload,
     User,
@@ -93,6 +94,7 @@
     | 'shield'
     | 'smartphone'
     | 'store'
+    | 'tag'
     | 'trash-2'
     | 'upload'
     | 'user'
@@ -153,6 +155,7 @@
     shield: Shield,
     smartphone: Smartphone,
     store: Store,
+    tag: Tag,
     'trash-2': Trash2,
     upload: Upload,
     user: User,

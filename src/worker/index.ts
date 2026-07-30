@@ -19,6 +19,8 @@ import reports from './routes/reports.js';
 import uoms from './routes/uoms.js';
 import publicRoutes from './routes/public.js';
 import analytics from './routes/analytics.js';
+import labels from './routes/labels.js';
+import labelsPrint from './routes/labels-print.js';
 
 const app = new Hono<Env>({ strict: false });
 
@@ -148,6 +150,7 @@ app.use('/api/media/products/*', requireAuth);
 app.use('/api/media/visits/*', requireAuth);
 
 app.route('/api/media', media);
+app.route('/api/labels/print', labelsPrint);  // Public - no auth
 
 app.route('/api/auth', auth);
 app.route('/api/users', users);
@@ -161,6 +164,8 @@ app.route('/api/reports', reports);
 app.route('/api/uoms', uoms);
 app.route('/api/public', publicRoutes);
 app.route('/api/analytics', analytics);
+app.use('/api/labels', requireAuth);
+app.route('/api/labels', labels);
 
 app.onError((err, c) => {
   if (err instanceof AppError) {

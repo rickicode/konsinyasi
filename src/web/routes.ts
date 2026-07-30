@@ -122,6 +122,10 @@ export const ownerRoutes = {
     conditions: [requireAuth, requireOwner],
   }),
 
+  // Label cetak
+  '/labels': lazy(() => import('./features/labels/pages/LabelPage.svelte'), {
+    conditions: [requireAuth, requireOwner],
+  }),
   // Pengelolaan users
   '/pengguna': lazy(() => import('./features/users/pages/UsersPage.svelte'), {
     conditions: [requireAuth, requireOwner],

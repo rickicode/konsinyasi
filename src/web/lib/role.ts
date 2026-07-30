@@ -54,7 +54,8 @@ export type AppNavItem = {
     | 'shield'
     | 'bar-chart-3'
     | 'bar-chart'
-    | 'clipboard-check';
+    | 'clipboard-check'
+    | 'tag';
 
   roles: ('owner' | 'staff')[];
   position: 'bottom' | 'top';
@@ -141,6 +142,14 @@ const ownerNavItems: AppNavItem[] = [
     path: '/pengaturan',
     label: 'Pengaturan',
     icon: 'settings',
+    roles: ['owner'],
+    position: 'top',
+  },
+  {
+    key: 'labels',
+    path: '/labels',
+    label: 'Label',
+    icon: 'tag',
     roles: ['owner'],
     position: 'top',
   },

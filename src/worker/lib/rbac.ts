@@ -19,6 +19,8 @@ export const ROLE_PERMISSIONS = {
     'bom:write',
     'raw_materials:read',
     'raw_materials:write',
+    'labels:read',
+    'labels:write',
     'users:manage',
     'master:delete',
   ]),
