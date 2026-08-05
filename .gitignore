@@ -21,6 +21,9 @@ scripts/seed-owner.generated.sql
 .rpiv/
 .sdd/
 .serena/
+.impeccable/
+compact-pilot-todos-*.json
+storefront-old/
 
 
 

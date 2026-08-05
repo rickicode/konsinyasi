@@ -1,0 +1,56 @@
+{
+  // Cloudflare Pages configuration for Konsi Storefront Astro
+  "name": "konsi-storefront",
+  "compatibility_date": "2024-01-01",
+  "pages_build_output_dir": "dist",
+  
+  // Custom domain (uncomment and set after first deploy)
+  // "domains": ["kopi.hijitoko.com"],
+  
+  // Headers for performance and security
+  "headers": {
+    "/*": [
+      {
+        "key": "X-Content-Type-Options",
+        "value": "nosniff"
+      },
+      {
+        "key": "X-Frame-Options",
+        "value": "DENY"
+      },
+      {
+        "key": "X-XSS-Protection",
+        "value": "1; mode=block"
+      },
+      {
+        "key": "Referrer-Policy",
+        "value": "strict-origin-when-cross-origin"
+      },
+      {
+        "key": "Permissions-Policy",
+        "value": "geolocation=(self)"
+      }
+    ],
+    "/_astro/*": [
+      {
+        "key": "Cache-Control",
+        "value": "public, max-age=31536000, immutable"
+      }
+    ],
+    "/*.html": [
+      {
+        "key": "Cache-Control",
+        "value": "public, max-age=3600, must-revalidate"
+      }
+    ]
+  },
+  
+  // Redirects
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/",
+      "status": 301
+    }
+  ]
+}
