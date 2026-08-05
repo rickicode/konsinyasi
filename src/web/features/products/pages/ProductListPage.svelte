@@ -114,7 +114,7 @@ import ProductDetailSheet from '../components/ProductDetailSheet.svelte';
           <div>
             <h1 class="text-base font-bold tracking-tight text-coffee-900">Produk</h1>
             {#if !productsQuery.isLoading && totalLoaded > 0}
-              <p class="text-[11px] font-medium text-coffee-400">{totalLoaded} item</p>
+              <p class="text-xs font-medium text-coffee-400">{totalLoaded} item</p>
             {/if}
           </div>
         </div>
@@ -262,7 +262,7 @@ import ProductDetailSheet from '../components/ProductDetailSheet.svelte';
 
                   <!-- Content -->
                   <div class="flex min-w-0 flex-1 flex-col">
-                    <span class="truncate text-[13px] font-semibold text-coffee-900 leading-snug"
+                    <span class="truncate text-sm font-semibold text-coffee-900 leading-snug"
                       >{product.name}</span
                     >
                     <div class="mt-0.5 flex items-center gap-2">
@@ -272,13 +272,18 @@ import ProductDetailSheet from '../components/ProductDetailSheet.svelte';
                         >
                       {/if}
                       <span
-                        class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none
+                        class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-semibold leading-none
                         {product.status === 'active'
                           ? 'bg-emerald-50 text-emerald-600'
                           : 'bg-coffee-50 text-coffee-400'}"
                       >
                         {product.status === 'active' ? 'Aktif' : 'Nonaktif'}
                       </span>
+                      {#if product.is_public}
+                        <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-semibold leading-none text-blue-600">
+                          Publik
+                        </span>
+                      {/if}
                     </div>
                   </div>
 
@@ -287,24 +292,32 @@ import ProductDetailSheet from '../components/ProductDetailSheet.svelte';
                     {#if auth.isOwner}
                       <span
                         role="button"
-                        tabindex="-1"
+                        tabindex="0"
                         class="flex h-8 w-8 items-center justify-center rounded-xl text-coffee-300 transition-all hover:bg-coffee-50 hover:text-coffee-600"
                         onclick={(e) => openEditModal(e, product.id)}
-                        onkeydown={(e) =>
-                          e.key === 'Enter' &&
-                          openEditModal(e as unknown as MouseEvent, product.id)}
+                        onkeydown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            openEditModal(e as unknown as MouseEvent, product.id);
+                          }
+                        }
+                        }
                         aria-label="Edit"
                       >
                         <Icon name="edit" size={15} />
                       </span>
                       <span
                         role="button"
-                        tabindex="-1"
+                        tabindex="0"
                         class="flex h-8 w-8 items-center justify-center rounded-xl text-coffee-300 transition-all hover:bg-red-50 hover:text-red-500"
                         onclick={(e) => openDeleteModal(e, product.id)}
-                        onkeydown={(e) =>
-                          e.key === 'Enter' &&
-                          openDeleteModal(e as unknown as MouseEvent, product.id)}
+                        onkeydown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            openDeleteModal(e as unknown as MouseEvent, product.id);
+                          }
+                        }
+                        }
                         aria-label="Hapus"
                       >
                         <Icon name="trash-2" size={15} />

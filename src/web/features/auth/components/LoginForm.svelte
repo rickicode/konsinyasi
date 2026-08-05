@@ -37,7 +37,7 @@
   }
 </script>
 
-<form class="w-full max-w-sm space-y-4" onsubmit={handleSubmit}>
+<form class="w-full max-w-sm space-y-4" onsubmit={handleSubmit} aria-label="Form login pengguna">
   {#if error}
     <div
       class="flex items-start gap-2 rounded-xl bg-danger-bg p-3 text-sm font-medium text-danger"

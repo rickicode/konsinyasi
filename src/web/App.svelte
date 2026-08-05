@@ -88,6 +88,15 @@
   const currentRoutes = $derived(auth.isOwner ? ownerRoutes : staffRoutes);
 </script>
 
+<!-- Skip link: lets keyboard / screen-reader users jump past navigation to content. -->
+<a
+  href="#main-content"
+  class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-coffee-900 focus:px-4 focus:py-2 focus:text-cream"
+  onclick={() => document.getElementById('main-content')?.focus()}
+>
+  Langsung ke konten utama
+</a>
+
 <QueryClientProvider client={queryClient}>
   <ToastProvider>
     <RootLayout>

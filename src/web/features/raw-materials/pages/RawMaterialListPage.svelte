@@ -121,7 +121,7 @@ let isUomOpen = $state(false);
           <div>
             <h1 class="text-base font-bold tracking-tight text-coffee-900">Bahan Baku</h1>
             {#if !rawMaterialsQuery.isLoading && totalLoaded > 0}
-              <p class="text-[11px] font-medium text-coffee-400">{totalLoaded} item</p>
+              <p class="text-xs font-medium text-coffee-400">{totalLoaded} item</p>
             {/if}
           </div>
           {#if auth.isOwner}
@@ -275,7 +275,7 @@ let isUomOpen = $state(false);
                   </div>
                   <!-- Content -->
                   <div class="flex min-w-0 flex-1 flex-col">
-                    <span class="truncate text-[13px] font-semibold leading-snug text-coffee-900">
+                    <span class="truncate text-sm font-semibold leading-snug text-coffee-900">
                       {item.name}
                     </span>
                     <div class="mt-0.5 flex items-center gap-2">
@@ -285,7 +285,7 @@ let isUomOpen = $state(false);
                         </span>
                       {/if}
                       <span
-                        class="inline-flex items-center gap-1 rounded-full bg-coffee-50 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-coffee-500"
+                        class="inline-flex items-center gap-1 rounded-full bg-coffee-50 px-1.5 py-0.5 text-xs font-semibold leading-none text-coffee-500"
                       >
                         {unitLabels[item.base_unit] ?? item.base_unit}
                       </span>
@@ -295,22 +295,32 @@ let isUomOpen = $state(false);
                   <div class="flex flex-shrink-0 items-center gap-0.5">
                     <span
                       role="button"
-                      tabindex="-1"
+                      tabindex="0"
                       class="flex h-8 w-8 items-center justify-center rounded-xl text-coffee-300 transition-all hover:bg-coffee-50 hover:text-coffee-600"
                       onclick={(e) => openEditIcon(e, item.id)}
-                      onkeydown={(e) =>
-                        e.key === 'Enter' && openEditIcon(e as unknown as MouseEvent, item.id)}
+                      onkeydown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openEditIcon(e as unknown as MouseEvent, item.id);
+                        }
+                      }
+                      }
                       aria-label="Edit"
                     >
                       <Icon name="edit" size={15} />
                     </span>
                     <span
                       role="button"
-                      tabindex="-1"
+                      tabindex="0"
                       class="flex h-8 w-8 items-center justify-center rounded-xl text-coffee-300 transition-all hover:bg-red-50 hover:text-red-500"
                       onclick={(e) => openDeleteModal(e, item.id)}
-                      onkeydown={(e) =>
-                        e.key === 'Enter' && openDeleteModal(e as unknown as MouseEvent, item.id)}
+                      onkeydown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openDeleteModal(e as unknown as MouseEvent, item.id);
+                        }
+                      }
+                      }
                       aria-label="Hapus"
                     >
                       <Icon name="trash-2" size={15} />

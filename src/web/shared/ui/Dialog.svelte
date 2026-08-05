@@ -40,13 +40,45 @@
       onClose();
     }
   }
+
+  let dialogEl: HTMLDivElement | null = null;
+  let previousFocus: HTMLElement | null = null;
+
+  // Save the previously focused element when opening and restore it on close.
+  $effect(() => {
+    if (open) {
+      previousFocus = document.activeElement as HTMLElement | null;
+      requestAnimationFrame(() => dialogEl?.focus());
+    } else if (previousFocus) {
+      previousFocus.focus();
+      previousFocus = null;
+    }
+  });
+
+  // Trap Tab / Shift+Tab so keyboard focus cannot escape the dialog.
+  function trapFocus(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || !dialogEl) return;
+    const focusable = dialogEl.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 </script>
 
 <svelte:window onkeydown={handleKeyDown} />
 
 {#if open}
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-coffee-950/50 p-4"
+    class="fixed inset-0 z-[70] flex items-center justify-center bg-coffee-950/50 p-4"
     transition:fade={{ duration: 150 }}
     role="presentation"
     aria-label="Tutup dialog"
@@ -74,6 +106,8 @@
       aria-labelledby="dialog-title"
       aria-describedby={description ? 'dialog-desc' : undefined}
       tabindex="-1"
+      onkeydown={trapFocus}
+      bind:this={dialogEl}
     >
       <div class="flex items-start gap-3">
         <div

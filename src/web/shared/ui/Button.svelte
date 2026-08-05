@@ -89,7 +89,8 @@
   onclick={handleClick}
 >
   {#if loading}
-    <Icon name="loader-2" size={size === 'lg' ? 24 : 20} class="animate-spin" />
+    <span class="sr-only">Memproses...</span>
+    <Icon name="loader-2" size={size === 'lg' ? 24 : 20} class="animate-spin" aria-hidden="true" />
   {/if}
   {#if children}
     {@render children()}

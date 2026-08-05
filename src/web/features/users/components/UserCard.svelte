@@ -66,13 +66,13 @@ function handleToggle(e: MouseEvent | KeyboardEvent) {
 
 	<!-- Content -->
 	<div class="flex min-w-0 flex-1 flex-col">
-		<span class="truncate text-[13px] font-semibold leading-snug text-coffee-900"
+		<span class="truncate text-sm font-semibold leading-snug text-coffee-900"
 			>{user.name}</span
 		>
 		<span class="mt-0.5 truncate text-xs text-coffee-500">{user.email}</span>
 		<div class="mt-1 flex flex-wrap items-center gap-1.5">
 			<span
-				class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {user.role ===
+				class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide {user.role ===
 				'owner'
 					? 'bg-coffee-700 text-white'
 					: 'bg-coffee-100 text-coffee-700'}"
@@ -85,7 +85,7 @@ function handleToggle(e: MouseEvent | KeyboardEvent) {
 				{roleLabel}
 			</span>
 			<span
-				class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {user.status ===
+				class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide {user.status ===
 				'active'
 					? 'bg-emerald-50 text-emerald-700'
 					: 'bg-coffee-200 text-coffee-600'}"
@@ -105,10 +105,16 @@ function handleToggle(e: MouseEvent | KeyboardEvent) {
 		{#if onedit}
 			<span
 				role="button"
-				tabindex="-1"
+				tabindex="0"
 				class="flex h-8 w-8 items-center justify-center rounded-xl text-coffee-300 transition-all hover:bg-coffee-50 hover:text-coffee-600"
 				onclick={handleEdit}
-				onkeydown={(e) => e.key === 'Enter' && handleEdit(e)}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						handleEdit(e);
+					}
+				}
+				}
 				aria-label="Edit"
 			>
 				<Icon name="edit" size={15} />
@@ -117,10 +123,16 @@ function handleToggle(e: MouseEvent | KeyboardEvent) {
 		{#if onreset}
 			<span
 				role="button"
-				tabindex="-1"
+				tabindex="0"
 				class="flex h-8 w-8 items-center justify-center rounded-xl text-coffee-300 transition-all hover:bg-coffee-50 hover:text-coffee-600"
 				onclick={handleReset}
-				onkeydown={(e) => e.key === 'Enter' && handleReset(e)}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						handleReset(e);
+					}
+				}
+				}
 				aria-label="Reset password"
 			>
 				<Lock size={15} />
@@ -129,10 +141,16 @@ function handleToggle(e: MouseEvent | KeyboardEvent) {
 		{#if canToggle && ontoggle}
 			<span
 				role="button"
-				tabindex="-1"
+				tabindex="0"
 				class="flex h-8 w-8 items-center justify-center rounded-xl text-coffee-300 transition-all hover:bg-coffee-50 hover:text-coffee-600"
 				onclick={handleToggle}
-				onkeydown={(e) => e.key === 'Enter' && handleToggle(e)}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						handleToggle(e);
+					}
+				}
+				}
 				aria-label={statusLabel}
 			>
 				{#if user.status === 'active'}

@@ -24,6 +24,8 @@
 <div
   class={cn('flex flex-col items-center justify-center gap-3 px-6 py-10 text-center', className)}
   role="alert"
+  aria-live="assertive"
+  aria-atomic="true"
 >
   {#if icon}
     {@render icon()}
