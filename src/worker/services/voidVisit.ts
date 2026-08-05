@@ -97,11 +97,12 @@ export async function voidVisit(
         .update(schema.consignment_cycles)
         .set({
           qty_sold: 0,
-          qty_return_good: 0,
+          qty_remaining_good: 0,
           qty_return_damaged: 0,
           amount_collected: 0,
           picked_up_at: null,
           visit_submission_id: null,
+          status: 'open',
           updated_at: now,
         })
         .where(

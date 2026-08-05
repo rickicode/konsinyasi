@@ -61,14 +61,15 @@ export function computeHPP(lines: HPPRecipeLine[], registry: UomRegistry): numbe
   for (const line of lines) {
     try {
       const baseQuantity = convertQuantity(line.quantity, line.unit, line.baseUnit, registry);
-      total += baseQuantity * line.pricePerBaseUnit;
+      // Round each line's contribution to avoid floating-point accumulation
+      total += Math.round(baseQuantity * line.pricePerBaseUnit);
     } catch {
       throw new ValidationError(
         `Satuan ${line.unit} tidak cocok dengan satuan dasar ${line.baseUnit}`
       );
     }
   }
-  return Math.round(total);
+  return total;
 }
 
 const rawMaterialColumns = {

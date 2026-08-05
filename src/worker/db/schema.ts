@@ -118,7 +118,9 @@ export const products = sqliteTable(
       .notNull()
       .default('active'),
     photo_key: text('photo_key'),
+    description: text('description'),
     deleted_at: text('deleted_at'),
+    is_public: integer('is_public').notNull().default(0),
     created_at: text('created_at')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
@@ -223,9 +225,10 @@ export const consignment_cycles = sqliteTable(
     price_snapshot: integer('price_snapshot').notNull(),
     qty_dropped: integer('qty_dropped').notNull(),
     dropped_at: text('dropped_at').notNull(),
+    expires_at: text('expires_at'),
     qty_sold: integer('qty_sold').notNull().default(0),
-    qty_return_good: integer('qty_return_good').notNull().default(0),
-    qty_return_damaged: integer('qty_return_damaged').notNull().default(0),
+    qty_remaining_good: integer('qty_remaining_good').notNull().default(0),  // Good products stay at warung
+    qty_return_damaged: integer('qty_return_damaged').notNull().default(0),  // Damaged pulled back
     amount_collected: integer('amount_collected').notNull().default(0),
     picked_up_at: text('picked_up_at'),
     status: text('status', { enum: ['open', 'closed', 'voided'] })
@@ -246,9 +249,11 @@ export const consignment_cycles = sqliteTable(
     check('chk_cycles_price', sql`price_snapshot >= 0`),
     check('chk_cycles_qty_dropped', sql`qty_dropped > 0`),
     check('chk_cycles_qty_sold', sql`qty_sold >= 0`),
-    check('chk_cycles_qty_return_good', sql`qty_return_good >= 0`),
+    check('chk_cycles_qty_remaining_good', sql`qty_remaining_good >= 0`),
     check('chk_cycles_qty_return_damaged', sql`qty_return_damaged >= 0`),
     check('chk_cycles_amount', sql`amount_collected >= 0`),
+    check('chk_cycles_return_limit', sql`qty_remaining_good + qty_return_damaged <= qty_dropped`),
+    check('chk_cycles_sold_calc', sql`status != 'closed' OR qty_sold = qty_dropped - qty_remaining_good - qty_return_damaged`),
     index('idx_cycles_outlet_status_picked').on(t.outlet_id, t.status, t.picked_up_at),
     index('idx_cycles_dropped_at').on(t.dropped_at),
     index('idx_cycles_product').on(t.product_id),
@@ -278,6 +283,7 @@ export const visit_submissions = sqliteTable(
     notes: text('notes'),
     amount_collected_total: integer('amount_collected_total').notNull().default(0),
     qty_sold_total: integer('qty_sold_total').notNull().default(0),
+    qty_remaining_total: integer('qty_remaining_total').notNull().default(0),  // Good products stay at warung
     status: text('status', { enum: ['committed', 'voided'] })
       .notNull()
       .default('committed'),

@@ -17,7 +17,11 @@ import {
 const GEOFENCE_KEY = 'geofence_radius_m';
 const BRAND_KEY = 'brand_name';
 const BRAND_LOGO_KEY = 'brand_logo_key';
+const CYCLE_RED_HOURS_KEY = 'cycle_red_hours';
+const CYCLE_YELLOW_HOURS_KEY = 'cycle_yellow_hours';
 const DEFAULT_BRAND_NAME = 'Konsi';
+const DEFAULT_CYCLE_RED_HOURS = '96';
+const DEFAULT_CYCLE_YELLOW_HOURS = '72';
 
 const geofenceUpdateSchema = z.object({
   radius_m: z.coerce
@@ -32,6 +36,19 @@ const brandUpdateSchema = z.object({
     .string()
     .min(1, 'Nama brand wajib diisi')
     .max(50, 'Nama brand maksimal 50 karakter'),
+});
+
+const cycleAgeUpdateSchema = z.object({
+  cycle_red_hours: z.coerce
+    .number()
+    .int('Jam harus bilangan bulat')
+    .min(24, 'Jam minimal 24')
+    .max(720, 'Jam maksimal 720 (30 hari)'),
+  cycle_yellow_hours: z.coerce
+    .number()
+    .int('Jam harus bilangan bulat')
+    .min(12, 'Jam minimal 12')
+    .max(480, 'Jam maksimal 480 (20 hari)'),
 });
 
 async function ensureSetting(
@@ -63,15 +80,19 @@ settings.use('*', requirePermission('settings:read'));
 
 settings.get('/', async (c) => {
   const db = createClient(c.env);
-  const [geofenceValue, brandValue, logoKey] = await Promise.all([
+  const [geofenceValue, brandValue, logoKey, redHours, yellowHours] = await Promise.all([
     ensureSetting(db, GEOFENCE_KEY, '100'),
     ensureSetting(db, BRAND_KEY, DEFAULT_BRAND_NAME),
     getBrandLogoKey(db),
+    ensureSetting(db, CYCLE_RED_HOURS_KEY, DEFAULT_CYCLE_RED_HOURS),
+    ensureSetting(db, CYCLE_YELLOW_HOURS_KEY, DEFAULT_CYCLE_YELLOW_HOURS),
   ]);
   return c.json({
     geofence_radius_m: Number(geofenceValue),
     brand_name: brandValue,
     logo_url: logoKey ? buildImageUrl(logoKey, c.env.PUBLIC_R2_CDN_URL) : null,
+    cycle_red_hours: Number(redHours),
+    cycle_yellow_hours: Number(yellowHours),
   });
 });
 
@@ -132,6 +153,40 @@ settings.put('/brand', async (c) => {
     geofence_radius_m: Number(geofenceValue),
     brand_name: parsed.data.brand_name,
     logo_url: logoKey ? buildImageUrl(logoKey, c.env.PUBLIC_R2_CDN_URL) : null,
+  });
+});
+
+settings.put('/cycle-age', async (c) => {
+  const user = c.get('user');
+  if (user.role !== 'owner') {
+    throw new ForbiddenError('Hanya owner yang dapat mengubah pengaturan usia siklus');
+  }
+  const body = await c.req.json();
+  const parsed = cycleAgeUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '));
+  }
+  
+  // Validate: yellow must be less than red
+  if (parsed.data.cycle_yellow_hours >= parsed.data.cycle_red_hours) {
+    throw new ValidationError('Jam kuning harus lebih kecil dari jam merah');
+  }
+  
+  const db = createClient(c.env);
+  const now = new Date().toISOString();
+  
+  await Promise.all([
+    db.update(app_settings)
+      .set({ value: String(parsed.data.cycle_red_hours), updated_by: user.id, updated_at: now })
+      .where(eq(app_settings.key, CYCLE_RED_HOURS_KEY)),
+    db.update(app_settings)
+      .set({ value: String(parsed.data.cycle_yellow_hours), updated_by: user.id, updated_at: now })
+      .where(eq(app_settings.key, CYCLE_YELLOW_HOURS_KEY)),
+  ]);
+  
+  return c.json({
+    cycle_red_hours: parsed.data.cycle_red_hours,
+    cycle_yellow_hours: parsed.data.cycle_yellow_hours,
   });
 });
 

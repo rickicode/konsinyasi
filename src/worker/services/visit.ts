@@ -11,10 +11,14 @@ export function ageHours(droppedAt: string): number {
   return (Date.now() - Date.parse(droppedAt)) / 3_600_000;
 }
 
-export function ageColor(droppedAt: string): 'red' | 'yellow' | 'green' {
+export function ageColor(
+  droppedAt: string,
+  redHours: number = 96,
+  yellowHours: number = 72
+): 'red' | 'yellow' | 'green' {
   const h = ageHours(droppedAt);
-  if (h >= 96) return 'red';
-  if (h >= 72) return 'yellow';
+  if (h >= redHours) return 'red';
+  if (h >= yellowHours) return 'yellow';
   return 'green';
 }
 
@@ -32,14 +36,15 @@ export function haversineM(lat1: number, lng1: number, lat2: number, lng2: numbe
 export type PickupInput = {
   cycle_id: string;
   qty_sold: number;
-  qty_return_good: number;
-  qty_return_damaged: number;
+  qty_remaining_good: number;  // Good products stay at warung
+  qty_return_damaged: number;  // Damaged pulled back
 };
 
 export type DropInput = {
   product_id: string;
   qty_dropped: number;
-  notes?: string;
+  expires_at?: string;
+  notes?: string | null;
 };
 
 export type ProcessVisitInput = {
@@ -61,8 +66,8 @@ export type ClosedCycleSummary = {
   cycle_id: string;
   product_name: string;
   qty_sold: number;
-  qty_return_good: number;
-  qty_return_damaged: number;
+  qty_remaining_good: number;  // Good products stay at warung
+  qty_return_damaged: number;  // Damaged pulled back
   amount_collected: number;
 };
 
@@ -83,6 +88,7 @@ export type VisitResult = {
   geofence_override: boolean;
   amount_collected_total: number;
   qty_sold_total: number;
+  qty_remaining_total: number;
 };
 
 export type OpenCycle = {
@@ -93,7 +99,8 @@ export type OpenCycle = {
   price_snapshot: number;
   qty_dropped: number;
   dropped_at: string;
-  status: 'open' | 'closed' | 'voided'; // 'closed' kept for backward compatibility
+  status: 'open' | 'closed' | 'voided';
+  expires_at?: string | null;
 };
 
 const openCycleColumns = {
@@ -105,6 +112,7 @@ const openCycleColumns = {
   qty_dropped: schema.consignment_cycles.qty_dropped,
   dropped_at: schema.consignment_cycles.dropped_at,
   status: schema.consignment_cycles.status,
+  expires_at: schema.consignment_cycles.expires_at,
 };
 
 function nowUtcIso(): string {
@@ -130,7 +138,12 @@ export async function loadOpenCycles(
   return db
     .select(openCycleColumns)
     .from(schema.consignment_cycles)
-    .where(eq(schema.consignment_cycles.outlet_id, outletId))
+    .where(
+      and(
+        eq(schema.consignment_cycles.outlet_id, outletId),
+        eq(schema.consignment_cycles.status, 'open')
+      )
+    )
     .orderBy(schema.consignment_cycles.dropped_at);
 }
 
@@ -268,42 +281,73 @@ function processPickups(
 ): { summaries: ClosedCycleSummary[]; statements: unknown[] } {
   const summaries: ClosedCycleSummary[] = [];
   const statements: unknown[] = [];
-  for (const pickup of inputs) {
-    const cycle = openCycles.find((c) => c.id === pickup.cycle_id);
-    if (!cycle) {
-      throw new ValidationError('Siklus tidak ditemukan');
+
+  // Build a map of pickup inputs by cycle_id for quick lookup
+  const inputMap = new Map(inputs.map((p) => [p.cycle_id, p]));
+
+  // Process ALL open cycles, not just those in input
+  // Cycles NOT in input = all units sold (no remaining stock)
+  for (const cycle of openCycles) {
+    const input = inputMap.get(cycle.id);
+
+    let qty_remaining_good = 0;  // Good products stay at warung
+    let qty_return_damaged = 0;  // Damaged pulled back
+    let qty_sold = cycle.qty_dropped;
+
+    if (input) {
+      // qty_remaining_good = good products stay at warung
+      qty_remaining_good = Math.max(0, input.qty_remaining_good);
+      // qty_return_damaged = only damaged products are pulled back
+      qty_return_damaged = Math.max(0, input.qty_return_damaged);
+
+      // Validate: remaining cannot exceed dropped
+      const totalRemaining = qty_remaining_good + qty_return_damaged;
+      if (totalRemaining > cycle.qty_dropped) {
+        throw new ValidationError(
+          `Sisa (${totalRemaining}) melebihi jumlah dititip (${cycle.qty_dropped})`
+        );
+      }
+
+      // Auto-calculate sold: what's not remaining is sold
+      qty_sold = cycle.qty_dropped - qty_remaining_good - qty_return_damaged;
     }
-    if (pickup.qty_sold < 0 || pickup.qty_return_good < 0 || pickup.qty_return_damaged < 0) {
-      throw new ValidationError('Qty tidak boleh negatif');
-    }
-    const total = pickup.qty_sold + pickup.qty_return_good + pickup.qty_return_damaged;
-    if (total !== cycle.qty_dropped) {
-      throw new ValidationError(`Penutupan tidak sesuai: ${total} ≠ ${cycle.qty_dropped}`);
-    }
-    const amount = pickup.qty_sold * cycle.price_snapshot;
+    // else: no input = all sold (qty_sold = qty_dropped, qty_remaining = 0)
+
+    const amount = qty_sold * cycle.price_snapshot;
+    // Cycle stays open if there's still good stock at warung
+    const cycleStatus = (qty_remaining_good > 0) ? 'open' : 'closed';
+
     summaries.push({
       cycle_id: cycle.id,
       product_name: productNames.get(cycle.product_id) ?? 'Produk',
-      qty_sold: pickup.qty_sold,
-      qty_return_good: pickup.qty_return_good,
-      qty_return_damaged: pickup.qty_return_damaged,
+      qty_sold,
+      qty_remaining_good,
+      qty_return_damaged,
       amount_collected: amount,
     });
+
     statements.push(
       db
         .update(schema.consignment_cycles)
         .set({
-          qty_sold: pickup.qty_sold,
-          qty_return_good: pickup.qty_return_good,
-          qty_return_damaged: pickup.qty_return_damaged,
+          qty_sold,
+          qty_remaining_good,  // Good products stay at warung
+          qty_return_damaged,   // Only damaged pulled back
           amount_collected: amount,
           picked_up_at: timestamp,
           visit_submission_id: visitId,
+          status: cycleStatus,  // open if still has stock, closed if empty
           updated_at: timestamp,
         })
-        .where(eq(schema.consignment_cycles.id, cycle.id))
+        .where(
+          and(
+            eq(schema.consignment_cycles.id, cycle.id),
+            eq(schema.consignment_cycles.status, 'open')
+          )
+        )
     );
   }
+
   return { summaries, statements };
 }
 
@@ -343,12 +387,13 @@ function processDrops(
         qty_dropped: drop.qty_dropped,
         dropped_at: timestamp,
         qty_sold: 0,
-        qty_return_good: 0,
+        qty_remaining_good: 0,  // Good products stay at warung
         qty_return_damaged: 0,
         amount_collected: 0,
         status: 'open',
         visit_submission_id: visitId,
         notes: drop.notes ?? null,
+        expires_at: drop.expires_at ?? null,
         created_at: timestamp,
         updated_at: timestamp,
       })
@@ -374,6 +419,7 @@ function buildVisitResult(
     geofence_override: !!input.geofenceOverride,
     amount_collected_total: closedSummaries.reduce((sum, cycle) => sum + cycle.amount_collected, 0),
     qty_sold_total: closedSummaries.reduce((sum, cycle) => sum + cycle.qty_sold, 0),
+    qty_remaining_total: closedSummaries.reduce((sum, cycle) => sum + cycle.qty_remaining_good, 0),
   };
 }
 
@@ -389,6 +435,7 @@ function buildVisitSubmissionInsert(
     response_json: JSON.stringify(result),
     amount_collected_total: result.amount_collected_total,
     qty_sold_total: result.qty_sold_total,
+    qty_remaining_total: result.qty_remaining_total,
     client_latitude: input.clientLat,
     client_longitude: input.clientLng,
     client_accuracy_m: input.clientAccuracyM ?? null,
