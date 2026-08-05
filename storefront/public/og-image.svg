@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#f7f3eb"/>
+  
+  <!-- Coffee gradient overlay -->
+  <defs>
+    <linearGradient id="coffeeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5d4037;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3e2a24;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Right decorative block -->
+  <rect x="800" y="0" width="400" height="630" fill="url(#coffeeGrad)"/>
+  
+  <!-- Coffee cup icon -->
+  <g transform="translate(920, 200)">
+    <path d="M60 0h8a30 30 0 010 60H60V0z" fill="#c8956c" opacity="0.3"/>
+    <rect x="0" y="0" width="60" height="60" rx="4" fill="none" stroke="white" stroke-width="6"/>
+    <path d="M60 10h8a20 20 0 010 40h-8" fill="none" stroke="white" stroke-width="6"/>
+    <!-- Steam -->
+    <path d="M15 -15 Q20 -30 15 -45" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+    <path d="M30 -15 Q35 -35 30 -50" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+    <path d="M45 -15 Q50 -30 45 -45" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  </g>
+  
+  <!-- Logo mark -->
+  <rect x="100" y="80" width="80" height="80" rx="16" fill="#5d4037"/>
+  <text x="140" y="135" font-family="system-ui, sans-serif" font-size="48" font-weight="800" fill="white" text-anchor="middle">K</text>
+  
+  <!-- Brand name -->
+  <text x="100" y="220" font-family="system-ui, sans-serif" font-size="72" font-weight="800" fill="#3e2a24">Konsi</text>
+  
+  <!-- Tagline -->
+  <text x="100" y="280" font-family="system-ui, sans-serif" font-size="28" fill="#7d5a38">Temukan Kopi di Warung Sekitarmu</text>
+  
+  <!-- Divider -->
+  <rect x="100" y="310" width="120" height="4" rx="2" fill="#c8956c"/>
+  
+  <!-- Description -->
+  <text x="100" y="370" font-family="system-ui, sans-serif" font-size="22" fill="#5d4037">
+    <tspan x="100" dy="0">Cek lokasi warung kopi terdekat,</tspan>
+    <tspan x="100" dy="35">stok produk tersedia, dan navigasi</tspan>
+    <tspan x="100" dy="35">langsung ke warung kesukaanmu.</tspan>
+  </text>
+  
+  <!-- URL -->
+  <text x="100" y="540" font-family="system-ui, sans-serif" font-size="18" fill="#9a7044">kopi.hijitoko.com</text>
+  
+  <!-- Decorative coffee beans -->
+  <circle cx="650" cy="500" r="20" fill="#c8956c" opacity="0.2"/>
+  <circle cx="700" cy="480" r="15" fill="#c8956c" opacity="0.15"/>
+  <circle cx="670" cy="540" r="12" fill="#c8956c" opacity="0.1"/>
+</svg>

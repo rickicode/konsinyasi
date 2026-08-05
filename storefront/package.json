@@ -1,17 +1,20 @@
 {
-  "name": "konsi-storefront",
+  "name": "konsi-storefront-astro",
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "description": "Public storefront for Konsi - Temukan kopi di warung sekitarmu",
+  "description": "Public storefront for Konsi - Temukan kopi di warung sekitarmu (Astro version)",
   "scripts": {
-    "dev": "vite --port 3000",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
     "deploy": "npm run build && wrangler pages deploy dist --project-name=konsi-storefront"
   },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.3",
+    "astro": "^5.0.0"
+  },
   "devDependencies": {
-    "vite": "^6.0.0",
     "wrangler": "^3.109.0"
   }
 }
