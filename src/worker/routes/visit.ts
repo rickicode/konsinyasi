@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { Hono } from 'hono';
-import { and, desc, eq, gte, inArray, isNull, lte, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import type { Env, SafeUser } from '../types.js';
 import { createClient } from '../db/client.js';
 import {
+  consignment_cycles,
   app_settings,
   outlets,
   products,
@@ -13,6 +14,7 @@ import {
   visit_submissions,
 } from '../db/schema.js';
 import { outletColumns } from './outlets.js';
+import { validateUuidParam } from '../lib/validation.js';
 import { AppError, ForbiddenError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
 import { loadOpenCycles, processVisit, type VisitResult } from '../services/visit.js';
@@ -55,8 +57,8 @@ const visitSchema = z.object({
       z.object({
         cycle_id: z.string().min(1),
         qty_sold: z.number().int().nonnegative(),
-        qty_return_good: z.number().int().nonnegative(),
-        qty_return_damaged: z.number().int().nonnegative(),
+        qty_remaining_good: z.number().int().nonnegative(),  // Good products stay at warung
+        qty_return_damaged: z.number().int().nonnegative(),  // Only damaged pulled back
       })
     )
     .default([]),
@@ -85,6 +87,7 @@ export const visitListColumns = {
   response_json: visit_submissions.response_json,
   amount_collected_total: visit_submissions.amount_collected_total,
   qty_sold_total: visit_submissions.qty_sold_total,
+  qty_remaining_total: visit_submissions.qty_remaining_total,
   distance_m: visit_submissions.distance_m,
   geofence_radius_m: visit_submissions.geofence_radius_m,
   geofence_override: visit_submissions.geofence_override,
@@ -135,7 +138,7 @@ export function pickVisitResult(result: VisitResult, includeFinancial: boolean):
 }
 
 visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) => {
-  const outletId = c.req.param('id');
+  const outletId = validateUuidParam(c.req.param('id'), 'outletId');
   const user = c.get('user');
   const includeFinancial = user.role === 'owner';
   const db = createClient(c.env);
@@ -148,12 +151,22 @@ visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) 
   const outlet = outletRows[0];
   if (!outlet) throw new AppError(404, 'NOT_FOUND', 'Warung tidak ditemukan');
 
-  const [openCycles, settingsRows] = await Promise.all([
+  const [openCycles, settingsRows, redHoursRow, yellowHoursRow] = await Promise.all([
     loadOpenCycles(db, outletId),
     db
       .select({ value: app_settings.value })
       .from(app_settings)
       .where(eq(app_settings.key, 'geofence_radius_m'))
+      .limit(1),
+    db
+      .select({ value: app_settings.value })
+      .from(app_settings)
+      .where(eq(app_settings.key, 'cycle_red_hours'))
+      .limit(1),
+    db
+      .select({ value: app_settings.value })
+      .from(app_settings)
+      .where(eq(app_settings.key, 'cycle_yellow_hours'))
       .limit(1),
   ]);
 
@@ -172,6 +185,14 @@ visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) 
     let color: 'red' | 'yellow' | 'green' = 'green';
     if (ageH >= 96) color = 'red';
     else if (ageH >= 72) color = 'yellow';
+    let expiryStatus: 'none' | 'ok' | 'expiring' | 'expired' = 'none';
+    if (cycle.expires_at) {
+      const exp = new Date(cycle.expires_at).getTime();
+      const now = Date.now();
+      if (exp < now) expiryStatus = 'expired';
+      else if (exp - now <= 48 * 3_600_000) expiryStatus = 'expiring';
+      else expiryStatus = 'ok';
+    }
     return {
       id: cycle.id,
       product_id: cycle.product_id,
@@ -180,6 +201,8 @@ visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) 
       dropped_at: cycle.dropped_at,
       age_hours: ageH,
       color,
+      expires_at: cycle.expires_at ?? undefined,
+      expiry_status: expiryStatus,
       hpp_snapshot: includeFinancial ? cycle.hpp_snapshot : undefined,
       price_snapshot: includeFinancial ? cycle.price_snapshot : undefined,
     };
@@ -194,7 +217,7 @@ visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) 
 });
 
 visitRoute.post('/outlets/:id/visit', requirePermission('visit:write'), async (c) => {
-  const outletId = c.req.param('id');
+  const outletId = validateUuidParam(c.req.param('id'), 'outletId');
   const user = c.get('user');
   const body = await c.req.json();
   const parsed = visitSchema.safeParse(body);
@@ -232,7 +255,7 @@ visitRoute.post('/outlets/:id/visit', requirePermission('visit:write'), async (c
 visitRoute.get('/visits', requirePermission('visit:read'), async (c) => {
   const user = c.get('user');
   const db = createClient(c.env);
-  const { outlet_id, user_id, from, to } = c.req.query();
+  const { outlet_id, user_id, from, to, search } = c.req.query();
   const fromDate = parseOptionalDate(from);
   const toDate = parseOptionalDate(to);
 
@@ -250,6 +273,15 @@ visitRoute.get('/visits', requirePermission('visit:read'), async (c) => {
     filters.push(eq(visit_submissions.user_id, user.id));
   } else if (user_id) {
     filters.push(eq(visit_submissions.user_id, user_id));
+  }
+  // Server-side search by outlet name
+  if (search?.trim()) {
+    const term = `%${search.trim()}%`;
+    const matchingOutletIds = db
+      .select({ id: outlets.id })
+      .from(outlets)
+      .where(sql`(${outlets.name} LIKE ${term} OR ${outlets.address} LIKE ${term})`);
+    filters.push(inArray(visit_submissions.outlet_id, matchingOutletIds));
   }
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
   const pagination = parsePaginationParams(c.req.query());
@@ -299,6 +331,7 @@ visitRoute.get('/visits', requirePermission('visit:read'), async (c) => {
     geofence_override: row.geofence_override,
     amount_collected_total: row.amount_collected_total,
     qty_sold_total: row.qty_sold_total,
+    qty_remaining_total: row.qty_remaining_total,
     status: row.status,
     voided_at: row.voided_at,
     void_reason: row.void_reason,
@@ -360,7 +393,7 @@ function parseOptionalString(value: unknown): string | null {
 }
 
 visitRoute.get('/visits/:id/photos', requirePermission('visit:read'), async (c) => {
-  const visitId = c.req.param('id');
+  const visitId = validateUuidParam(c.req.param('id'), 'visitId');
   const db = createClient(c.env);
   await loadVisitForPhoto(db, visitId);
   const rows = await db
@@ -383,7 +416,7 @@ visitRoute.get('/visits/:id/photos', requirePermission('visit:read'), async (c) 
 });
 
 visitRoute.post('/visits/:id/photos', requirePermission('visit:write'), async (c) => {
-  const visitId = c.req.param('id');
+  const visitId = validateUuidParam(c.req.param('id'), 'visitId');
   const user = c.get('user');
   const bucket = requirePhotosBucket(c);
   const db = createClient(c.env);
@@ -435,8 +468,8 @@ visitRoute.post('/visits/:id/photos', requirePermission('visit:write'), async (c
 });
 
 visitRoute.delete('/visits/:id/photos/:photoId', requirePermission('visit:write'), async (c) => {
-  const visitId = c.req.param('id');
-  const photoId = c.req.param('photoId');
+  const visitId = validateUuidParam(c.req.param('id'), 'visitId');
+  const photoId = validateUuidParam(c.req.param('photoId'), 'photoId');
   const user = c.get('user');
   const bucket = requirePhotosBucket(c);
   const db = createClient(c.env);
@@ -458,7 +491,7 @@ visitRoute.delete('/visits/:id/photos/:photoId', requirePermission('visit:write'
 });
 
 visitRoute.get('/visits/:id/receipt-photos', requirePermission('visit:read'), async (c) => {
-  const visitId = c.req.param('id');
+  const visitId = validateUuidParam(c.req.param('id'), 'visitId');
   const db = createClient(c.env);
   await loadVisitForPhoto(db, visitId);
   const rows = await db
@@ -481,7 +514,7 @@ visitRoute.get('/visits/:id/receipt-photos', requirePermission('visit:read'), as
 });
 
 visitRoute.post('/visits/:id/receipt-photos', requirePermission('visit:write'), async (c) => {
-  const visitId = c.req.param('id');
+  const visitId = validateUuidParam(c.req.param('id'), 'visitId');
   const user = c.get('user');
   const bucket = requirePhotosBucket(c);
   const db = createClient(c.env);
@@ -544,8 +577,8 @@ visitRoute.delete(
   '/visits/:id/receipt-photos/:photoId',
   requirePermission('visit:write'),
   async (c) => {
-    const visitId = c.req.param('id');
-    const photoId = c.req.param('photoId');
+    const visitId = validateUuidParam(c.req.param('id'), 'visitId');
+    const photoId = validateUuidParam(c.req.param('photoId'), 'photoId');
     const user = c.get('user');
     const bucket = requirePhotosBucket(c);
     const db = createClient(c.env);
@@ -566,5 +599,112 @@ visitRoute.delete(
     return c.json({ ok: true });
   }
 );
+
+
+// Get cycle history - all visits that affected this cycle
+visitRoute.get('/cycles/:id/history', requirePermission('visit:read'), async (c) => {
+  const cycleId = validateUuidParam(c.req.param('id'), 'cycleId');
+  const user = c.get('user');
+  const db = createClient(c.env);
+
+  // Get cycle details
+  const cycleRows = await db
+    .select({
+      id: consignment_cycles.id,
+      outlet_id: consignment_cycles.outlet_id,
+      product_id: consignment_cycles.product_id,
+      qty_dropped: consignment_cycles.qty_dropped,
+      dropped_at: consignment_cycles.dropped_at,
+      expires_at: consignment_cycles.expires_at,
+      qty_sold: consignment_cycles.qty_sold,
+      qty_remaining_good: consignment_cycles.qty_remaining_good,
+      qty_return_damaged: consignment_cycles.qty_return_damaged,
+      amount_collected: consignment_cycles.amount_collected,
+      status: consignment_cycles.status,
+      visit_submission_id: consignment_cycles.visit_submission_id,
+    })
+    .from(consignment_cycles)
+    .where(eq(consignment_cycles.id, cycleId))
+    .limit(1);
+
+  const cycle = cycleRows[0];
+  if (!cycle) {
+    throw new AppError(404, 'NOT_FOUND', 'Siklus tidak ditemukan');
+  }
+
+  // Get outlet and product info
+  const [outletRows, productRows] = await Promise.all([
+    db.select({ id: outlets.id, name: outlets.name }).from(outlets).where(eq(outlets.id, cycle.outlet_id)).limit(1),
+    db.select({ id: products.id, name: products.name }).from(products).where(eq(products.id, cycle.product_id)).limit(1),
+  ]);
+
+  // Get all visits for this outlet to find which ones affected this cycle
+  const allVisits = await db
+    .select({
+      idempotency_key: visit_submissions.idempotency_key,
+      user_id: visit_submissions.user_id,
+      status: visit_submissions.status,
+      created_at: visit_submissions.created_at,
+      response_json: visit_submissions.response_json,
+    })
+    .from(visit_submissions)
+    .where(eq(visit_submissions.outlet_id, cycle.outlet_id))
+    .orderBy(desc(visit_submissions.created_at));
+
+  // Filter visits that affected this cycle
+  const matchingVisits: Array<{
+    visit: (typeof allVisits)[number];
+    action: 'drop' | 'pickup';
+  }> = [];
+  for (const visit of allVisits) {
+    try {
+      const response = JSON.parse(visit.response_json);
+      const droppedInVisit = response.dropped_cycles?.some((dc: { cycle_id: string }) => dc.cycle_id === cycleId);
+      const pickedUpInVisit = response.closed_cycles?.some((cc: { cycle_id: string }) => cc.cycle_id === cycleId);
+
+      if (droppedInVisit || pickedUpInVisit) {
+        matchingVisits.push({ visit, action: droppedInVisit ? 'drop' : 'pickup' });
+      }
+    } catch {
+      // Skip malformed response_json
+    }
+  }
+
+  // Batch-fetch user names for all matching visits to avoid an N+1 query per visit.
+  const userIds = [...new Set(matchingVisits.map((m) => m.visit.user_id))];
+  const userRows =
+    userIds.length > 0
+      ? await db
+          .select({ id: users.id, name: users.name })
+          .from(users)
+          .where(inArray(users.id, userIds))
+      : [];
+  const userMap = new Map(userRows.map((u) => [u.id, u.name]));
+
+  const cycleVisits = matchingVisits.map(({ visit, action }) => ({
+    visit_id: visit.idempotency_key,
+    user_name: userMap.get(visit.user_id) ?? 'User',
+    status: visit.status,
+    created_at: visit.created_at,
+    action,
+  }));
+
+  return c.json({
+    cycle: {
+      id: cycle.id,
+      outlet_name: outletRows[0]?.name ?? 'Warung',
+      product_name: productRows[0]?.name ?? 'Produk',
+      qty_dropped: cycle.qty_dropped,
+      dropped_at: cycle.dropped_at,
+      expires_at: cycle.expires_at ?? null,
+      qty_sold: cycle.qty_sold,
+      qty_remaining_good: cycle.qty_remaining_good,
+      qty_return_damaged: cycle.qty_return_damaged,
+      amount_collected: cycle.amount_collected,
+      status: cycle.status,
+    },
+    visits: cycleVisits,
+  });
+});
 
 export default visitRoute;

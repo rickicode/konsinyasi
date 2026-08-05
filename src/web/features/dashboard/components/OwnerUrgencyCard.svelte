@@ -34,7 +34,7 @@
 <button
   type="button"
   class={cn(
-    'group w-full rounded-2xl border border-coffee-200 border-l-4 bg-cream p-4 text-left shadow-card transition-all',
+    'group w-full rounded-2xl border border-coffee-200 border-l bg-cream p-4 text-left shadow-card transition-all',
     'focus:outline-none focus-visible:ring-2 focus-visible:ring-coffee-400 active:scale-[0.98]',
     borderClass[item.color]
   )}
@@ -47,7 +47,7 @@
         <h3 class="truncate font-bold text-coffee-900">{item.name}</h3>
         <span
           class={cn(
-            'text-[10px] font-bold uppercase tracking-wide',
+            'text-xs font-bold uppercase tracking-wide',
             item.color === 'none' ? 'text-coffee-400' : 'text-coffee-600'
           )}
         >
@@ -75,6 +75,17 @@
       {#if item.estimated_bill != null && item.open_cycles_count > 0}
         <p class="mt-1 text-xs font-semibold text-coffee-800">
           Tagihan: {formatRupiah(item.estimated_bill)}
+        </p>
+      {/if}
+
+      {#if item.expired_count && item.expired_count > 0}
+        <p class="mt-1 text-xs font-semibold text-red-600">
+          <Icon name="alert-triangle" size={14} class="inline-block align-text-bottom" /> {item.expired_count} unit expired
+        </p>
+      {/if}
+      {#if item.expiring_soon_count && item.expiring_soon_count > 0}
+        <p class="mt-1 text-xs font-semibold text-amber-600">
+          <Icon name="clock" size={14} class="inline-block align-text-bottom" /> {item.expiring_soon_count} unit segera expired
         </p>
       {/if}
     </div>

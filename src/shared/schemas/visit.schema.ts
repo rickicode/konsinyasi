@@ -13,8 +13,8 @@ export const visitAccuracySchema = z
 export const pickupLineSchema = z.object({
   cycle_id: z.string().min(1),
   qty_sold: z.number().int().nonnegative(),
-  qty_return_good: z.number().int().nonnegative(),
-  qty_return_damaged: z.number().int().nonnegative(),
+  qty_remaining_good: z.number().int().nonnegative(),  // Good products stay at warung
+  qty_return_damaged: z.number().int().nonnegative(),  // Damaged pulled back
 });
 
 export type PickupLineInput = z.infer<typeof pickupLineSchema>;
@@ -22,6 +22,7 @@ export type PickupLineInput = z.infer<typeof pickupLineSchema>;
 export const dropLineSchema = z.object({
   product_id: z.string().min(1),
   qty_dropped: z.number().int().positive(),
+  expires_at: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -51,7 +52,7 @@ export const closedCycleSummarySchema = z.object({
   cycle_id: z.string(),
   product_name: z.string(),
   qty_sold: z.number(),
-  qty_return_good: z.number(),
+  qty_remaining_good: z.number(),  // Good products stay at warung
   qty_return_damaged: z.number(),
   amount_collected: z.number(),
 });
@@ -77,6 +78,7 @@ export const visitResultSchema = z.object({
   geofence_override: z.boolean(),
   amount_collected_total: z.number(),
   qty_sold_total: z.number(),
+  qty_remaining_total: z.number(),  // Good products stay at warung
 });
 
 export type VisitResult = z.infer<typeof visitResultSchema>;
@@ -95,6 +97,8 @@ export const visitCycleStateSchema = z.object({
   dropped_at: z.string(),
   age_hours: z.number(),
   color: visitCycleColorSchema,
+  expires_at: z.string().optional(),
+  expiry_status: z.enum(['none', 'ok', 'expiring', 'expired']).optional(),
   hpp_snapshot: z.number().optional(),
   price_snapshot: z.number().optional(),
 });

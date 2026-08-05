@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { and, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
-import { consignment_cycles, outlets, visit_submissions, users } from '../db/schema.js';
+import { app_settings, consignment_cycles, outlets, visit_submissions, users } from '../db/schema.js';
 import { ageHours } from '../services/visit.js';
 import { requirePermission } from '../lib/rbac.js';
 
@@ -37,14 +37,18 @@ const cycleColumns = {
   id: consignment_cycles.id,
   outlet_id: consignment_cycles.outlet_id,
   qty_dropped: consignment_cycles.qty_dropped,
+  qty_remaining_good: consignment_cycles.qty_remaining_good,
   dropped_at: consignment_cycles.dropped_at,
   price_snapshot: consignment_cycles.price_snapshot,
+  expires_at: consignment_cycles.expires_at,
 };
 
 type CycleDashboardRow = {
   id: string;
   outlet_id: string;
+  expires_at?: string | null;
   qty_dropped: number;
+  qty_remaining_good: number;
   dropped_at: string;
   price_snapshot: number;
 };
@@ -113,6 +117,17 @@ dashboardRoute.get('/', async (c) => {
       estimated_bill: includeFinancial
         ? cycles.reduce((sum, cycle) => sum + cycle.qty_dropped * cycle.price_snapshot, 0)
         : 0,
+      expired_count: cycles.reduce(
+        (sum, c) => (c.expires_at && new Date(c.expires_at) < new Date() ? sum + c.qty_remaining_good : sum),
+        0
+      ),
+      expiring_soon_count: cycles.reduce((sum, c) => {
+        if (!c.expires_at) return sum;
+        const exp = new Date(c.expires_at);
+        const now = new Date();
+        const hoursLeft = (exp.getTime() - now.getTime()) / (1000 * 60 * 60);
+        return hoursLeft > 0 && hoursLeft <= 48 ? sum + c.qty_remaining_good : sum;
+      }, 0),
     };
   });
 

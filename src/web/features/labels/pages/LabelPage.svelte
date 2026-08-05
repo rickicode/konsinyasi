@@ -23,6 +23,7 @@
   let showForm = $state(false);
   let isSaving = $state(false);
   let searchQuery = $state('');
+  let expiryFilter = $state<'all' | 'expiring' | 'expired'>('all');
 
   // Print modal state
   let showPrintModal = $state(false);
@@ -38,14 +39,39 @@
   let formQuantity = $state(0);
   let formNotes = $state('');
 
+  // Expiry status: 'expired' < now, 'expiring' within 48h, 'ok' future, 'none' unknown
+  function batchExpiryStatus(expiredDate: string): 'expired' | 'expiring' | 'ok' {
+    const exp = new Date(expiredDate).getTime();
+    const now = Date.now();
+    if (exp < now) return 'expired';
+    if (exp - now <= 48 * 3_600_000) return 'expiring';
+    return 'ok';
+  }
+
+  function expiryLabel(status: 'expired' | 'expiring' | 'ok'): string | null {
+    if (status === 'expired') return 'Sudah expired';
+    if (status === 'expiring') return 'Segera expired';
+    return null;
+  }
+
+  function expiryClass(status: 'expired' | 'expiring' | 'ok'): string | null {
+    if (status === 'expired') return 'bg-red-50 border-red-200/80 text-red-700';
+    if (status === 'expiring') return 'bg-amber-50 border-amber-200/80 text-amber-700';
+    return null;
+  }
+
   const filteredBatches = $derived(
-    searchQuery
-      ? batches.filter(
-          (b) =>
-            b.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (b.batch_number && b.batch_number.toLowerCase().includes(searchQuery.toLowerCase()))
-        )
-      : batches
+    batches.filter((b) => {
+      const matchesSearch =
+        !searchQuery ||
+        b.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (b.batch_number && b.batch_number.toLowerCase().includes(searchQuery.toLowerCase()));
+      if (!matchesSearch) return false;
+      const status = batchExpiryStatus(b.expired_date);
+      if (expiryFilter === 'expired') return status === 'expired';
+      if (expiryFilter === 'expiring') return status === 'expiring' || status === 'expired';
+      return true;
+    })
   );
 
   function formatDate(dateStr: string): string {
@@ -220,8 +246,8 @@
 
   <!-- Print Modal -->
   {#if showPrintModal}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onclick={() => (showPrintModal = false)}>
-      <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl" onclick={(e) => e.stopPropagation()}>
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onclick={() => (showPrintModal = false)} onkeydown={(e) => e.key === 'Escape' && (showPrintModal = false)} role="presentation">
+      <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Cetak Label" tabindex="-1">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-lg font-bold text-coffee-900">Cetak Label</h3>
           <button onclick={() => (showPrintModal = false)} class="text-coffee-400 hover:text-coffee-600">
@@ -281,8 +307,8 @@
 
   <!-- Create Batch Modal -->
   {#if showForm}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onclick={() => (showForm = false)}>
-      <div class="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-5 shadow-xl" onclick={(e) => e.stopPropagation()}>
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onclick={() => (showForm = false)} onkeydown={(e) => e.key === 'Escape' && (showForm = false)} role="presentation">
+      <div class="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-5 shadow-xl" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Batch Baru" tabindex="-1">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-lg font-bold text-coffee-900">Batch Baru</h3>
           <button onclick={() => (showForm = false)} class="text-coffee-400 hover:text-coffee-600">
@@ -399,6 +425,43 @@
     />
   </div>
 
+  <!-- Expiry filter -->
+  <div class="flex items-center gap-2" role="group" aria-label="Filter status expired">
+    <span class="text-xs font-medium text-coffee-500">Status:</span>
+    <div class="flex gap-1 rounded-xl bg-coffee-100/70 p-1">
+      <button
+        type="button"
+        onclick={() => (expiryFilter = 'all')}
+        class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+        class:bg-white={expiryFilter === 'all'}
+        class:text-coffee-800={expiryFilter === 'all'}
+        class:shadow-sm={expiryFilter === 'all'}
+        class:text-coffee-500={expiryFilter !== 'all'}
+        aria-pressed={expiryFilter === 'all'}
+      >Semua</button>
+      <button
+        type="button"
+        onclick={() => (expiryFilter = 'expiring')}
+        class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+        class:bg-white={expiryFilter === 'expiring'}
+        class:text-amber-700={expiryFilter === 'expiring'}
+        class:shadow-sm={expiryFilter === 'expiring'}
+        class:text-coffee-500={expiryFilter !== 'expiring'}
+        aria-pressed={expiryFilter === 'expiring'}
+      >Segera</button>
+      <button
+        type="button"
+        onclick={() => (expiryFilter = 'expired')}
+        class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+        class:bg-white={expiryFilter === 'expired'}
+        class:text-red-700={expiryFilter === 'expired'}
+        class:shadow-sm={expiryFilter === 'expired'}
+        class:text-coffee-500={expiryFilter !== 'expired'}
+        aria-pressed={expiryFilter === 'expired'}
+      >Expired</button>
+    </div>
+  </div>
+
   <!-- Batch List -->
   {#if isLoading}
     <div class="flex items-center justify-center py-12">
@@ -423,6 +486,12 @@
               <h3 class="text-base font-semibold text-coffee-900">{batch.product_name}</h3>
               {#if batch.batch_number}
                 <p class="mt-0.5 text-xs text-coffee-500">{batch.batch_number}</p>
+              {/if}
+
+              {#if expiryLabel(batchExpiryStatus(batch.expired_date))}
+                <span class="mt-2 inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold {expiryClass(batchExpiryStatus(batch.expired_date))}">
+                  {expiryLabel(batchExpiryStatus(batch.expired_date))}
+                </span>
               {/if}
               <div class="mt-2 flex flex-wrap gap-3 text-xs text-coffee-600">
                 <span>Prod: {formatDate(batch.production_date)}</span>
