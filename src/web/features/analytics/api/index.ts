@@ -5,6 +5,8 @@ import {
   analyticsResponseSchema,
   analyticsOutletDetailSchema,
   analyticsProductDetailSchema,
+  wasteAnalyticsResponseSchema,
+  trendAnalyticsResponseSchema,
 } from '../schemas.js';
 import type {
   AnalyticsResponse,
@@ -96,6 +98,55 @@ export function productAnalyticsQueryOptions(
     queryKey: queryKeys.analytics.product(productId, filters),
     queryFn: () => getProductAnalytics(productId, filters, client),
     enabled: Boolean(productId && filters.from && filters.to),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+// ── Waste & Trend ──
+
+export interface WasteResponse {
+  by_product: { id: string; name: string; waste_qty: number; waste_value: number; total_dropped: number }[];
+  by_outlet: { id: string; name: string; waste_qty: number; waste_value: number; total_dropped: number }[];
+}
+
+export interface TrendResponse {
+  weeks: { week_start: string; revenue: number; hpp: number; margin: number; qty_sold: number }[];
+}
+
+export async function getWaste(
+  filters: Pick<AnalyticsFilters, 'from' | 'to'>,
+  client: ApiClient = apiClient
+): Promise<WasteResponse> {
+  const params = new URLSearchParams();
+  params.set('from', filters.from);
+  params.set('to', filters.to);
+  return client.get(`/api/analytics/waste?${params.toString()}`, wasteAnalyticsResponseSchema);
+}
+
+export async function getTrend(
+  filters: Pick<AnalyticsFilters, 'from' | 'to'>,
+  client: ApiClient = apiClient
+): Promise<TrendResponse> {
+  const params = new URLSearchParams();
+  params.set('from', filters.from);
+  params.set('to', filters.to);
+  return client.get(`/api/analytics/trend?${params.toString()}`, trendAnalyticsResponseSchema);
+}
+
+export function wasteQueryOptions(filters: Pick<AnalyticsFilters, 'from' | 'to'>, client: ApiClient = apiClient) {
+  return queryOptions({
+    queryKey: queryKeys.analytics.waste(filters),
+    queryFn: () => getWaste(filters, client),
+    enabled: Boolean(filters.from && filters.to),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function trendQueryOptions(filters: Pick<AnalyticsFilters, 'from' | 'to'>, client: ApiClient = apiClient) {
+  return queryOptions({
+    queryKey: queryKeys.analytics.trend(filters),
+    queryFn: () => getTrend(filters, client),
+    enabled: Boolean(filters.from && filters.to),
     staleTime: 1000 * 60 * 5,
   });
 }

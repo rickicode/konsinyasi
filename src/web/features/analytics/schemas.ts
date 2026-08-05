@@ -11,7 +11,7 @@ export const analyticsSummarySchema = z.object({
   waste_percentage: z.number(),
   total_qty_sold: z.number(),
   total_qty_dropped: z.number(),
-  total_qty_return_good: z.number(),
+  total_qty_remaining_good: z.number(),  // Good products stay at warung
   total_qty_return_damaged: z.number(),
   sell_through_rate: z.number(),
   total_cycles: z.number(),
@@ -122,3 +122,45 @@ export const analyticsProductDetailSchema = z.object({
   by_outlet: z.array(analyticsOutletSchema),
 });
 export type AnalyticsProductDetail = z.infer<typeof analyticsProductDetailSchema>;
+
+// ── Waste analytics ──
+
+export const wasteByProductSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  waste_qty: z.number(),
+  waste_value: z.number(),
+  total_dropped: z.number(),
+});
+export type WasteByProduct = z.infer<typeof wasteByProductSchema>;
+
+export const wasteByOutletSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  waste_qty: z.number(),
+  waste_value: z.number(),
+  total_dropped: z.number(),
+});
+export type WasteByOutlet = z.infer<typeof wasteByOutletSchema>;
+
+export const wasteAnalyticsResponseSchema = z.object({
+  by_product: z.array(wasteByProductSchema),
+  by_outlet: z.array(wasteByOutletSchema),
+});
+export type WasteAnalyticsResponse = z.infer<typeof wasteAnalyticsResponseSchema>;
+
+// ── Trend analytics ──
+
+export const trendWeekSchema = z.object({
+  week_start: z.string(),
+  revenue: z.number(),
+  hpp: z.number(),
+  margin: z.number(),
+  qty_sold: z.number(),
+});
+export type TrendWeek = z.infer<typeof trendWeekSchema>;
+
+export const trendAnalyticsResponseSchema = z.object({
+  weeks: z.array(trendWeekSchema),
+});
+export type TrendAnalyticsResponse = z.infer<typeof trendAnalyticsResponseSchema>;

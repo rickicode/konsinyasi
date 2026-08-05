@@ -8,6 +8,7 @@ import { product_recipes, raw_materials as rawMaterials, uoms } from '../db/sche
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
 import { recalculateAllProductsUsingMaterial } from '../services/hpp.js';
+import { validateUuidParam } from '../lib/validation.js';
 
 async function validateBaseUnit(
   db: ReturnType<typeof createClient>,
@@ -86,7 +87,7 @@ rawMaterialsRoute.get('/', async (c) => {
 });
 
 rawMaterialsRoute.get('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const db = createClient(c.env);
   const rows = await db.select().from(rawMaterials).where(eq(rawMaterials.id, id)).limit(1);
   if (!rows[0] || rows[0].deleted_at) {
@@ -123,7 +124,7 @@ rawMaterialsRoute.post('/', async (c) => {
 });
 
 rawMaterialsRoute.patch('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const body = await c.req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
@@ -179,7 +180,7 @@ rawMaterialsRoute.patch('/:id', async (c) => {
 });
 
 rawMaterialsRoute.delete('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const db = createClient(c.env);
   const existing = await db
     .select()

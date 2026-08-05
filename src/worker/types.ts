@@ -23,6 +23,8 @@ export type Bindings = {
   PUBLIC_R2_CDN_URL?: string;
   /** Set to '1' to return full stack traces in 500 responses. */
   DEBUG?: string;
+  /** Comma-separated allow-list of trusted origins for CORS. */
+  ALLOWED_ORIGINS?: string;
 };
 
 export type Env = {

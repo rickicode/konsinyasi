@@ -3,13 +3,14 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { createClient } from '../db/client.js';
 import { product_batches, products } from '../db/schema.js';
 import { AppError } from '../lib/errors.js';
+import { validateUuidParam } from '../lib/validation.js';
 import type { Env } from '../types.js';
 
 const labelsPrintRoute = new Hono<Env>();
 
 // Standalone print page - no auth required (opens in new tab)
 labelsPrintRoute.get('/:batchId', async (c) => {
-  const batchId = c.req.param('batchId');
+  const batchId = validateUuidParam(c.req.param('batchId'), 'batchId');
   const db = createClient(c.env);
 
   const rows = await db
@@ -33,6 +34,10 @@ labelsPrintRoute.get('/:batchId', async (c) => {
 
   const batch = rows[0];
 
+  if (batch.quantity <= 0) {
+    throw new AppError(400, 'EMPTY_BATCH', 'Batch tidak memiliki stok');
+  }
+
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     const day = String(d.getDate()).padStart(2, '0');
@@ -44,15 +49,16 @@ labelsPrintRoute.get('/:batchId', async (c) => {
   const prodDate = formatDate(batch.production_date);
   const expDate = formatDate(batch.expired_date);
 
-  const batchName = batch.product_name.replace(/'/g, "\\'");
-  const batchNum = batch.batch_number ? batch.batch_number.replace(/'/g, "\\'") : '';
+  const escapeHtml = (str: string) => str.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' }[c] as string));
+  const batchName = escapeHtml(batch.product_name ?? 'Produk');
+  const batchNum = batch.batch_number ? escapeHtml(batch.batch_number) : '';
 
   const html = `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cetak Label - ${batch.product_name}</title>
+  <title>Cetak Label - ${batch.product_name ?? 'Produk'}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; }

@@ -6,7 +6,10 @@ account_id = "f8ab5bbdd826db1b9aa1059d7842be75"
 [vars]
 PUBLIC_API_BASE_URL = "https://konsi.rickicode.workers.dev"
 PUBLIC_R2_CDN_URL = "https://cdn.kopi.hijitoko.com"
-DEBUG = "1"
+# Comma-separated allow-list of trusted origins for CORS. DO NOT set DEBUG in
+# production vars — debug stack traces are enabled per-environment via
+# `wrangler secret put DEBUG` only when needed.
+ALLOWED_ORIGINS = "https://konsi.rickicode.workers.dev"
 
 [dev]
 port = 8787

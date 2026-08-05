@@ -8,12 +8,13 @@ import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination
 import { sessions, users } from '../db/schema.js';
 import { AppError, ForbiddenError, ValidationError } from '../lib/errors.js';
 import { hashPassword } from '../lib/password.js';
+import { validateUuidParam } from '../lib/validation.js';
 
 const createUserSchema = z.object({
   name: z.string().min(1, 'Nama wajib diisi'),
   email: z.string().email('Format email tidak valid'),
   username: z.string().min(3, 'Username minimal 3 karakter'),
-  password: z.string().min(6, 'Password minimal 6 karakter'),
+  password: z.string().min(8, 'Password minimal 8 karakter'),
   role: z.enum(['staff', 'owner']).optional().default('staff'),
 });
 
@@ -24,7 +25,7 @@ const updateUserSchema = z.object({
 });
 
 const resetPasswordSchema = z.object({
-  new_password: z.string().min(6, 'Password minimal 6 karakter'),
+  new_password: z.string().min(8, 'Password minimal 8 karakter'),
 });
 
 const usersRoute = new Hono<Env>();
@@ -112,7 +113,7 @@ usersRoute.post('/', async (c) => {
 });
 
 usersRoute.patch('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const body = await c.req.json();
   const parsed = updateUserSchema.safeParse(body);
   if (!parsed.success) {
@@ -154,7 +155,7 @@ usersRoute.patch('/:id', async (c) => {
 });
 
 usersRoute.post('/:id/reset-password', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const body = await c.req.json();
   const parsed = resetPasswordSchema.safeParse(body);
   if (!parsed.success) {
@@ -164,6 +165,9 @@ usersRoute.post('/:id/reset-password', async (c) => {
   const existing = await db.select(userColumns).from(users).where(eq(users.id, id)).limit(1);
   if (!existing[0]) {
     throw new AppError(404, 'NOT_FOUND', 'Pengguna tidak ditemukan');
+  }
+  if (existing[0].status !== 'active') {
+    throw new ValidationError('Tidak dapat reset password pengguna yang tidak aktif');
   }
 
   const passwordHash = await hashPassword(parsed.data.new_password);

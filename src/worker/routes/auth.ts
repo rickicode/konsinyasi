@@ -273,7 +273,11 @@ auth.get('/me', async (c) => {
 
 const updateProfileSchema = z.object({
   name: z.string().min(1, 'Nama wajib diisi'),
-  username: z.string().min(3, 'Username minimal 3 karakter'),
+  username: z
+    .string()
+    .min(3, 'Username minimal 3 karakter')
+    .max(50, 'Username maksimal 50 karakter')
+    .regex(/^[a-zA-Z0-9_.-]+$/, 'Username hanya boleh huruf, angka, titik, garis bawah, dan strip'),
   email: z.string().email('Format email tidak valid'),
 });
 

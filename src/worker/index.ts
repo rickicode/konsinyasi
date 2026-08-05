@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from './types.js';
 import { AppError } from './lib/errors.js';
+import { logger } from './lib/logger.js';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { optionalAuth, requireAuth } from './lib/session.js';
@@ -29,9 +30,23 @@ const app = new Hono<Env>({ strict: false });
 app.use(
   '*',
   cors({
-    origin: '*',
+    // CORS origin policy:
+    // - ALLOWED_ORIGINS unset/empty (local dev) → allow any origin.
+    // - ALLOWED_ORIGINS configured (production) → restrict to allow-list;
+    //   unknown origins get no CORS headers at all.
+    origin: (origin, c) => {
+      const raw: string = (c.env?.ALLOWED_ORIGINS ?? '').trim();
+      if (raw === '') return '*';
+      const allowed: string[] = raw
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean);
+      if (allowed.length === 0) return '*';
+      return allowed.includes(origin ?? '') ? origin : null;
+    },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400,
   })
 );
 app.use(
@@ -67,7 +82,20 @@ app.use(
   })
 );
 
-app.get('/api/health', (c) => c.json({ status: 'ok' }));
+app.get('/api/health', async (c) => {
+  const started = Date.now();
+  try {
+    await c.env.DB.prepare('SELECT 1').all();
+    return c.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - started });
+    return c.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - started });
+  } catch (err) {
+    logger.error('health check db probe failed', {
+      code: 'HEALTH_DB_ERROR',
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return c.json({ status: 'degraded', db: 'error', latency_ms: Date.now() - started }, 503);
+  }
+});
 
 app.use('/api/auth/logout', requireAuth);
 app.use('/api/auth/me', optionalAuth);
@@ -162,6 +190,17 @@ app.route('/api', visits);
 app.route('/api/dashboard', dashboard);
 app.route('/api/reports', reports);
 app.route('/api/uoms', uoms);
+// Public storefront endpoints are unauthenticated, so gate them with a
+// per-IP rate limit to prevent scraping and DoS.
+app.use(
+  '/api/public/*',
+  createRateLimitMiddleware({
+    keyPrefix: 'public',
+    byUsername: false,
+    windowSeconds: 60,
+    maxAttempts: 120,
+  })
+);
 app.route('/api/public', publicRoutes);
 app.route('/api/analytics', analytics);
 app.use('/api/labels', requireAuth);
@@ -171,10 +210,18 @@ app.onError((err, c) => {
   if (err instanceof AppError) {
     return c.json({ code: err.code, message: err.message }, err.status as 200);
   }
-  const isDebug = c.env.DEBUG === '1' || c.env.DEBUG === 'true';
+  // c.env may be undefined in unit tests, so guard the DEBUG read.
+  const isDebug = c.env?.DEBUG === '1' || c.env?.DEBUG === 'true';
   const message = err.message ?? 'Terjadi kesalahan server';
   // Log a redacted summary in production; avoid leaking full stack traces.
-  console.error({ code: 'INTERNAL_ERROR', message, stack: err.stack });
+  // Stack is only attached in debug mode via the structured logger.
+  logger.error('unhandled error', {
+    code: 'INTERNAL_ERROR',
+    message,
+    path: c.req.path,
+    method: c.req.method,
+    ...((isDebug && err instanceof Error && { stack: err.stack }) ?? {}),
+  });
   if (isDebug) {
     return c.json({ code: 'INTERNAL_ERROR', message, stack: err.stack }, 500);
   }

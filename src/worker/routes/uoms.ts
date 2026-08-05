@@ -5,6 +5,7 @@ import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
 import { product_recipes, raw_materials, uoms } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
+import { validateUuidParam } from '../lib/validation.js';
 
 const dimensionSchema = z.enum(['vol', 'mass', 'count'], {
   message: 'Dimensi harus vol, mass, atau count',
@@ -55,7 +56,7 @@ uomsRoute.get('/', async (c) => {
 });
 
 uomsRoute.get('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const db = createClient(c.env);
   const rows = await db.select().from(uoms).where(eq(uoms.id, id)).limit(1);
   if (!rows[0] || rows[0].deleted_at) {
@@ -93,7 +94,7 @@ uomsRoute.post('/', async (c) => {
 });
 
 uomsRoute.patch('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const body = await c.req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
@@ -130,7 +131,7 @@ uomsRoute.patch('/:id', async (c) => {
 });
 
 uomsRoute.delete('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const db = createClient(c.env);
   const existing = await db.select().from(uoms).where(eq(uoms.id, id)).limit(1);
   if (!existing[0] || existing[0].deleted_at) {

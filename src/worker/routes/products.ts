@@ -5,6 +5,7 @@ import { createClient } from '../db/client.js';
 import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination.js';
 import { consignment_cycles, product_recipes, products } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
+import { validateUuidParam } from '../lib/validation.js';
 import {
   buildImageUrl,
   deleteImageFromR2,
@@ -29,6 +30,7 @@ const recipeLineSchema = z.object({
 
 const createSchema = z.object({
   name: z.string().min(1, 'Nama produk wajib diisi'),
+  description: z.string().optional(),
   status: z
     .enum(['active', 'inactive'], {
       message: 'Status harus active atau inactive',
@@ -45,10 +47,12 @@ const createSchema = z.object({
     .int('Override HPP harus bilangan bulat')
     .nonnegative('Override HPP tidak boleh negatif')
     .optional(),
+  is_public: z.boolean().optional(),
 });
 
 const updateSchema = z.object({
   name: z.string().min(1, 'Nama produk wajib diisi').optional(),
+  description: z.string().optional(),
   status: z
     .enum(['active', 'inactive'], {
       message: 'Status harus active atau inactive',
@@ -65,6 +69,7 @@ const updateSchema = z.object({
     .int('Override HPP harus bilangan bulat')
     .nonnegative('Override HPP tidak boleh negatif')
     .optional(),
+  is_public: z.boolean().optional(),
 });
 
 const productsRoute = new Hono<Env>();
@@ -72,6 +77,7 @@ const productsRoute = new Hono<Env>();
 export const productListColumns = {
   id: products.id,
   name: products.name,
+  description: products.description,
   hpp: products.hpp,
   hpp_override: products.hpp_override,
   price_to_outlet: products.price_to_outlet,
@@ -80,12 +86,14 @@ export const productListColumns = {
   deleted_at: products.deleted_at,
   created_at: products.created_at,
   updated_at: products.updated_at,
+  is_public: products.is_public,
 };
 
 export type ProductListRow = Pick<
   typeof products.$inferSelect,
   | 'id'
   | 'name'
+  | 'description'
   | 'hpp'
   | 'hpp_override'
   | 'price_to_outlet'
@@ -94,11 +102,13 @@ export type ProductListRow = Pick<
   | 'deleted_at'
   | 'created_at'
   | 'updated_at'
+  | 'is_public'
 >;
 
 type ProductResponse = {
   id: string;
   name: string;
+  description?: string | null;
   status: 'active' | 'inactive';
   photo_key?: string | null;
   photo_url?: string | null;
@@ -120,6 +130,7 @@ function pickProduct(
   const response: ProductResponse = {
     id: row.id,
     name: row.name,
+    description: row.description,
     status: row.status as 'active' | 'inactive',
     photo_key: row.photo_key,
     photo_url: row.photo_key ? buildImageUrl(row.photo_key, cdnBase) : null,
@@ -191,7 +202,7 @@ productsRoute.get('/picker', async (c) => {
 });
 
 productsRoute.get('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const user = c.get('user');
   const owner = isOwner(user);
   const db = createClient(c.env);
@@ -249,10 +260,12 @@ productsRoute.post('/', async (c) => {
   await db.insert(products).values({
     id,
     name: data.name,
+    description: data.description ?? null,
     hpp: effectiveHpp,
     hpp_override: data.recipe_lines?.length ? null : (data.hpp_override ?? null),
     price_to_outlet: data.price_to_outlet ?? 0,
     status: data.status ?? 'active',
+    is_public: data.is_public ? 1 : 0,
     created_at: now,
     updated_at: now,
   });
@@ -270,7 +283,7 @@ productsRoute.post('/', async (c) => {
 });
 
 productsRoute.patch('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const user = c.get('user');
   const owner = isOwner(user);
   const body = await c.req.json();
@@ -296,7 +309,9 @@ productsRoute.patch('/:id', async (c) => {
 
   const setValues: Partial<typeof products.$inferInsert> = {};
   if (data.name !== undefined) setValues.name = data.name;
+  if (data.description !== undefined) setValues.description = data.description;
   if (data.status !== undefined) setValues.status = data.status;
+  if (data.is_public !== undefined) setValues.is_public = data.is_public ? 1 : 0;
   if (owner && data.price_to_outlet !== undefined) {
     setValues.price_to_outlet = data.price_to_outlet;
   }
@@ -327,7 +342,7 @@ productsRoute.patch('/:id', async (c) => {
 });
 
 productsRoute.delete('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const db = createClient(c.env);
   const existing = await db
     .select(productListColumns)
@@ -369,7 +384,7 @@ productsRoute.delete('/:id', async (c) => {
 });
 
 productsRoute.post('/:id/photo', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const bucket = c.env.PHOTOS;
   if (!bucket) {
     throw new AppError(500, 'CONFIG_ERROR', 'R2 bucket PHOTOS tidak dikonfigurasi');
@@ -409,7 +424,7 @@ productsRoute.post('/:id/photo', async (c) => {
 });
 
 productsRoute.delete('/:id/photo', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const bucket = c.env.PHOTOS;
   const db = createClient(c.env);
   const existing = await db

@@ -7,6 +7,7 @@ import { product_batches, products } from '../db/schema.js';
 import { AppError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
 import type { Env } from '../types.js';
+import { validateUuidParam } from '../lib/validation.js';
 
 const createBatchSchema = z.object({
   product_id: z.string().min(1, 'Produk wajib dipilih'),
@@ -100,7 +101,7 @@ labelsRoute.get('/batches', async (c) => {
 
 // Get single batch
 labelsRoute.get('/batches/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const db = createClient(c.env);
 
   const rows = await db
@@ -190,7 +191,7 @@ labelsRoute.post('/batches', requirePermission('labels:write'), async (c) => {
 
 // Update batch
 labelsRoute.patch('/batches/:id', requirePermission('labels:write'), async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const body = await c.req.json();
   const parsed = updateBatchSchema.safeParse(body);
 
@@ -247,7 +248,7 @@ labelsRoute.patch('/batches/:id', requirePermission('labels:write'), async (c) =
 
 // Delete batch (soft delete)
 labelsRoute.delete('/batches/:id', requirePermission('labels:write'), async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const db = createClient(c.env);
 
   const existing = await db

@@ -5,18 +5,7 @@ import { createClient } from '../db/client.js';
 import { consignment_cycles, outlets, products, users, visit_submissions } from '../db/schema.js';
 import { reportResponseSchema } from '@shared/schemas/report.schema.js';
 import { ValidationError } from '../lib/errors.js';
-
-function parseDateParam(value: string | undefined, fallback: Date): string {
-  const input = value ?? fallback.toISOString().slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input)) {
-    throw new ValidationError('Format tanggal tidak valid (YYYY-MM-DD)');
-  }
-  const d = new Date(input);
-  if (Number.isNaN(d.getTime())) {
-    throw new ValidationError('Tanggal tidak valid');
-  }
-  return input;
-}
+import { parseDateParam } from '../lib/analytics-helpers.js';
 
 const reportsRoute = new Hono<Env>();
 

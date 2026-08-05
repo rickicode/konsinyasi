@@ -15,6 +15,7 @@ export const errorCodes = {
   PARSE_ERROR: 'Gagal membaca respons server.',
   UPLOAD_ERROR: 'Gagal mengunggah file.',
 RATE_LIMITED: 'Terlalu banyak percobaan. Silakan coba lagi nanti.',
+  EMPTY_BATCH: 'Batch tidak memiliki stok.',
 } as const;
 
 export type ErrorCode = keyof typeof errorCodes;

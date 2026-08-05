@@ -8,6 +8,7 @@ import { consignment_cycles, outlets } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
 import { buildImageUrl, processImageUpload } from '../services/image-processing.js';
+import { validateUuidParam } from '../lib/validation.js';
 
 function isCoordInvalid(lat: number, lng: number): boolean {
   return Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001;
@@ -119,7 +120,23 @@ function pickOutlet(row: OutletListRow, cdnBase?: string) {
 outletsRoute.get('/', async (c) => {
   const db = createClient(c.env);
   const pagination = parsePaginationParams(c.req.query());
-  const where = isNull(outlets.deleted_at);
+  const search = c.req.query('search')?.trim() || '';
+  const status = c.req.query('status')?.trim() || '';
+
+  const filters = [isNull(outlets.deleted_at)];
+
+  if (search) {
+    const term = `%${search}%`;
+    filters.push(
+      sql`(${outlets.name} LIKE ${term} OR ${outlets.address} LIKE ${term})`
+    );
+  }
+
+  if (status && (status === 'active' || status === 'inactive')) {
+    filters.push(eq(outlets.status, status));
+  }
+
+  const where = and(...filters);
 
   if (pagination) {
     const countQuery = db
@@ -152,7 +169,7 @@ outletsRoute.get('/', async (c) => {
 });
 
 outletsRoute.get('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const db = createClient(c.env);
   const existing = await db
     .select(outletColumns)
@@ -198,7 +215,7 @@ outletsRoute.post('/', async (c) => {
 });
 
 outletsRoute.patch('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const body = await c.req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
@@ -245,7 +262,7 @@ outletsRoute.patch('/:id', async (c) => {
 });
 
 outletsRoute.delete('/:id', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const db = createClient(c.env);
   const existing = await db
     .select(outletColumns)
@@ -274,7 +291,7 @@ outletsRoute.delete('/:id', async (c) => {
 });
 
 outletsRoute.post('/:id/photo', async (c) => {
-  const id = c.req.param('id');
+  const id = validateUuidParam(c.req.param('id'));
   const bucket = c.env.PHOTOS;
   if (!bucket) {
     throw new AppError(500, 'CONFIG_ERROR', 'R2 bucket PHOTOS tidak dikonfigurasi');
