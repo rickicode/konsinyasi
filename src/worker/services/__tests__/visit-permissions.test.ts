@@ -69,12 +69,13 @@ const sampleVisitResult: VisitResult = {
   geofence_override: false,
   amount_collected_total: 5000,
   qty_sold_total: 1,
+  qty_remaining_total: 0,
   closed_cycles: [
     {
       cycle_id: 'cycle-1',
       product_name: 'Produk A',
       qty_sold: 1,
-      qty_return_good: 0,
+      qty_remaining_good: 0,
       qty_return_damaged: 0,
       amount_collected: 5000,
     },

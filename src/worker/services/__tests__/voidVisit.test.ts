@@ -113,7 +113,7 @@ describe('voidVisit', () => {
   });
 
   it('returns ConflictError when submission is missing', async () => {
-    const db = new StubDb([[], [], [changes(0)], []]);
+    const db = new StubDb([[], [changes(0)], []]);
     await expect(
       voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
@@ -121,25 +121,24 @@ describe('voidVisit', () => {
   });
 
   it('returns ConflictError when submission is already voided', async () => {
-    const db = new StubDb([[], [], [changes(0)], [{ ...committedSubmission, status: 'voided' }]]);
+    const db = new StubDb([[], [changes(0)], [{ ...committedSubmission, status: 'voided' }]]);
     await expect(
       voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
   it('returns ConflictError when a newer committed visit exists', async () => {
-    const db = new StubDb([[], [], [changes(0)], [committedSubmission], [{ count: 1 }]]);
+    const db = new StubDb([[], [changes(0)], [committedSubmission], [{ count: 1 }]]);
     await expect(
       voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
   it('voids a committed visit and re-opens/voids related cycles', async () => {
-    const closedCycle = { id: 'cycle-closed', status: 'closed' };
-    const openCycle = { id: 'cycle-open', status: 'open' };
+    const closedCycle = { id: 'cycle-closed', picked_up_at: '2026-01-01T00:00:00Z' };
+    const droppedCycle = { id: 'cycle-dropped', picked_up_at: null };
     const db = new StubDb([
-      [closedCycle],
-      [openCycle],
+      [closedCycle, droppedCycle],
       [changes(1), changes(1), changes(1)],
       [],
       [],
@@ -154,13 +153,12 @@ describe('voidVisit', () => {
   });
 
   it('rejects a second void even when select still sees committed', async () => {
-    const db = new StubDb([[], [], [changes(0)], [committedSubmission], [{ count: 0 }]]);
+    const db = new StubDb([[], [changes(0)], [committedSubmission], [{ count: 0 }]]);
     await expect(
       voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
     expect(db.calls.filter((c) => c.op === 'batch')).toHaveLength(1);
   });
-});
 
 type D1Response = {
   success: boolean;
@@ -174,3 +172,5 @@ type D1Response = {
     changed_db: boolean;
   };
 };
+
+});

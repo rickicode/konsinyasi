@@ -193,8 +193,8 @@ describe('createVisitDraftStore', () => {
     it('emits pickup rows with computed sold values', () => {
       const sub = store.buildSubmission({ lat: 0, lng: 0, accuracy: null }, cycles);
       expect(sub.pickups).toEqual([
-        { cycle_id: 'cycle-1', qty_sold: 7, qty_return_good: 2, qty_return_damaged: 1 },
-        { cycle_id: 'cycle-2', qty_sold: 5, qty_return_good: 0, qty_return_damaged: 0 },
+        { cycle_id: 'cycle-1', qty_sold: 7, qty_remaining_good: 2, qty_return_damaged: 1 },
+        { cycle_id: 'cycle-2', qty_sold: 5, qty_remaining_good: 0, qty_return_damaged: 0 },
       ]);
     });
 

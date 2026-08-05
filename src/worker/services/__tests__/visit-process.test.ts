@@ -172,7 +172,7 @@ describe('processVisit', () => {
         {
           cycle_id: openCycle.id,
           qty_sold: 5,
-          qty_return_good: 0,
+          qty_remaining_good: 0,
           qty_return_damaged: 0,
         },
       ],
@@ -209,7 +209,7 @@ describe('processVisit', () => {
         {
           cycle_id: openCycle.id,
           qty_sold: 5,
-          qty_return_good: 0,
+          qty_remaining_good: 0,
           qty_return_damaged: 0,
         },
       ],
@@ -233,7 +233,7 @@ describe('processVisit', () => {
         {
           cycle_id: openCycle.id,
           qty_sold: 5,
-          qty_return_good: 0,
+          qty_remaining_good: 0,
           qty_return_damaged: 0,
         },
       ],
