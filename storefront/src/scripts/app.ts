@@ -169,7 +169,7 @@ function goToLocation(lat: number, lon: number, name: string) {
     className: '',
     html: `
       <div style="position:relative;display:flex;flex-direction:column;align-items:center">
-        <div style="background:white;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;color:#3e2a24;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);margin-bottom:4px;border:1.5px solid #e0ccaf">
+        <div style="background:white;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;color:#3e2a24;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);margin-bottom:4px;border:1.5px solid #e0ccaf">
           ${esc(name)}
         </div>
         <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid white;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1))"></div>
