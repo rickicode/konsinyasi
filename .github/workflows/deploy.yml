@@ -1,0 +1,65 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'wrangler.toml'
+      - 'migrations/**'
+      - 'package.json'
+      - 'vite.config.ts'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, migrate & deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck worker
+        run: npx tsc --noEmit -p tsconfig.worker.json
+
+      - name: Build web assets
+        run: npx vite build
+
+      - name: Fail on Svelte warnings / errors
+        run: |
+          OUTPUT=$(npx vite build 2>&1)
+          if echo "$OUTPUT" | grep -qE "warning|deprecated|implicitly|must have"; then
+            echo "::error::Build produced Svelte warnings:"
+            echo "$OUTPUT" | grep -E "warning|deprecated|implicitly|must have" | head -40
+            exit 1
+          fi
+          echo "Build clean (no warnings)"
+
+      - name: Run font-size design detector
+        run: |
+          node /home/ricki/.pi/agent/skills/impeccable/scripts/detect.mjs --json src/web/ || true
+
+      - name: Deploy worker (assets + API)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env production
+
+      - name: Apply D1 migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply konsi --remote
