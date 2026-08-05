@@ -30,6 +30,8 @@ export interface OutletPhotoUploadArgs {
 export interface FetchOutletsPaginatedInput {
   page: number;
   limit: number;
+  search?: string;
+  status?: string;
 }
 
 /**
@@ -43,10 +45,12 @@ export async function fetchOutlets(client: ApiClient = apiClient): Promise<Outle
  * Fetch a paginated list of outlets.
  */
 export async function fetchOutletsPaginated(
-  { page, limit }: FetchOutletsPaginatedInput,
+  { page, limit, search, status }: FetchOutletsPaginatedInput,
   client: ApiClient = apiClient
 ): Promise<PaginatedList<Outlet>> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (search?.trim()) params.set('search', search.trim());
+  if (status && status !== 'all') params.set('status', status);
   return client.get(`/api/outlets?${params.toString()}`, paginatedListSchema(outletResponseSchema));
 }
 
@@ -123,11 +127,15 @@ export function outletsQueryOptions(client: ApiClient = apiClient) {
 /**
  * TanStack Query infinite options for the outlet list.
  */
-export function outletsInfiniteQueryOptions(client: ApiClient = apiClient) {
+export function outletsInfiniteQueryOptions(
+  search: string = '',
+  status: string = 'all',
+  client: ApiClient = apiClient
+) {
   return infiniteQueryOptions({
-    queryKey: [...queryKeys.outlets.all, 'infinite'],
+    queryKey: [...queryKeys.outlets.all, 'infinite', search, status],
     queryFn: ({ pageParam }) =>
-      fetchOutletsPaginated({ page: pageParam, limit: DEFAULT_PAGE_SIZE }, client),
+      fetchOutletsPaginated({ page: pageParam, limit: DEFAULT_PAGE_SIZE, search, status }, client),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.meta.page < lastPage.meta.total_pages ? lastPage.meta.page + 1 : undefined,

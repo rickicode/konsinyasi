@@ -29,6 +29,7 @@ export type EnrichedRecipeLine = z.infer<typeof enrichedRecipeLineSchema>;
 
 export const productCreateSchema = z.object({
   name: z.string().min(1, 'Nama produk wajib diisi'),
+  description: z.string().optional(),
   status: productStatusSchema.optional().default('active'),
   recipe_lines: z.array(recipeLineSchema).optional(),
   price_to_outlet: z
@@ -41,12 +42,14 @@ export const productCreateSchema = z.object({
     .int('Override HPP harus bilangan bulat')
     .nonnegative('Override HPP tidak boleh negatif')
     .optional(),
+  is_public: z.boolean().optional(),
 });
 
 export type ProductCreateInput = z.infer<typeof productCreateSchema>;
 
 export const productUpdateSchema = z.object({
   name: z.string().min(1, 'Nama produk wajib diisi').optional(),
+  description: z.string().optional(),
   status: productStatusSchema.optional(),
   recipe_lines: z.array(recipeLineSchema).optional(),
   price_to_outlet: z
@@ -59,6 +62,7 @@ export const productUpdateSchema = z.object({
     .int('Override HPP harus bilangan bulat')
     .nonnegative('Override HPP tidak boleh negatif')
     .optional(),
+  is_public: z.boolean().optional(),
 });
 
 export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;
@@ -79,6 +83,8 @@ export const productResponseSchema = z.object({
   price_to_outlet: z.number().optional(),
   photo_key: z.string().nullable().optional(),
   photo_url: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  is_public: z.boolean().optional(),
   deleted_at: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),

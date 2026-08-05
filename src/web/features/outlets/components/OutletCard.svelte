@@ -47,11 +47,11 @@
 
   <!-- Content -->
   <div class="flex min-w-0 flex-1 flex-col">
-    <span class="truncate text-[13px] font-semibold text-coffee-900 leading-snug"
+    <span class="truncate text-sm font-semibold text-coffee-900 leading-snug"
       >{outlet.name}</span
     >
     <span class="mt-0.5 truncate text-xs text-coffee-500">{outlet.address}</span>
-    <div class="mt-1 flex items-center gap-3 text-[11px] text-coffee-400">
+    <div class="mt-1 flex items-center gap-3 text-xs text-coffee-400">
       {#if distance !== null}
         <span class="inline-flex items-center gap-1 font-medium text-coffee-600">
           <Icon name="navigation" size={11} />
@@ -70,13 +70,19 @@
     {#if onedit}
       <span
         role="button"
-        tabindex="-1"
+        tabindex="0"
         class="flex h-8 w-8 items-center justify-center rounded-xl text-coffee-300 transition-all hover:bg-coffee-50 hover:text-coffee-600"
         onclick={(e) => {
           e.stopPropagation();
           onedit();
         }}
-        onkeydown={(e) => e.key === 'Enter' && onedit?.()}
+        onkeydown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            onedit();
+          }
+        }}
         aria-label="Edit"
       >
         <Icon name="edit" size={15} />

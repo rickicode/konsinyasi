@@ -51,7 +51,7 @@
     </button>
   </header>
 
-  <div class="flex-1 space-y-4 overflow-y-auto px-4 pb-28">
+  <div class="flex-1 space-y-4 overflow-y-auto px-4 pb-2">
     {#if isLoading}
       <div class="space-y-3">
         <Skeleton class="h-24 w-full rounded-2xl" />
@@ -73,7 +73,7 @@
             {#if data.outlet.address}
               <p class="text-xs text-coffee-500">{data.outlet.address}</p>
             {/if}
-            <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold
+            <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold
               {data.outlet.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
               {data.outlet.status === 'active' ? 'Aktif' : 'Nonaktif'}
             </span>
@@ -86,20 +86,20 @@
         <h2 class="mb-3 text-sm font-bold text-coffee-800">Ringkasan Keuangan</h2>
         <div class="grid grid-cols-2 gap-3">
           <Card variant="dashboard" class="p-3">
-            <p class="text-[10px] font-semibold text-coffee-500">Pendapatan</p>
+            <p class="text-xs font-semibold text-coffee-500">Pendapatan</p>
             <p class="mt-1 text-base font-extrabold text-coffee-900">{formatRupiah(data.summary.total_revenue)}</p>
           </Card>
           <Card variant="dashboard" class="p-3">
-            <p class="text-[10px] font-semibold text-coffee-500">HPP</p>
+            <p class="text-xs font-semibold text-coffee-500">HPP</p>
             <p class="mt-1 text-base font-extrabold text-coffee-900">{formatRupiah(data.summary.total_hpp)}</p>
           </Card>
           <Card variant="dashboard" class="p-3">
-            <p class="text-[10px] font-semibold text-coffee-500">Laba Kotor</p>
+            <p class="text-xs font-semibold text-coffee-500">Laba Kotor</p>
             <p class="mt-1 text-base font-extrabold {marginColor(data.summary.total_margin)}">{formatRupiah(data.summary.total_margin)}</p>
-            <p class="text-[10px] font-semibold {marginColor(data.summary.total_margin)}">{data.summary.margin_percentage.toFixed(1)}%</p>
+            <p class="text-xs font-semibold {marginColor(data.summary.total_margin)}">{data.summary.margin_percentage.toFixed(1)}%</p>
           </Card>
           <Card variant="dashboard" class="p-3">
-            <p class="text-[10px] font-semibold text-coffee-500">Waste</p>
+            <p class="text-xs font-semibold text-coffee-500">Waste</p>
             <p class="mt-1 text-base font-extrabold text-danger">{formatRupiah(data.summary.total_waste)}</p>
           </Card>
         </div>
@@ -110,19 +110,19 @@
         <h2 class="mb-3 text-sm font-bold text-coffee-800">Metrik Operasional</h2>
         <div class="grid grid-cols-2 gap-3">
           <Card variant="default" class="p-3">
-            <p class="text-[10px] font-semibold text-coffee-500">Terjual</p>
+            <p class="text-xs font-semibold text-coffee-500">Terjual</p>
             <p class="text-base font-extrabold text-coffee-900">{data.summary.total_qty_sold}/{data.summary.total_qty_dropped}</p>
           </Card>
           <Card variant="default" class="p-3">
-            <p class="text-[10px] font-semibold text-coffee-500">Sell Through</p>
+            <p class="text-xs font-semibold text-coffee-500">Sell Through</p>
             <p class="text-base font-extrabold {sellThroughColor(data.summary.sell_through_rate)}">{data.summary.sell_through_rate.toFixed(1)}%</p>
           </Card>
           <Card variant="default" class="p-3">
-            <p class="text-[10px] font-semibold text-coffee-500">Siklus</p>
+            <p class="text-xs font-semibold text-coffee-500">Siklus</p>
             <p class="text-base font-extrabold text-coffee-900">{data.summary.total_cycles}</p>
           </Card>
           <Card variant="default" class="p-3">
-            <p class="text-[10px] font-semibold text-coffee-500">Waste Rate</p>
+            <p class="text-xs font-semibold text-coffee-500">Waste Rate</p>
             <p class="text-base font-extrabold text-danger">{data.summary.waste_percentage.toFixed(1)}%</p>
           </Card>
         </div>

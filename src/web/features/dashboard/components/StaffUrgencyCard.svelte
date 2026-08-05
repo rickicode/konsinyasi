@@ -33,7 +33,7 @@
 <button
   type="button"
   class={cn(
-    'group w-full rounded-2xl border border-coffee-200 border-l-4 bg-cream p-4 text-left shadow-card transition-all',
+    'group w-full rounded-2xl border border-coffee-200 border-l bg-cream p-4 text-left shadow-card transition-all',
     'focus:outline-none focus-visible:ring-2 focus-visible:ring-coffee-400 active:scale-[0.98]',
     borderClass[item.color]
   )}
@@ -46,7 +46,7 @@
         <h3 class="truncate font-bold text-coffee-900">{item.name}</h3>
         <span
           class={cn(
-            'text-[10px] font-bold uppercase tracking-wide',
+            'text-xs font-bold uppercase tracking-wide',
             item.color === 'none' ? 'text-coffee-400' : 'text-coffee-600'
           )}
         >

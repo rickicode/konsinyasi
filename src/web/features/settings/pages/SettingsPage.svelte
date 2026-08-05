@@ -14,16 +14,19 @@
     updateBrandMutationOptions,
     uploadBrandLogoMutationOptions,
     deleteBrandLogoMutationOptions,
+    updateCycleAgeMutationOptions,
   } from '../api/index.js';
   import { queryKeys } from '$lib/api/query-keys.js';
 
   const queryClient = useQueryClient();
   const toast = useToast();
   const appConfig = getAppConfig();
+
   const settingsQuery = createQuery(() => settingsQueryOptions());
   const updateBrandMutation = createMutation(() => updateBrandMutationOptions());
   const uploadLogoMutation = createMutation(() => uploadBrandLogoMutationOptions());
   const deleteLogoMutation = createMutation(() => deleteBrandLogoMutationOptions());
+  const updateCycleAgeMutation = createMutation(() => updateCycleAgeMutationOptions());
 
   let brandName = $state('Konsi');
   let brandError = $state('');
@@ -32,11 +35,16 @@
   let logoPreview = $state<string | null>(null);
   let lastLogoPreview: string | null = null;
 
+  let cycleRedHours = $state(96);
+  let cycleYellowHours = $state(72);
+  let cycleAgeError = $state('');
+
   onDestroy(() => {
     if (logoPreview && logoPreview.startsWith('blob:')) {
       URL.revokeObjectURL(logoPreview);
     }
   });
+
   $effect(() => {
     if (logoPreview !== lastLogoPreview) {
       if (lastLogoPreview?.startsWith('blob:')) {
@@ -50,6 +58,8 @@
     if (settingsQuery.data) {
       brandName = settingsQuery.data.brand_name;
       logoPreview = settingsQuery.data.logo_url ?? null;
+      cycleRedHours = settingsQuery.data.cycle_red_hours ?? 96;
+      cycleYellowHours = settingsQuery.data.cycle_yellow_hours ?? 72;
     }
   });
 
@@ -138,6 +148,27 @@
       toast.add(err instanceof Error ? err.message : 'Gagal menghapus logo', 'error');
     }
   }
+
+  async function handleCycleAgeSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    cycleAgeError = '';
+    
+    if (cycleYellowHours >= cycleRedHours) {
+      cycleAgeError = 'Jam kuning harus lebih kecil dari jam merah';
+      return;
+    }
+    
+    try {
+      await updateCycleAgeMutation.mutateAsync({
+        cycle_red_hours: cycleRedHours,
+        cycle_yellow_hours: cycleYellowHours,
+      });
+      toast.add('Pengaturan usia siklus diperbarui', 'success');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.settings.all });
+    } catch (err) {
+      toast.add(err instanceof Error ? err.message : 'Gagal memperbarui pengaturan', 'error');
+    }
+  }
 </script>
 
 <section class="space-y-4 py-4" aria-label="Pengaturan Aplikasi">
@@ -149,9 +180,7 @@
   <Card>
     {#snippet header()}
       <div class="flex items-center gap-2">
-        <div
-          class="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-100 text-coffee-600"
-        >
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-100 text-coffee-600">
           <Icon name="type" size={20} />
         </div>
         <div>
@@ -191,9 +220,7 @@
             class="h-9 w-9 rounded-xl border border-coffee-200 object-contain bg-cream"
           />
         {:else}
-          <div
-            class="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-100 text-coffee-600"
-          >
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-100 text-coffee-600">
             <Icon name="image" size={20} />
           </div>
         {/if}
@@ -203,7 +230,7 @@
         </div>
       </div>
     {/snippet}
-        <form class="space-y-4" onsubmit={handleLogoSubmit}>
+    <form class="space-y-4" onsubmit={handleLogoSubmit}>
       <input
         bind:this={logoInput}
         id="logo-input"
@@ -266,9 +293,7 @@
   <Card>
     {#snippet header()}
       <div class="flex items-center gap-2">
-        <div
-          class="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-100 text-coffee-600"
-        >
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-100 text-coffee-600">
           <Icon name="map-pinned" size={20} />
         </div>
         <div>
@@ -278,5 +303,112 @@
       </div>
     {/snippet}
     <RadiusForm />
+  </Card>
+
+  <Card>
+    {#snippet header()}
+      <div class="flex items-center gap-2">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-100 text-coffee-600">
+          <Icon name="clock" size={20} />
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-coffee-900">Usia Stok Konsinyasi</h2>
+          <p class="text-xs text-coffee-500">Atur batas waktu status stok warung</p>
+        </div>
+      </div>
+    {/snippet}
+    <form class="space-y-4" onsubmit={handleCycleAgeSubmit}>
+      <div class="rounded-xl bg-coffee-50 p-4 space-y-3">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-3 h-3 rounded-full bg-success"></span>
+          <span class="text-sm text-coffee-700">Hijau: Stok baru (&lt; {cycleYellowHours} jam)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-3 h-3 rounded-full bg-warning"></span>
+          <span class="text-sm text-coffee-700">Kuning: Mendekati batas ({cycleYellowHours}-{cycleRedHours} jam)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-3 h-3 rounded-full bg-danger"></span>
+          <span class="text-sm text-coffee-700">Merah: Wajib ditarik (&gt; {cycleRedHours} jam)</span>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-4">
+        <Input
+          label="Jam Kuning (peringatan)"
+          name="cycle_yellow_hours"
+          type="number"
+          placeholder="72"
+          helper="Stok dianggap perlu perhatian"
+          bind:value={cycleYellowHours}
+          disabled={updateCycleAgeMutation.isPending}
+        />
+        <Input
+          label="Jam Merah (wajib tarik)"
+          name="cycle_red_hours"
+          type="number"
+          placeholder="96"
+          helper="Stok wajib ditarik dari warung"
+          bind:value={cycleRedHours}
+          disabled={updateCycleAgeMutation.isPending}
+        />
+      </div>
+      
+      {#if cycleAgeError}
+        <p class="text-xs text-danger">{cycleAgeError}</p>
+      {/if}
+      
+      <Button
+        type="submit"
+        loading={updateCycleAgeMutation.isPending}
+        disabled={settingsQuery.isLoading && !settingsQuery.data}
+      >
+        Simpan Pengaturan Usia Stok
+      </Button>
+    </form>
+  </Card>
+</section>
+
+<!-- Bantuan Section -->
+<section class="space-y-4">
+  <Card>
+    {#snippet header()}
+      <div class="flex items-center gap-2">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-coffee-100 text-coffee-600">
+          <Icon name="help-circle" size={20} />
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-coffee-900">Bantuan</h2>
+          <p class="text-xs text-coffee-500">Panduan dan informasi aplikasi</p>
+        </div>
+      </div>
+    {/snippet}
+    <div class="space-y-3">
+      <button
+        type="button"
+        class="flex w-full items-center justify-between rounded-xl border border-coffee-200 bg-cream px-4 py-3 text-left transition-colors hover:bg-coffee-50"
+        onclick={() => {
+          localStorage.removeItem('konsi-onboarding-completed');
+          window.location.reload();
+        }}
+      >
+        <div class="flex items-center gap-3">
+          <Icon name="play-circle" size={20} class="text-coffee-600" />
+          <div>
+            <p class="text-sm font-semibold text-coffee-900">Tampilkan Panduan Lagi</p>
+            <p class="text-xs text-coffee-500">Lihat panduan penggunaan aplikasi kembali</p>
+          </div>
+        </div>
+        <Icon name="chevron-right" size={16} class="text-coffee-400" />
+      </button>
+      <div class="rounded-xl bg-coffee-50 px-4 py-3">
+        <p class="text-xs text-coffee-600">
+          <span class="font-semibold">Versi Aplikasi:</span> Konsi v1.0
+        </p>
+        <p class="mt-1 text-xs text-coffee-500">
+          Aplikasi konsinyasi untuk mengelola kunjungan warung
+        </p>
+      </div>
+    </div>
   </Card>
 </section>

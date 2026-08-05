@@ -106,6 +106,14 @@ const ownerNavItems: AppNavItem[] = [
     position: 'top',
   },
   {
+    key: 'labels',
+    path: '/labels',
+    label: 'Label',
+    icon: 'tag',
+    roles: ['owner'],
+    position: 'top',
+  },
+  {
     key: 'admin',
     path: '/admin',
     label: 'Admin',
@@ -145,14 +153,7 @@ const ownerNavItems: AppNavItem[] = [
     roles: ['owner'],
     position: 'top',
   },
-  {
-    key: 'labels',
-    path: '/labels',
-    label: 'Label',
-    icon: 'tag',
-    roles: ['owner'],
-    position: 'top',
-  },
+
 ];
 
 // Staff navigation items - simplified, no admin features

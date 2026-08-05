@@ -50,13 +50,12 @@
 </script>
 
 <section class="flex h-full flex-col bg-milk">
-  <header class="px-4 pb-3 pt-safe">
-    <h1 class="text-xl font-bold text-coffee-900">Beranda</h1>
-    <p class="text-sm text-coffee-500">Ringkasan kunjungan hari ini</p>
-  </header>
-
   <PullToRefresh onRefresh={handleRefresh} class="flex-1">
-    <div class="space-y-5 px-4 pb-28 pt-2">
+    <div class="space-y-5 px-4 pb-2 pt-safe">
+      <header>
+        <h1 class="text-xl font-bold text-coffee-900">Beranda</h1>
+        <p class="text-sm text-coffee-500">Ringkasan kunjungan hari ini</p>
+      </header>
       {#if query.isPending}
         <div class="grid grid-cols-2 gap-3">
           <Skeleton class="h-24 w-full rounded-2xl" />
@@ -80,11 +79,9 @@
 
         <!-- Prioritas Warung -->
         <div>
-          <div class="mb-3 flex items-center justify-between">
+          <div class="mb-2 flex items-center justify-between">
             <h2 class="text-sm font-bold text-coffee-800">Prioritas Warung</h2>
-            <span
-              class="rounded-full bg-coffee-100 px-2.5 py-0.5 text-xs font-semibold text-coffee-700"
-            >
+            <span class="rounded-full bg-coffee-100 px-2 py-0.5 text-xs font-semibold text-coffee-600">
               {sortedItems.length}
             </span>
           </div>

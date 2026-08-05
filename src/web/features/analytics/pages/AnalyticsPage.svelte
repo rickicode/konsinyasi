@@ -18,7 +18,7 @@
     Percent,
     Activity,
   } from 'lucide-svelte';
-  import { analyticsQueryOptions } from '../api/index.js';
+  import { analyticsQueryOptions, wasteQueryOptions, trendQueryOptions } from '../api/index.js';
   import { analyticsFilters, PERIOD_OPTIONS } from '../stores/analytics-filters.svelte.js';
   import Card from '../../../shared/ui/Card.svelte';
   import Skeleton from '../../../shared/ui/Skeleton.svelte';
@@ -30,6 +30,8 @@
 
   const filters = $derived(analyticsFilters.filters);
   const analyticsQuery = createQuery(() => analyticsQueryOptions(filters));
+  const wasteQuery = createQuery(() => wasteQueryOptions(filters));
+  const trendQuery = createQuery(() => trendQueryOptions(filters));
 
   const isLoading = $derived(analyticsQuery.isPending);
   const isError = $derived(analyticsQuery.isError);
@@ -88,7 +90,7 @@
     </div>
   </header>
 
-  <div class="flex-1 space-y-4 overflow-y-auto px-4 pb-28">
+  <div class="flex-1 space-y-4 overflow-y-auto px-4 pb-2">
     <!-- ── Filter ── -->
     <Card variant="default" class="p-4">
       <div class="mb-3 flex items-center gap-2">
@@ -142,7 +144,7 @@
               ? 'bg-white text-coffee-900 shadow-sm'
               : 'text-coffee-500 hover:text-coffee-700'}"
         >
-          <svelte:component this={tab.icon} size={14} />
+          <tab.icon size={14} />
           {tab.label}
         </button>
       {/each}
@@ -297,9 +299,9 @@
             <Card variant="default" class="p-4">
               <div class="flex items-center gap-2">
                 <ArrowUpRight size={14} class="text-green-500" />
-                <p class="text-xs font-semibold text-coffee-500">Return Bagus</p>
+                <p class="text-xs font-semibold text-coffee-500">Sisa di Warung</p>
               </div>
-              <p class="mt-1 text-lg font-extrabold text-coffee-900">{data.summary.total_qty_return_good}</p>
+              <p class="mt-1 text-lg font-extrabold text-coffee-900">{data.summary.total_qty_remaining_good}</p>
             </Card>
 
             <Card variant="default" class="p-4">
@@ -344,6 +346,76 @@
       {#if activeTab === 'staff'}
         {@render staffList(data.by_staff)}
       {/if}
+
+      <!-- ── Waste Leaderboard ── -->
+      {#if wasteQuery.data}
+        {@const waste = wasteQuery.data}
+        {#if waste.by_product.length > 0}
+          <div>
+            <div class="mb-3 flex items-center gap-2">
+              <Trash2 size={16} class="text-red-500" />
+              <h2 class="text-sm font-bold text-coffee-800">Limbah Terbesar</h2>
+            </div>
+
+            <div class="space-y-2">
+              {#each waste.by_product.slice(0, 5) as item, i (item.id)}
+                <Card variant="default" class="p-3">
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full {i < 3 ? 'bg-red-100 text-red-600' : 'bg-coffee-100 text-coffee-600'}">
+                      <span class="text-xs font-bold">{i + 1}</span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm font-semibold text-coffee-900 truncate">{item.name}</p>
+                      <p class="text-xs text-coffee-500">{item.waste_qty} rusak dari {item.total_dropped} dititipkan</p>
+                    </div>
+                    <p class="text-sm font-bold text-danger">{formatRupiah(item.waste_value)}</p>
+                  </div>
+                </Card>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      {/if}
+
+      <!-- ── Margin Trend ── -->
+      {#if trendQuery.data}
+        {@const trend = trendQuery.data}
+        {#if trend.weeks.length > 0}
+          <div>
+            <div class="mb-3 flex items-center gap-2">
+              <TrendingUp size={16} class="text-coffee-600" />
+              <h2 class="text-sm font-bold text-coffee-800">Tren Margin Mingguan</h2>
+            </div>
+
+            <Card variant="default" class="overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="border-b border-coffee-100">
+                      <th class="px-4 py-2 text-left text-xs font-semibold text-coffee-500">Minggu</th>
+                      <th class="px-4 py-2 text-right text-xs font-semibold text-coffee-500">Pendapatan</th>
+                      <th class="px-4 py-2 text-right text-xs font-semibold text-coffee-500">HPP</th>
+                      <th class="px-4 py-2 text-right text-xs font-semibold text-coffee-500">Margin</th>
+                      <th class="px-4 py-2 text-right text-xs font-semibold text-coffee-500">Qty</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {#each trend.weeks as week (week.week_start)}
+                      <tr class="border-b border-coffee-50 last:border-0">
+                        <td class="px-4 py-2 text-coffee-700">{formatDate(week.week_start)}</td>
+                        <td class="px-4 py-2 text-right font-medium text-coffee-900">{formatRupiah(week.revenue)}</td>
+                        <td class="px-4 py-2 text-right text-coffee-600">{formatRupiah(week.hpp)}</td>
+                        <td class="px-4 py-2 text-right font-semibold {week.margin >= 0 ? 'text-emerald-600' : 'text-danger'}">{formatRupiah(week.margin)}</td>
+                        <td class="px-4 py-2 text-right text-coffee-700">{week.qty_sold}</td>
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        {/if}
+      {/if}
     {/if}
   </div>
 </section>
@@ -379,7 +451,7 @@
       <div class="flex flex-1 flex-col items-center justify-end gap-1">
         <!-- Value label (show on wider screens) -->
         {#if day.revenue > 0}
-          <span class="hidden text-[8px] font-semibold text-coffee-400 lg:block">
+          <span class="hidden text-xs font-semibold text-coffee-400 lg:block">
             {day.revenue >= 1000000
               ? `${(day.revenue / 1000000).toFixed(1)}M`
               : day.revenue >= 1000
@@ -403,7 +475,7 @@
         {/if}
 
         <!-- Day label -->
-        <span class="text-[9px] text-coffee-400 lg:text-[10px]">{dayLabel}</span>
+        <span class="text-xs text-coffee-400">{dayLabel}</span>
       </div>
     {/each}
   </div>
@@ -438,19 +510,19 @@
                 <!-- Metrics row -->
                 <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2">
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Pendapatan</p>
+                    <p class="text-xs font-semibold text-coffee-400">Pendapatan</p>
                     <p class="text-sm font-bold text-coffee-900">{formatRupiah(outlet.revenue)}</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Margin</p>
+                    <p class="text-xs font-semibold text-coffee-400">Margin</p>
                     <p class="text-sm font-bold {marginColor(outlet.margin)}">{formatRupiah(outlet.margin)}</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Terjual</p>
+                    <p class="text-xs font-semibold text-coffee-400">Terjual</p>
                     <p class="text-sm font-bold text-coffee-900">{outlet.qty_sold}/{outlet.qty_dropped}</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Sell Through</p>
+                    <p class="text-xs font-semibold text-coffee-400">Sell Through</p>
                     <p class="text-sm font-bold {sellThroughColor(outlet.sell_through_pct)}">{outlet.sell_through_pct.toFixed(1)}%</p>
                   </div>
                 </div>
@@ -496,19 +568,19 @@
 
                 <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2">
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Pendapatan</p>
+                    <p class="text-xs font-semibold text-coffee-400">Pendapatan</p>
                     <p class="text-sm font-bold text-coffee-900">{formatRupiah(product.revenue)}</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Margin</p>
+                    <p class="text-xs font-semibold text-coffee-400">Margin</p>
                     <p class="text-sm font-bold {marginColor(product.margin)}">{formatRupiah(product.margin)}</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Margin %</p>
+                    <p class="text-xs font-semibold text-coffee-400">Margin %</p>
                     <p class="text-sm font-bold {marginColor(product.margin)}">{product.margin_pct.toFixed(1)}%</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Sell Through</p>
+                    <p class="text-xs font-semibold text-coffee-400">Sell Through</p>
                     <p class="text-sm font-bold {sellThroughColor(product.sell_through_pct)}">{product.sell_through_pct.toFixed(1)}%</p>
                   </div>
                 </div>
@@ -556,19 +628,19 @@
 
                 <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2">
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Pendapatan</p>
+                    <p class="text-xs font-semibold text-coffee-400">Pendapatan</p>
                     <p class="text-sm font-bold text-coffee-900">{formatRupiah(person.revenue)}</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Margin</p>
+                    <p class="text-xs font-semibold text-coffee-400">Margin</p>
                     <p class="text-sm font-bold {marginColor(person.margin)}">{formatRupiah(person.margin)}</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Margin %</p>
+                    <p class="text-xs font-semibold text-coffee-400">Margin %</p>
                     <p class="text-sm font-bold {marginColor(person.margin)}">{person.margin_pct.toFixed(1)}%</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-semibold text-coffee-400">Qty Terjual</p>
+                    <p class="text-xs font-semibold text-coffee-400">Qty Terjual</p>
                     <p class="text-sm font-bold text-coffee-900">{person.qty_sold}</p>
                   </div>
                 </div>

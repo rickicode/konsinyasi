@@ -49,7 +49,15 @@
     }
 
     function isAtTop() {
-      return el.scrollTop <= 0;
+			// Check nearest scrollable parent (shell's main)
+			let parent = el.parentElement;
+			while (parent) {
+				if (parent.scrollHeight > parent.clientHeight + 1) {
+					return parent.scrollTop <= 0;
+				}
+				parent = parent.parentElement;
+			}
+			return true;
     }
 
     function onTouchStart(e: TouchEvent) {
@@ -138,7 +146,7 @@
   });
 </script>
 
-<div class="relative h-full">
+<div class="relative flex min-h-0 flex-1 flex-col">
   {#if offline}
     <div
       class="absolute left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-coffee-900 px-3 py-1.5 text-xs font-semibold text-white shadow-lg"
@@ -152,7 +160,7 @@
   {/if}
   <div
     bind:this={container}
-    class={cn('relative h-full overflow-y-auto overscroll-y-contain', className)}
+    class={cn('relative min-h-0 flex-1', className)}
   >
     <div
       class="pointer-events-none absolute left-0 right-0 top-0 z-10 flex h-20 -translate-y-full items-end justify-center pb-3"

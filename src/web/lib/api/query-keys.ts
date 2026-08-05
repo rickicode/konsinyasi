@@ -47,6 +47,8 @@ export const queryKeys = {
     summary: (filters: AnalyticsFilters) => ['analytics', filters] as const,
     outlet: (id: string, filters: Pick<AnalyticsFilters, 'from' | 'to'>) => ['analytics', 'outlet', id, filters] as const,
     product: (id: string, filters: Pick<AnalyticsFilters, 'from' | 'to'>) => ['analytics', 'product', id, filters] as const,
+    waste: (filters: Pick<AnalyticsFilters, 'from' | 'to'>) => ['analytics', 'waste', filters] as const,
+    trend: (filters: Pick<AnalyticsFilters, 'from' | 'to'>) => ['analytics', 'trend', filters] as const,
   },
   staffReport: {
     summary: (period: string) => ['staff-report', period] as const,

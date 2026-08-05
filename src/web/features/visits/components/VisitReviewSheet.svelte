@@ -50,104 +50,116 @@
   const hasDrops = $derived(draft.drops.length > 0);
 </script>
 
-<Sheet {open} title="Ringkasan Kunjungan" description="Periksa kembali sebelum menyimpan." {onClose}>
-  <div class="space-y-4">
+<Sheet {open} title="Ringkasan & Konfirmasi" description="Periksa detail setoran dan barang sebelum disimpan." {onClose}>
+  <div class="space-y-4 pb-4">
 
-    <!-- Lokasi -->
-    <div class="rounded-2xl border border-coffee-100 bg-milk p-4">
+    <!-- Lokasi Card -->
+    <div class="rounded-2xl border border-coffee-200/80 bg-white p-4 shadow-sm">
       <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl {isInside ? 'bg-emerald-100' : 'bg-red-100'}">
-          <MapPin size={18} class={isInside ? 'text-emerald-600' : 'text-red-600'} />
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl {isInside ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">
+          <MapPin size={20} />
         </div>
-        <div class="flex-1">
-          <p class="text-sm font-bold text-coffee-900">{distanceM !== null ? formatDistance(distanceM) : '-'}</p>
-          <p class="text-xs text-coffee-500">Radius: {formatDistance(radiusM)}</p>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-coffee-500">Jarak ke Warung</p>
+          <p class="text-sm font-extrabold text-coffee-900">{distanceM !== null ? formatDistance(distanceM) : '-'}</p>
         </div>
         {#if isInside}
-          <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-            <CheckCircle size={12} /> Valid
+          <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+            <CheckCircle size={14} /> Presensi Valid
           </span>
         {:else}
-          <span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">
-            <AlertTriangle size={12} /> Luar radius
+          <span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700 border border-red-200">
+            <AlertTriangle size={14} /> Luar Radius
           </span>
         {/if}
       </div>
       {#if !isInside && draft.override}
-        <div class="mt-3 flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2">
-          <Shield size={14} class="text-blue-600" />
-          <div>
-            <p class="text-xs font-semibold text-blue-700">Override aktif</p>
-            <p class="text-xs text-blue-600">{draft.overrideReason || '-'}</p>
+        <div class="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 border border-amber-200">
+          <Shield size={16} class="text-amber-600 shrink-0" />
+          <div class="min-w-0">
+            <p class="text-xs font-bold text-amber-900">Override Pemilik Aktif</p>
+            <p class="text-xs text-amber-700 truncate">{draft.overrideReason || '-'}</p>
           </div>
         </div>
       {/if}
     </div>
 
-    <!-- Penarikan (Simple List) -->
+    <!-- Ringkasan Finansial Banner -->
+    <div class="rounded-2xl bg-gradient-to-br from-coffee-900 to-coffee-950 p-4 text-white shadow-md">
+      <div class="flex items-center justify-between gap-2.5">
+        <div>
+          <span class="text-xs font-medium text-coffee-300 block">Total Setoran Kas</span>
+          <span class="text-xl font-extrabold text-amber-400 block mt-0.5">{formatRupiah(totalCollected)}</span>
+        </div>
+        <div class="text-right shrink-0">
+          <span class="text-xs font-medium text-coffee-300 block">Total Terjual</span>
+          <span class="text-base font-bold text-white block mt-0.5">{totalSold} Unit</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Penarikan List -->
     {#if hasPickups}
-      <div class="rounded-2xl border border-coffee-100 bg-white p-4">
-        <div class="mb-3 flex items-center gap-2">
-          <ShoppingCart size={16} class="text-orange-500" />
-          <h3 class="text-sm font-bold text-coffee-900">Produk Ditarik</h3>
+      <div class="rounded-2xl border border-coffee-200/80 bg-white p-4 shadow-sm space-y-3">
+        <div class="flex items-center gap-2 pb-2 border-b border-coffee-100">
+          <ShoppingCart size={18} class="text-amber-600" />
+          <h3 class="text-sm font-bold text-coffee-900">Rincian Penarikan & Penjualan</h3>
         </div>
 
-        <div class="space-y-2">
+        <div class="divide-y divide-coffee-50">
           {#each closedSummaries as item (item.id)}
-            <div class="flex items-center justify-between py-1">
-              <div class="flex items-center gap-2">
-                <Package size={14} class="text-coffee-400" />
-                <span class="text-sm text-coffee-800">{item.name}</span>
-                <span class="text-xs text-coffee-400">×{item.sold}</span>
+            <div class="flex items-center justify-between py-2">
+              <div class="flex items-start gap-2 min-w-0 pr-2">
+                <Package size={16} class="text-coffee-400 shrink-0 mt-0.5" />
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-coffee-900 leading-snug">{item.name}</p>
+                  <p class="text-xs text-coffee-500 mt-0.5">{item.sold} unit terjual</p>
+                </div>
               </div>
-              <span class="text-sm font-semibold text-coffee-900">{formatRupiah(item.revenue)}</span>
+              <span class="text-xs font-extrabold text-coffee-900 shrink-0 self-start mt-0.5">{formatRupiah(item.revenue)}</span>
             </div>
           {/each}
-        </div>
-
-        <div class="mt-3 flex items-center justify-between border-t border-coffee-100 pt-3">
-          <span class="text-sm font-medium text-coffee-600">Total Setoran</span>
-          <span class="text-lg font-extrabold text-coffee-900">{formatRupiah(totalCollected)}</span>
         </div>
       </div>
     {/if}
 
-    <!-- Penitipan (Simple List) -->
+    <!-- Penitipan List -->
     {#if hasDrops}
-      <div class="rounded-2xl border border-coffee-100 bg-white p-4">
-        <div class="mb-3 flex items-center gap-2">
-          <ArrowUpRight size={16} class="text-green-500" />
-          <h3 class="text-sm font-bold text-coffee-900">Produk Dititip</h3>
+      <div class="rounded-2xl border border-coffee-200/80 bg-white p-4 shadow-sm space-y-3">
+        <div class="flex items-center gap-2 pb-2 border-b border-coffee-100">
+          <ArrowUpRight size={18} class="text-emerald-600" />
+          <h3 class="text-sm font-bold text-coffee-900">Rincian Stok Dititipkan</h3>
         </div>
 
-        <div class="space-y-2">
+        <div class="divide-y divide-coffee-50">
           {#each draft.drops as drop (drop.id)}
-            <div class="flex items-center justify-between py-1">
-              <div class="flex items-center gap-2">
-                <Package size={14} class="text-coffee-400" />
-                <span class="text-sm text-coffee-800">{drop.productName}</span>
-                <span class="text-xs text-coffee-400">×{drop.qty}</span>
+            <div class="flex items-center justify-between py-2">
+              <div class="flex items-start gap-2 min-w-0 pr-2">
+                <Package size={16} class="text-emerald-600 shrink-0 mt-0.5" />
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-coffee-900 leading-snug">{drop.productName}</p>
+                  <p class="text-xs text-coffee-500 mt-0.5">{drop.qty} unit @{formatRupiah(drop.price ?? 0)}</p>
+                </div>
               </div>
-              <span class="text-sm font-semibold text-coffee-900">{formatRupiah(drop.qty * (drop.price ?? 0))}</span>
+              <span class="text-xs font-extrabold text-emerald-700 shrink-0 self-start mt-0.5">{formatRupiah(drop.qty * (drop.price ?? 0))}</span>
             </div>
           {/each}
         </div>
-
-        <div class="mt-3 flex items-center justify-between border-t border-coffee-100 pt-3">
-          <span class="text-sm font-medium text-coffee-600">Total Penitipan</span>
-          <span class="text-lg font-extrabold text-green-700">{formatRupiah(totalDropValue)}</span>
+        <div class="pt-2 border-t border-coffee-100 flex justify-between items-center text-xs">
+          <span class="font-medium text-coffee-600">Total Nilai Barang Titip</span>
+          <span class="font-bold text-emerald-700 text-sm">{formatRupiah(totalDropValue)}</span>
         </div>
       </div>
     {/if}
 
     <!-- Catatan -->
     {#if draft.notes}
-      <div class="rounded-2xl border border-coffee-100 bg-milk p-4">
-        <div class="flex items-start gap-3">
-          <FileText size={16} class="mt-0.5 text-coffee-400" />
-          <div>
-            <p class="text-xs font-semibold text-coffee-500">Catatan</p>
-            <p class="mt-1 text-sm text-coffee-900">{draft.notes}</p>
+      <div class="rounded-2xl border border-coffee-200/80 bg-cream/70 p-3.5">
+        <div class="flex items-start gap-2.5">
+          <FileText size={16} class="mt-0.5 text-coffee-500 shrink-0" />
+          <div class="min-w-0">
+            <p class="text-xs font-bold text-coffee-700">Catatan Kunjungan</p>
+            <p class="mt-0.5 text-xs text-coffee-900 leading-relaxed">{draft.notes}</p>
           </div>
         </div>
       </div>
@@ -155,9 +167,9 @@
 
     <!-- Error -->
     {#if error}
-      <div class="rounded-xl border border-danger bg-danger-bg px-4 py-3 text-sm text-danger" role="alert">
+      <div class="rounded-2xl border border-red-300 bg-red-50 p-3.5 text-xs text-red-700 font-medium" role="alert">
         <div class="flex items-center gap-2">
-          <AlertTriangle size={16} />
+          <AlertTriangle size={16} class="shrink-0" />
           {error}
         </div>
       </div>
@@ -165,8 +177,8 @@
 
     <!-- Actions -->
     <div class="grid grid-cols-2 gap-3 pt-2">
-      <Button type="button" variant="secondary" fullWidth onclick={onClose} disabled={isPending}>
-        Periksa Lagi
+      <Button type="button" variant="secondary" fullWidth onclick={onClose} disabled={isPending} class="h-11 font-bold">
+        Cek Lagi
       </Button>
       <Button
         type="button"
@@ -176,8 +188,9 @@
         loading={isPending}
         disabled={disabled || isPending}
         haptic
+        class="h-11 font-bold shadow-sm"
       >
-        {isPending ? 'Menyimpan…' : 'Simpan'}
+        {isPending ? 'Menyimpan…' : 'Simpan Kunjungan'}
       </Button>
     </div>
   </div>

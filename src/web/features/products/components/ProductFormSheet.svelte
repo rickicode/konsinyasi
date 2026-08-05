@@ -19,11 +19,11 @@
     uploadProductPhotoMutationOptions,
   } from '../api/index.js';
   import { formatRupiah } from '$lib/utils/format.js';
-  import HppDisplay from './HppDisplay.svelte';
   import PhotoUploader from '../../outlets/components/PhotoUploader.svelte';
   import RecipeEditor from './RecipeEditor.svelte';
   import Button from '../../../shared/ui/Button.svelte';
   import Input from '../../../shared/ui/Input.svelte';
+  import TextArea from '../../../shared/ui/TextArea.svelte';
   import ErrorState from '../../../shared/ui/ErrorState.svelte';
   import Sheet from '../../../shared/ui/Sheet.svelte';
   import Dialog from '../../../shared/ui/Dialog.svelte';
@@ -53,7 +53,9 @@
   const uploadPhoto = createMutation(() => uploadProductPhotoMutationOptions());
 
   let name = $state('');
+  let description = $state('');
   let status = $state<'active' | 'inactive'>('active');
+  let is_public = $state(0);
   let priceInput = $state('');
   let hppOverrideInput = $state('');
   let recipeLines = $state<RecipeLineInput[]>([]);
@@ -62,7 +64,6 @@
   let attemptedSubmit = $state(false);
   let photoFile = $state<File | null>(null);
   let photoPreviewUrl = $state<string | null>(null);
-  let activeTab = $state<'info' | 'price' | 'recipe'>('info');
   let initialSnapshot = $state<string | null>(null);
   let initializedCreate = $state(false);
   let showUnsavedDialog = $state(false);
@@ -78,34 +79,12 @@
     { value: 'inactive', label: 'Nonaktif' },
   ];
 
-  const tabs = [
-    { key: 'info', label: 'Informasi' },
-    { key: 'price', label: 'Harga & HPP' },
-    { key: 'recipe', label: 'Resep' },
-  ] as const;
-
-  const tabKeys = tabs.map((t) => t.key);
-  const firstTab = tabKeys[0];
-  const lastTab = tabKeys[tabKeys.length - 1];
-
-  function nextTab() {
-    const index = tabKeys.indexOf(activeTab);
-    if (index < tabKeys.length - 1) {
-      activeTab = tabKeys[index + 1] as typeof activeTab;
-    }
-  }
-
-  function previousTab() {
-    const index = tabKeys.indexOf(activeTab);
-    if (index > 0) {
-      activeTab = tabKeys[index - 1] as typeof activeTab;
-    }
-  }
-
   function getSnapshot() {
     return JSON.stringify({
       name: name.trim(),
+      description: description.trim(),
       status,
+      is_public,
       priceInput,
       hppOverrideInput,
       recipeLines,
@@ -119,12 +98,6 @@
   }
 
   $effect(() => {
-    if (open) {
-      activeTab = 'info';
-    }
-  });
-
-  $effect(() => {
     if (!open) return;
     if (isCreate && initializedCreate) return;
     if (isCreate) {
@@ -136,7 +109,9 @@
     const product = detailQuery.data;
     if (product) {
       name = product.name;
+      description = product.description ?? '';
       status = product.status;
+      is_public = product.is_public ? 1 : 0;
       priceInput = product.price_to_outlet !== undefined ? String(product.price_to_outlet) : '';
       hppOverrideInput =
         product.hpp_override !== null && product.hpp_override !== undefined
@@ -162,10 +137,11 @@
     }
   });
 
-
   function resetForm() {
     name = '';
+    description = '';
     status = 'active';
+    is_public = 0;
     priceInput = '';
     hppOverrideInput = '';
     recipeLines = [];
@@ -203,22 +179,10 @@
     return Object.keys(errors).length === 0;
   }
 
-  function focusFirstError() {
-    if (fieldErrors.name) {
-      activeTab = 'info';
-      return;
-    }
-    if (fieldErrors.price_to_outlet || fieldErrors.hpp_override) {
-      activeTab = 'price';
-      return;
-    }
-    if (Object.keys(fieldErrors).some((k) => k.startsWith('recipe_lines'))) {
-      activeTab = 'recipe';
-    }
-  }
-
   function buildCreatePayload(): ProductCreateInput {
     const payload: ProductCreateInput = { name: name.trim(), status };
+    payload.is_public = is_public === 1;
+    if (description.trim()) payload.description = description.trim();
     if (!canManageFinancial) return payload;
     const hasRecipe = recipeLines.length > 0;
     payload.price_to_outlet = Number(priceInput);
@@ -231,6 +195,8 @@
 
   function buildUpdatePayload(): ProductUpdateInput {
     const payload: ProductUpdateInput = { name: name.trim(), status };
+    payload.is_public = is_public === 1;
+    if (description.trim()) payload.description = description.trim();
     if (!canManageFinancial) return payload;
     const hasRecipe = recipeLines.length > 0;
     payload.price_to_outlet = Number(priceInput);
@@ -241,6 +207,7 @@
     return payload;
   }
 
+  /** Real-time HPP calculation from recipe lines */
   function previewHpp() {
     if (!canManageFinancial) return 0;
     if (recipeLines.length === 0) {
@@ -285,7 +252,6 @@
     attemptedSubmit = true;
     resetErrors();
     if (!validate()) {
-      focusFirstError();
       const first = Object.values(fieldErrors)[0];
       if (first) formError = first;
       return;
@@ -377,104 +343,34 @@
         </div>
       {/if}
 
-      <!-- Mobile tabs -->
-      <div class="lg:hidden">
-        <div
-          class="flex gap-1 rounded-2xl border border-coffee-100 bg-cream p-1"
-          role="tablist"
-          aria-label="Bagian formulir"
-        >
-          {#each tabs as tab (tab.key)}
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.key}
-              class="flex-1 rounded-xl py-2 text-xs font-semibold transition-all {activeTab ===
-              tab.key
-                ? 'bg-coffee-700 text-white shadow-sm'
-                : 'text-coffee-600 hover:bg-coffee-100'}"
-              onclick={() => (activeTab = tab.key)}
-            >
-              {tab.label}
-            </button>
-          {/each}
-        </div>
-      </div>
+      <!-- Single page: all sections visible -->
+      <div class="space-y-5">
+        <!-- 1. Info -->
+        {@render infoSection()}
 
-      <!-- Mobile content -->
-      <div class="space-y-5 lg:hidden">
-        {#if activeTab === 'info'}
-          {@render infoSection()}
-          {@render photoSection()}
-        {:else if activeTab === 'price'}
-          {@render priceSection()}
-        {:else if activeTab === 'recipe'}
-          {@render recipeSection()}
-        {/if}
-      </div>
+        <!-- 2. Photo -->
+        {@render photoSection()}
 
-      <!-- Desktop two-column layout -->
-      <div class="hidden lg:grid lg:grid-cols-[1fr_18rem] lg:gap-6">
-        <div class="space-y-5">
-          {@render infoSection()}
-          {@render photoSection()}
-          {@render priceSection()}
-          {@render recipeSection()}
-        </div>
-        <aside class="relative">
-          <div class="sticky top-0 space-y-4">
-            {@render summaryCard()}
-          </div>
-        </aside>
+        <!-- 3. Harga -->
+        {@render priceSection()}
+
+        <!-- 4. Resep + HPP inline -->
+        {@render recipeSection()}
       </div>
     </form>
   {/if}
 
   {#snippet footer()}
-    <!-- Mobile wizard footer -->
-    <div class="flex gap-3 lg:hidden">
-      {#if activeTab !== firstTab}
-        <Button
-          variant="secondary"
-          class="flex-1"
-          type="button"
-          disabled={isSaving}
-          onclick={previousTab}
-        >
-          Sebelumnya
-        </Button>
-      {/if}
-      {#if activeTab !== lastTab}
-        <Button class="flex-1" type="button" disabled={isSaving} onclick={nextTab}>
-          Berikutnya
-        </Button>
-      {:else}
-        <Button
-          type="submit"
-          form={formId}
-          class="flex-1"
-          loading={isSaving}
-          disabled={isSaving || !canWrite}
-          haptic
-        >
-          {isCreate ? 'Simpan' : 'Perbarui'}
-        </Button>
-      {/if}
-    </div>
-
-    <!-- Desktop footer -->
-    <div class="hidden lg:flex">
-      <Button
-        type="submit"
-        form={formId}
-        class="w-full"
-        loading={isSaving}
-        disabled={isSaving || !canWrite}
-        haptic
-      >
-        {isCreate ? 'Simpan' : 'Perbarui'}
-      </Button>
-    </div>
+    <Button
+      type="submit"
+      form={formId}
+      class="w-full"
+      loading={isSaving}
+      disabled={isSaving || !canWrite}
+      haptic
+    >
+      {isCreate ? 'Simpan' : 'Perbarui'}
+    </Button>
   {/snippet}
 </Sheet>
 
@@ -499,6 +395,12 @@
         bind:value={name}
         error={fieldErrors.name}
       />
+      <TextArea
+        label="Deskripsi"
+        placeholder="Deskripsi produk (opsional)"
+        rows={3}
+        bind:value={description}
+      />
       <div class="space-y-1.5">
         <span class="text-sm font-medium text-coffee-800">Status</span>
         <div class="flex rounded-xl border border-coffee-200 bg-cream p-1">
@@ -515,6 +417,32 @@
               {option.label}
             </button>
           {/each}
+        </div>
+      </div>
+      <div class="space-y-1.5">
+        <span class="text-sm font-medium text-coffee-800">Tampilkan ke Publik</span>
+        <p class="text-xs text-coffee-500">Produk akan muncul di halaman publik</p>
+        <div class="flex rounded-xl border border-coffee-200 bg-cream p-1">
+          <button
+            type="button"
+            class="flex-1 rounded-lg py-2 text-sm font-semibold transition-all {is_public === 1
+              ? 'bg-coffee-700 text-white shadow-sm'
+              : 'text-coffee-600 hover:bg-coffee-100'}"
+            aria-pressed={is_public === 1}
+            onclick={() => (is_public = 1)}
+          >
+            Ya
+          </button>
+          <button
+            type="button"
+            class="flex-1 rounded-lg py-2 text-sm font-semibold transition-all {is_public === 0
+              ? 'bg-coffee-700 text-white shadow-sm'
+              : 'text-coffee-600 hover:bg-coffee-100'}"
+            aria-pressed={is_public === 0}
+            onclick={() => (is_public = 0)}
+          >
+            Tidak
+          </button>
         </div>
       </div>
     </div>
@@ -563,13 +491,6 @@
           bind:value={hppOverrideInput}
           error={fieldErrors.hpp_override}
         />
-        <HppDisplay
-          hpp={displayHpp}
-          hppOverride={String(hppOverrideInput).trim() !== '' && recipeLines.length === 0
-            ? Number(hppOverrideInput)
-            : null}
-          priceToOutlet={displayPrice}
-        />
       </div>
     </section>
   {/if}
@@ -587,64 +508,30 @@
       {#if attemptedSubmit && materialsQuery.error}
         <p class="mt-2 text-sm text-danger" role="alert">Gagal memuat bahan baku.</p>
       {/if}
+
+      <!-- HPP summary: auto-calculated from recipe -->
+      <div class="mt-4 rounded-xl border border-coffee-200 bg-cream p-4">
+        <dl class="space-y-2 text-sm">
+          <div class="flex items-center justify-between">
+            <dt class="text-coffee-500">HPP (dari resep)</dt>
+            <dd class="font-semibold text-coffee-900">{formatRupiah(displayHpp)}</dd>
+          </div>
+          {#if displayPrice !== undefined}
+            <div class="flex items-center justify-between">
+              <dt class="text-coffee-500">Harga ke Outlet</dt>
+              <dd class="font-semibold text-coffee-900">{formatRupiah(displayPrice)}</dd>
+            </div>
+          {/if}
+          {#if displayMargin !== undefined}
+            <div class="flex items-center justify-between">
+              <dt class="text-coffee-500">Margin</dt>
+              <dd class="font-semibold {displayMargin >= 0 ? 'text-emerald-600' : 'text-danger'}">
+                {displayMargin >= 0 ? '+' : ''}{formatRupiah(displayMargin)}
+              </dd>
+            </div>
+          {/if}
+        </dl>
+      </div>
     </section>
   {/if}
-{/snippet}
-
-{#snippet summaryCard()}
-  <div class="rounded-2xl border border-coffee-100 bg-cream p-4 shadow-card">
-    <h3 class="mb-3 text-sm font-semibold text-coffee-800">Ringkasan</h3>
-    <div class="space-y-4">
-      <div class="mx-auto w-3/4">
-        {#if photoPreviewUrl}
-          <img
-            src={photoPreviewUrl}
-            alt="Foto produk"
-            class="aspect-square w-full rounded-2xl object-cover"
-          />
-        {:else}
-          <div
-            class="flex aspect-square w-full items-center justify-center rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/60"
-          >
-            <Icon name="package" size={32} class="text-amber-400" />
-          </div>
-        {/if}
-      </div>
-
-      <div>
-        <h4 class="truncate text-base font-bold text-coffee-900">
-          {name.trim() || 'Produk Baru'}
-        </h4>
-        <span
-          class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none {status ===
-          'active'
-            ? 'bg-emerald-50 text-emerald-600'
-            : 'bg-coffee-50 text-coffee-400'}"
-        >
-          {status === 'active' ? 'Aktif' : 'Nonaktif'}
-        </span>
-      </div>
-
-      <dl class="space-y-2 text-sm">
-        <div class="flex items-center justify-between">
-          <dt class="text-coffee-500">HPP</dt>
-          <dd class="font-semibold text-coffee-900">{formatRupiah(displayHpp)}</dd>
-        </div>
-        {#if displayPrice !== undefined}
-          <div class="flex items-center justify-between">
-            <dt class="text-coffee-500">Harga ke Outlet</dt>
-            <dd class="font-semibold text-coffee-900">{formatRupiah(displayPrice)}</dd>
-          </div>
-        {/if}
-        {#if displayMargin !== undefined}
-          <div class="flex items-center justify-between">
-            <dt class="text-coffee-500">Margin</dt>
-            <dd class="font-semibold {displayMargin >= 0 ? 'text-emerald-600' : 'text-danger'}">
-              {displayMargin >= 0 ? '+' : ''}{formatRupiah(displayMargin)}
-            </dd>
-          </div>
-        {/if}
-      </dl>
-    </div>
-  </div>
 {/snippet}

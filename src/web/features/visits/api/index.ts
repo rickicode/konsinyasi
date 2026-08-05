@@ -42,6 +42,8 @@ export interface VisitListItem {
   geofence_radius_m: number;
   geofence_override: boolean;
   amount_collected_total: number;
+  qty_sold_total: number;
+  qty_remaining_total: number;
   status: 'committed' | 'voided';
   voided_at: string | null;
   void_reason: string | null;
@@ -58,6 +60,8 @@ const visitListItemSchema = z.object({
   geofence_radius_m: z.number(),
   geofence_override: z.boolean(),
   amount_collected_total: z.number(),
+  qty_sold_total: z.number(),
+  qty_remaining_total: z.number(),
   status: z.enum(['committed', 'voided']),
   voided_at: z.string().nullable(),
   void_reason: z.string().nullable(),
@@ -167,19 +171,21 @@ export interface FetchVisitsInput {
   outlet_id?: string;
   from?: string;
   to?: string;
+  search?: string;
 }
 
 /**
  * Fetch a paginated list of visits.
  */
 export async function fetchVisits(
-  { page, limit, outlet_id, from, to }: FetchVisitsInput,
+  { page, limit, outlet_id, from, to, search }: FetchVisitsInput,
   client: ApiClient = apiClient
 ): Promise<PaginatedList<VisitListItem>> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (outlet_id) params.set('outlet_id', outlet_id);
   if (from) params.set('from', from);
   if (to) params.set('to', to);
+  if (search?.trim()) params.set('search', search.trim());
   return client.get(`/api/visits?${params.toString()}`, paginatedListSchema(visitListItemSchema));
 }
 
@@ -196,10 +202,10 @@ export function visitPrepQueryOptions(outletId: string, client: ApiClient = apiC
 /**
  * TanStack Query infinite options for the visit history list.
  */
-export function visitHistoryInfiniteQueryOptions(client: ApiClient = apiClient) {
+export function visitHistoryInfiniteQueryOptions(search: string = '', client: ApiClient = apiClient) {
   return infiniteQueryOptions({
-    queryKey: [...queryKeys.visits.history, 'infinite'],
-    queryFn: ({ pageParam }) => fetchVisits({ page: pageParam, limit: DEFAULT_PAGE_SIZE }, client),
+    queryKey: [...queryKeys.visits.history, 'infinite', search],
+    queryFn: ({ pageParam }) => fetchVisits({ page: pageParam, limit: DEFAULT_PAGE_SIZE, search }, client),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.meta.page < lastPage.meta.total_pages ? lastPage.meta.page + 1 : undefined,

@@ -44,7 +44,7 @@
     <p class="text-sm text-coffee-500">Akses cepat untuk owner</p>
   </header>
 
-  <div class="flex-1 space-y-4 overflow-y-auto px-4 pb-28">
+  <div class="flex-1 space-y-4 overflow-y-auto px-4 pb-2">
     <div class="grid gap-3 sm:grid-cols-2">
       {#each cards as card (card.path)}
         {@const Icon = card.icon}

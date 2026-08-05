@@ -18,13 +18,24 @@ import { push } from 'svelte-spa-router';
   const auth = getAuth();
   const geolocation = useGeolocation();
 
-  const outletsQuery = createInfiniteQuery(() => outletsInfiniteQueryOptions());
+  const outletsQuery = createInfiniteQuery(() => outletsInfiniteQueryOptions(debouncedSearch, statusFilter));
 
   let search = $state('');
+  let debouncedSearch = $state('');
+  let searchTimeout: ReturnType<typeof setTimeout> | null = null;
   let editingId = $state<string | null>(null);
   let statusFilter = $state<'all' | 'active' | 'inactive'>('all');
   let sortBy = $state<'nearest' | 'name'>('nearest');
   let searchFocused = $state(false);
+
+  // Debounce search input
+  $effect(() => {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      debouncedSearch = search;
+    }, 300);
+    return () => { if (searchTimeout) clearTimeout(searchTimeout); };
+  });
 
   const canWrite = $derived(auth.can('outlets:write'));
   const isSheetOpen = $derived(editingId !== null || false);
@@ -44,20 +55,10 @@ import { push } from 'svelte-spa-router';
 
   const allOutlets = $derived(outletsQuery.data?.pages.flatMap((page) => page.data) ?? []);
 
-  const filtered = $derived(
-    allOutlets.filter((outlet) => {
-      const term = search.trim().toLowerCase();
-      const matchesTerm =
-        !term ||
-        outlet.name.toLowerCase().includes(term) ||
-        outlet.address?.toLowerCase().includes(term);
-      const matchesStatus = statusFilter === 'all' || outlet.status === statusFilter;
-      return matchesTerm && matchesStatus;
-    })
-  );
-
+  // Server-side filtering is now handled by the API
+  // Client-side sort only (distance requires geolocation)
   const sorted = $derived(
-    [...filtered].sort((a: Outlet, b: Outlet) => {
+    [...allOutlets].sort((a: Outlet, b: Outlet) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       const dA = geolocation.distanceTo(a.latitude, a.longitude);
       const dB = geolocation.distanceTo(b.latitude, b.longitude);
@@ -115,11 +116,11 @@ import { push } from 'svelte-spa-router';
           <div>
             <h1 class="text-base font-bold tracking-tight text-coffee-900">Warung</h1>
             {#if geolocation.accuracy !== null}
-              <p class="text-[11px] font-medium text-coffee-400">
+              <p class="text-xs font-medium text-coffee-400">
                 GPS: {formatAccuracy(geolocation.accuracy)}
               </p>
             {:else if !outletsQuery.isLoading && totalLoaded > 0}
-              <p class="text-[11px] font-medium text-coffee-400">{totalLoaded} warung</p>
+              <p class="text-xs font-medium text-coffee-400">{totalLoaded} warung</p>
             {/if}
           </div>
         </div>

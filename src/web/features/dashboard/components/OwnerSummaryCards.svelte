@@ -32,6 +32,7 @@
     <div class="flex items-start justify-between gap-3">
       <div>
         <p class="text-xs font-semibold text-coffee-500">Botol di pasar</p>
+        <p class="text-xs text-coffee-400">Total botol yang sedang dititipkan ke warung</p>
         <p class="mt-1 text-2xl font-extrabold text-coffee-900">
           {summary.total_bottles_in_market}
         </p>

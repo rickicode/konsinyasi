@@ -78,14 +78,14 @@
   const hasWork = $derived(cycles.length > 0 || draft.drops.length > 0);
   const submitDisabledReason = $derived.by(() => {
     if (submitMutation.isPending) return null;
-    if (!gpsReady) return 'GPS belum siap.';
-    if (!isInside && !canOverride) return 'Anda di luar radius geofence.';
+    if (!gpsReady) return 'GPS belum siap. Tunggu beberapa detik atau refresh GPS.'
+    if (!isInside && !canOverride) return 'Anda di luar radius geofence. Mendekati warung atau hubungi pemilik untuk override.'
     if (!isInside && canOverride && (!draft.override || !draft.overrideReason.trim())) {
       return 'Alasan override wajib diisi.';
     }
-    if (!hasWork) return 'Tambahkan penarikan atau penitipan.';
-    if (!draft.allPickupsValid(cycles)) return 'Jumlah penarikan belum sesuai.';
-    if (!draft.areDropsValid()) return 'Penitipan baru belum lengkap.';
+    if (!hasWork) return 'Tambahkan penarikan atau penitipan untuk melanjutkan.'
+    if (!draft.allPickupsValid(cycles)) return 'Jumlah penarikan belum sesuai. Pastikan total barang = jumlah dititipkan.'
+    if (!draft.areDropsValid()) return 'Penitipan baru belum lengkap. Isi jumlah dan harga untuk semua produk.'
     return null;
   });
 
@@ -103,10 +103,10 @@
     };
   });
 
-  function handleAddDrop(productId: string, qty: number, notes: string) {
+  function handleAddDrop(productId: string, qty: number, notes: string, expiresAt?: string) {
     const product = pickerQuery.data?.find((p) => p.id === productId);
     if (!product) return;
-    draft.addDrop({ id: product.id, name: product.name, price: product.price }, qty, notes);
+    draft.addDrop({ id: product.id, name: product.name, price: product.price }, qty, notes, expiresAt);
   }
 
 
@@ -170,102 +170,123 @@
 </script>
 
 {#if visitResult}
-  <section class="space-y-4 py-4" aria-label="Ringkasan kunjungan berhasil">
-    <div class="text-center">
-      <div
-        class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-bg text-success"
-      >
-        <Icon name="check-circle" size={32} />
+  <section class="space-y-4 py-6 px-1" aria-label="Ringkasan kunjungan berhasil">
+    <div class="text-center space-y-2">
+      <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 ring-8 ring-emerald-50/80">
+        <Icon name="check-circle" size={40} />
       </div>
-      <h1 class="mt-4 text-lg font-bold text-coffee-900">Kunjungan Tersimpan</h1>
-      <p class="text-sm text-coffee-500">Ringkasan hasil kunjungan hari ini.</p>
+      <h1 class="text-xl font-extrabold text-coffee-900 leading-tight">Kunjungan Berhasil Disimpan! 🎉</h1>
+      <p class="text-xs text-coffee-500 max-w-xs mx-auto leading-relaxed">
+        Data penarikan, stok titip baru, dan lokasi presensi telah berhasil dicatat.
+      </p>
     </div>
 
-    <Card variant="visit">
-      <div class="space-y-3 text-sm">
-        <div class="flex items-center justify-between">
-          <span class="text-coffee-600">Jarak ke warung</span>
-          <span class="font-bold text-coffee-900">{formatDistance(visitResult.distance_m)}</span>
+    <!-- Main Summary Card -->
+    <div class="rounded-2xl border border-coffee-200/80 bg-white p-4 shadow-sm space-y-3">
+      {#if outlet}
+        <div class="flex items-center justify-between py-1.5 border-b border-coffee-100">
+          <span class="text-xs font-medium text-coffee-600">Warung</span>
+          <span class="text-xs font-bold text-coffee-900">{outlet.name}</span>
         </div>
-        <div class="flex items-center justify-between">
-          <span class="text-coffee-600">Override geofence</span>
-          <span class="font-medium text-coffee-900"
-            >{visitResult.geofence_override ? 'Ya' : 'Tidak'}</span
-          >
+      {/if}
+      <div class="flex items-center justify-between py-1.5 border-b border-coffee-100">
+        <span class="text-xs font-medium text-coffee-600">Presensi Lokasi</span>
+        <span class="text-xs font-bold text-coffee-900 bg-coffee-50 px-2 py-0.5 rounded-lg border border-coffee-100">
+          {formatDistance(visitResult.distance_m)} {visitResult.geofence_override ? '(Override)' : ''}
+        </span>
+      </div>
+
+      <div class="flex items-center justify-between py-1.5">
+        <div>
+          <span class="text-xs font-medium text-coffee-600 block">Total Setoran Kas</span>
+          <span class="text-xs text-coffee-400">{visitResult.qty_sold_total} unit terjual</span>
         </div>
-        <div class="flex items-center justify-between">
-          <span class="text-coffee-600">Total setoran</span>
-          <span class="text-lg font-bold text-coffee-900">
-            {formatRupiah(visitResult.amount_collected_total)}
+        <span class="text-lg font-extrabold text-emerald-700">
+          {formatRupiah(visitResult.amount_collected_total)}
+        </span>
+      </div>
+
+      <div class="flex items-center justify-between py-1.5 border-t border-coffee-100">
+        <div>
+          <span class="text-xs font-medium text-coffee-600 block">Sisa Stok di Warung</span>
+          <span class="text-xs text-coffee-400">Produk belum laku, tetap di warung</span>
+        </div>
+        <span class="text-lg font-extrabold text-coffee-800">
+          {visitResult.qty_remaining_total} unit
+        </span>
+      </div>
+    </div>
+
+    <!-- Closed Cycles -->
+    {#if visitResult.closed_cycles.length > 0}
+      <div class="rounded-2xl border border-coffee-200/80 bg-white p-4 shadow-sm space-y-2.5">
+        <h2 class="text-xs font-bold text-coffee-800 uppercase tracking-wider">Hasil Penarikan Stok</h2>
+        <div class="divide-y divide-coffee-50">
+          {#each visitResult.closed_cycles as cycle (cycle.cycle_id)}
+            <div class="flex items-center justify-between py-2 text-xs">
+              <span class="font-bold text-coffee-900">{cycle.product_name}</span>
+              <div class="text-right">
+                <span class="font-extrabold text-emerald-700 block">{cycle.qty_sold} terjual</span>
+                <span class="text-coffee-500 block text-xs mt-0.5">({cycle.qty_remaining_good} sisa di warung · {cycle.qty_return_damaged} rusak ditarik)</span>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
+    <!-- Dropped Cycles -->
+    {#if visitResult.dropped_cycles.length > 0}
+      <div class="rounded-2xl border border-coffee-200/80 bg-white p-4 shadow-sm space-y-2.5">
+        <h2 class="text-xs font-bold text-coffee-800 uppercase tracking-wider">Stok Titip Baru</h2>
+        <div class="divide-y divide-coffee-50">
+          {#each visitResult.dropped_cycles as drop (drop.cycle_id)}
+            <div class="flex items-center justify-between py-2 text-xs">
+              <span class="font-bold text-coffee-900">{drop.product_name}</span>
+              <span class="font-bold text-coffee-800">
+                {drop.qty_dropped} unit <span class="text-coffee-500 font-normal">({formatRupiah(drop.qty_dropped * (drop.price ?? 0))})</span>
+              </span>
+            </div>
+          {/each}
+        </div>
+        <div class="pt-2 border-t border-coffee-100 flex items-center justify-between text-xs">
+          <span class="font-semibold text-amber-800">Total Nilai Titip Baru:</span>
+          <span class="font-extrabold text-amber-900 text-sm">
+            {formatRupiah(visitResult.dropped_cycles.reduce((s, d) => s + d.qty_dropped * (d.price ?? 0), 0))}
           </span>
         </div>
       </div>
-    </Card>
-
-    {#if visitResult.closed_cycles.length > 0}
-      <Card variant="visit">
-        {#snippet header()}
-          <h2 class="text-sm font-bold text-coffee-900">Penarikan</h2>
-        {/snippet}
-        <ul class="space-y-2 text-sm">
-          {#each visitResult.closed_cycles as cycle (cycle.cycle_id)}
-            <li class="flex items-center justify-between">
-              <span class="text-coffee-700">{cycle.product_name}</span>
-              <span class="font-medium text-coffee-900">
-                {cycle.qty_sold} terjual · {cycle.qty_return_good} layak · {cycle.qty_return_damaged}
-                rusak
-              </span>
-            </li>
-          {/each}
-        </ul>
-      </Card>
     {/if}
 
-    {#if visitResult.dropped_cycles.length > 0}
-      <Card variant="product">
-        {#snippet header()}
-          <h2 class="text-sm font-bold text-coffee-900">Penitipan Baru</h2>
-        {/snippet}
-        <ul class="space-y-2 text-sm">
-          {#each visitResult.dropped_cycles as drop (drop.cycle_id)}
-            <li class="flex items-center justify-between">
-              <span class="text-coffee-700">{drop.product_name}</span>
-              <span class="font-medium text-coffee-900"
-                >{drop.qty_dropped} unit · {formatRupiah(
-                  drop.qty_dropped * (drop.price ?? 0)
-                )}</span
-              >
-            </li>
-          {/each}
-        </ul>
-      </Card>
-      <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <div class="flex items-center justify-between">
-          <span class="text-amber-700">Nilai penitipan</span>
-          <span class="text-lg font-bold text-amber-900"
-            >{formatRupiah(
-              visitResult.dropped_cycles.reduce((s, d) => s + d.qty_dropped * (d.price ?? 0), 0)
-            )}</span
-          >
-        </div>
-        <p class="mt-1 text-xs text-amber-600">Nilai stok yang dititipkan ke warung</p>
-      </div>
-    {/if}
-    <Button type="button" variant="primary" fullWidth onclick={finish}>Kunjungan Berikutnya</Button>
+    <!-- Actions -->
+    <div class="space-y-2.5 pt-2">
+      <Button type="button" variant="primary" fullWidth size="lg" onclick={finish} class="h-12 font-bold shadow-md">
+        Lanjut Kunjungan Berikutnya
+      </Button>
+      <Button type="button" variant="secondary" fullWidth onclick={() => push('/beranda')} class="h-11 font-semibold">
+        Kembali ke Beranda
+      </Button>
+    </div>
   </section>
 {:else}
-  <section class="space-y-4 py-4" aria-label="Form kunjungan">
-    <div class="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onclick={() => push('/kunjungan')}
-        aria-label="Kembali ke daftar warung"
-      >
-        <Icon name="arrow-left" size={18} />
-        <span class="sr-only">Kembali</span>
-      </Button>
-      <h1 class="text-lg font-bold text-coffee-900">Kunjungan</h1>
+  <section class="space-y-4 py-2 pb-24" aria-label="Form kunjungan">
+    <!-- Header -->
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onclick={() => push('/kunjungan')}
+          aria-label="Kembali ke daftar warung"
+          class="h-10 w-10 rounded-2xl bg-white border border-coffee-100 p-0 text-coffee-800 shadow-sm hover:bg-coffee-50 active:scale-95"
+        >
+          <Icon name="arrow-left" size={20} />
+        </Button>
+        <div>
+          <h1 class="text-lg font-bold text-coffee-900 leading-tight">Form Kunjungan</h1>
+          <p class="text-xs text-coffee-500">Catat penarikan & penitipan stok warung</p>
+        </div>
+      </div>
     </div>
 
     {#if prepQuery.isLoading}
@@ -281,40 +302,47 @@
         onRetry={retryPrep}
       />
     {:else if outlet}
-      <Card variant="outlet">
-        <div class="flex items-center gap-3">
+      <div class="relative overflow-hidden rounded-2xl border border-coffee-200/80 bg-white p-4 shadow-sm">
+        <div class="flex items-center gap-3.5">
           <div
-            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-100 text-green-700"
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60"
           >
-            <Icon name="store" size={22} />
+            <Icon name="store" size={24} />
           </div>
           <div class="min-w-0 flex-1">
-            <h2 class="font-bold text-coffee-900">{outlet.name}</h2>
-            <p class="text-xs text-coffee-500">{outlet.address || 'Tidak ada alamat'}</p>
+            <h2 class="text-base font-bold text-coffee-900 leading-snug truncate">{outlet.name}</h2>
+            <p class="mt-0.5 text-xs text-coffee-500 line-clamp-1">{outlet.address || 'Tidak ada alamat'}</p>
           </div>
           <a
             href="https://www.google.com/maps?q={outlet.latitude},{outlet.longitude}"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500 text-white transition-colors hover:bg-green-600"
-            aria-label="Buka di Maps"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
+            aria-label="Buka navigasi Google Maps"
           >
             <Navigation size={18} />
           </a>
         </div>
-      </Card>
+      </div>
 
-      {#if !network.online}
-        <div
-          class="rounded-xl border border-warning/30 bg-warning-bg px-4 py-3 text-sm text-warning"
-          role="alert"
-        >
-          <p class="font-medium">Anda offline.</p>
-          <p class="text-xs">
-            Draft tetap tersimpan di perangkat. Kirim ulang saat online dan berada dalam radius.
-          </p>
+    {#if !network.online}
+      <div
+        class="rounded-2xl border border-amber-300 bg-amber-50/90 p-3.5 text-amber-900 shadow-sm backdrop-blur-sm"
+        role="alert"
+      >
+        <div class="flex items-start gap-2.5">
+          <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-amber-200/80 text-amber-800">
+            <Icon name="wifi-off" size={16} />
+          </div>
+          <div>
+            <p class="text-xs font-bold text-amber-900">Mode Offline</p>
+            <p class="mt-0.5 text-xs leading-relaxed text-amber-800">
+              Draft kunjungan otomatis tersimpan di HP Anda. Kunjungan akan disinkronkan saat koneksi kembali online.
+            </p>
+          </div>
         </div>
-      {/if}
+      </div>
+    {/if}
 
       <GeofenceStatus
         {distanceM}
@@ -329,22 +357,27 @@
 
       {#if gpsReady && gpsAccuracyPoor}
         <div
-          class="rounded-xl border border-warning/30 bg-warning-bg px-4 py-3 text-sm text-warning"
+          class="rounded-2xl border border-amber-300 bg-amber-50/90 p-3.5 text-amber-900 shadow-sm"
           role="status"
         >
-          <div class="flex items-center justify-between gap-2">
-            <p>
-              Akurasi GPS kurang baik (±{Math.round(gpsAccuracy ?? 0)} m). Tunggu beberapa detik atau
-              refresh GPS.
-            </p>
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-amber-200/80 text-amber-800">
+                <Icon name="navigation" size={16} />
+              </div>
+              <p class="text-xs leading-tight text-amber-900">
+                Akurasi GPS (±{Math.round(gpsAccuracy ?? 0)} m). Tunggu sejenak atau refresh GPS.
+              </p>
+            </div>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               onclick={handleRefreshGps}
               disabled={geolocation.acquiring}
+              class="shrink-0 text-xs font-semibold"
             >
-              {geolocation.acquiring ? 'Mencari...' : 'Refresh GPS'}
+              {geolocation.acquiring ? 'Mencari...' : 'Refresh'}
             </Button>
           </div>
         </div>
@@ -360,18 +393,20 @@
         />
 
         {#if draft.drops.length > 0}
-          <div class="space-y-2">
+          <div class="space-y-3">
             {#each draft.drops as drop (drop.id)}
-              <div class="rounded-2xl border border-coffee-100 bg-white p-4">
+              <div class="rounded-2xl border border-coffee-200/80 bg-white p-4 shadow-sm">
                 <!-- Header: nama + hapus -->
-                <div class="mb-3 flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <Package size={16} class="text-green-500" />
-                    <span class="text-sm font-bold text-coffee-900">{drop.productName}</span>
+                <div class="mb-3 flex items-center justify-between pb-2 border-b border-coffee-100/60">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                      <Package size={16} />
+                    </div>
+                    <span class="text-sm font-bold text-coffee-900 truncate">{drop.productName}</span>
                   </div>
                   <button
                     type="button"
-                    class="flex h-8 w-8 items-center justify-center rounded-lg text-coffee-300 transition-colors hover:bg-danger-bg hover:text-danger"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-coffee-400 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95"
                     onclick={() => draft.removeDrop(drop.id)}
                     disabled={submitMutation.isPending}
                     aria-label="Hapus {drop.productName}"
@@ -381,11 +416,11 @@
                 </div>
 
                 <!-- Qty Stepper -->
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-3">
                   <div>
-                    <p class="text-xs text-coffee-500">Jumlah titip</p>
+                    <p class="text-xs font-semibold text-coffee-700">Jumlah titip</p>
                     {#if drop.price}
-                      <p class="text-xs text-coffee-400">@{formatRupiah(drop.price)}/unit</p>
+                      <p class="text-xs text-coffee-500">@{formatRupiah(drop.price)}/unit</p>
                     {/if}
                   </div>
                   <QtyStepper
@@ -398,34 +433,46 @@
 
                 <!-- Total -->
                 {#if drop.price}
-                  <div class="mt-2 flex items-center justify-between border-t border-coffee-50 pt-2">
-                    <span class="text-xs text-coffee-500">Total</span>
-                    <span class="text-sm font-bold text-coffee-900">{formatRupiah(drop.qty * drop.price)}</span>
+                  <div class="mt-3 flex items-center justify-between rounded-xl bg-cream/70 px-3 py-2 border border-coffee-100/50">
+                    <span class="text-xs font-medium text-coffee-600">Subtotal titip</span>
+                    <span class="text-sm font-bold text-emerald-700">{formatRupiah(drop.qty * drop.price)}</span>
                   </div>
                 {/if}
 
                 <!-- Notes -->
                 {#if drop.notes}
-                  <p class="mt-2 text-xs text-coffee-400 italic">{drop.notes}</p>
+                  <p class="mt-2 text-xs text-coffee-500 italic bg-coffee-50/50 px-2.5 py-1.5 rounded-lg border border-coffee-100/40">💬 {drop.notes}</p>
+                {/if}
+
+                {#if drop.expires_at && drop.expires_at.trim() !== ''}
+                  <p class="mt-2 text-xs text-amber-600 bg-amber-50/70 px-2.5 py-1.5 rounded-lg border border-amber-200/60">
+                    ⏰ Expired: {new Date(drop.expires_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
                 {/if}
               </div>
             {/each}
           </div>
 
           <!-- Total -->
-          <div class="mt-2 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-            <span class="text-sm font-medium text-amber-700">Total nilai titip</span>
-            <span class="text-base font-bold text-amber-900">
+          <div class="mt-3 flex items-center justify-between rounded-2xl border border-amber-300 bg-amber-50/90 px-4 py-3 shadow-sm">
+            <div>
+              <span class="text-xs font-semibold text-amber-800 block">Total Estimasi Penitipan</span>
+              <span class="text-xs text-amber-700/80">Nilai barang yang dititipkan hari ini</span>
+            </div>
+            <span class="text-base font-extrabold text-amber-900">
               {formatRupiah(draft.drops.reduce((s, d) => s + d.qty * (d.price ?? 0), 0))}
             </span>
           </div>
         {/if}
       </section>
 
-      <section class="space-y-2" aria-label="Foto bon">
+      <section class="space-y-2.5 rounded-2xl border border-coffee-200/80 bg-white p-4 shadow-sm" aria-label="Foto bon">
         <div>
-          <h2 class="text-sm font-bold text-coffee-900">Foto Bon</h2>
-          <p class="text-xs text-coffee-500">Foto bon dari warung jika ada (opsional)</p>
+          <h2 class="text-sm font-bold text-coffee-900 flex items-center gap-1.5">
+            <Icon name="camera" size={16} class="text-coffee-600" />
+            Foto Bon Warung
+          </h2>
+          <p class="text-xs text-coffee-500 mt-0.5">Lampirkan foto nota/bon dari warung jika ada (opsional)</p>
         </div>
         <VisitPhotoUploader
           bind:file={bonFile}
@@ -435,15 +482,21 @@
         />
       </section>
 
-      <TextArea
-        label="Catatan kunjungan"
-        placeholder="Opsional"
-        rows={3}
-        bind:value={draft.notes}
-        disabled={submitMutation.isPending}
-      />
+      <div class="rounded-2xl border border-coffee-200/80 bg-white p-4 shadow-sm space-y-2">
+        <h2 class="text-sm font-bold text-coffee-900 flex items-center gap-1.5">
+          <Icon name="file-text" size={16} class="text-coffee-600" />
+          Catatan Kunjungan
+        </h2>
+        <TextArea
+          placeholder="Catatan tambahan seperti kondisi warung, pesan pemilik, dsb. (opsional)"
+          rows={3}
+          bind:value={draft.notes}
+          disabled={submitMutation.isPending}
+        />
+      </div>
 
-      <div class="pt-2">
+      <!-- Sticky Bottom Floating Action Bar for Mobile -->
+      <div class="fixed inset-x-0 bottom-0 z-30 border-t border-coffee-200/80 bg-white/95 p-3.5 backdrop-blur-md shadow-lg max-w-3xl mx-auto">
         <Button
           type="button"
           variant="primary"
@@ -452,6 +505,7 @@
           onclick={openReview}
           disabled={Boolean(submitDisabledReason) || submitMutation.isPending}
           haptic
+          class="h-12 text-sm font-bold shadow-md active:scale-[0.98] transition-transform"
         >
           {submitDisabledReason ?? 'Lanjut ke Ringkasan'}
         </Button>

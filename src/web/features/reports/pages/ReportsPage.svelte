@@ -57,7 +57,7 @@
     <p class="text-sm text-coffee-500">{periodLabel}</p>
   </header>
 
-  <div class="flex-1 space-y-5 overflow-y-auto px-4 pb-28">
+  <div class="flex-1 space-y-5 overflow-y-auto px-4 pb-2">
     <Card variant="default" class="p-4">
       <div class="mb-3 flex items-center gap-2">
         <Icon name="file-text" size={18} class="text-coffee-600" />

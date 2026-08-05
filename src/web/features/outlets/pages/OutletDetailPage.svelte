@@ -191,7 +191,7 @@
 
           <!-- Status Badge -->
           <span
-            class="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border border-white/50 bg-white/90 px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm {statusConfig[
+            class="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border border-white/50 bg-white/90 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm {statusConfig[
               outlet.status
             ].bg}"
           >
@@ -307,7 +307,7 @@
                     />
                   </div>
                   <div class="flex min-w-0 flex-1 flex-col">
-                    <span class="text-[13px] font-medium text-coffee-800">
+                    <span class="text-sm font-medium text-coffee-800">
                       {new Date(visit.created_at).toLocaleDateString(LOCALE, {
                         day: 'numeric',
                         month: 'short',
@@ -324,13 +324,13 @@
                     <button
                       type="button"
                       onclick={() => openVoid(visit.idempotency_key)}
-                      class="rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:bg-red-50 active:scale-95"
+                      class="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 active:scale-95"
                     >
                       Void
                     </button>
                   {:else if visit.status === 'voided'}
                     <span
-                      class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500"
+                      class="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-500"
                     >
                       Voided
                     </span>

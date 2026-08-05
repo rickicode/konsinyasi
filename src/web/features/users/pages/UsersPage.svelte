@@ -216,9 +216,9 @@ function resetFilters() {
 					<div>
 						<h1 class="text-base font-bold tracking-tight text-coffee-900">Pengguna</h1>
 						{#if !usersQuery.isLoading && totalLoaded > 0}
-							<p class="text-[11px] font-medium text-coffee-400">{totalLoaded} pengguna</p>
+								<p class="text-xs font-medium text-coffee-400">{totalLoaded} pengguna</p>
 						{:else}
-							<p class="text-[11px] font-medium text-coffee-400">Kelola akses tim konsinyasi</p>
+								<p class="text-xs font-medium text-coffee-400">Kelola akses tim konsinyasi</p>
 						{/if}
 					</div>
 				</div>

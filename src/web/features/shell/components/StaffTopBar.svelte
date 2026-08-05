@@ -42,7 +42,7 @@ async function handleLogout() {
 </script>
 
 <header class="sticky top-0 z-40 border-b border-coffee-100/60 bg-cream/95 pt-safe backdrop-blur">
-	<div class="mx-auto flex h-14 max-w-3xl items-center justify-between gap-3 px-4">
+	<div class="mx-auto flex h-14 max-w-3xl items-center justify-between gap-3 px-4 lg:max-w-5xl">
 		<div class="flex items-center gap-3">
 			{#if showBack}
 				<button
@@ -61,7 +61,7 @@ async function handleLogout() {
 			</div>
 			<div>
 				<h1 class="text-lg font-bold text-coffee-900">{pageTitle}</h1>
-				<p class="text-[10px] font-medium text-green-600">Staff Lapangan</p>
+					<p class="text-xs font-medium text-green-600">Staff Lapangan</p>
 			</div>
 		</div>
 		{#if menuItems.length > 0}

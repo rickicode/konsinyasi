@@ -1,5 +1,6 @@
 <script lang="ts">
 import { link, pop, push, router } from 'svelte-spa-router';
+import { onMount } from 'svelte';
 import { ArrowLeft, Menu } from 'lucide-svelte';
 import { getAuth } from '$lib/stores/auth.svelte';
 import { getAppConfig } from '$lib/stores/app-config.svelte.js';
@@ -21,12 +22,36 @@ const menuItems = $derived(topMenuTabs(auth.role ?? ''));
 const current = $derived(router.location ?? '/');
 const pageTitle = $derived(getPageTitle(current));
 const roleLabel = $derived(
-	auth.role === 'owner' ? 'Owner' : auth.role === 'staff' ? 'Staff Lapangan' : ''
+	auth.role === 'owner' ? 'Pemilik' : auth.role === 'staff' ? 'Staff Lapangan' : ''
 );
 
 function closeMenu() {
 	menuOpen = false;
 }
+
+// Keyboard shortcuts for navigation
+onMount(() => {
+	function handleKeydown(e: KeyboardEvent) {
+		// Ctrl/Cmd + number for quick navigation
+		if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '5') {
+			e.preventDefault();
+			const navItems = [
+				{ path: '/beranda', label: 'Beranda' },
+				{ path: '/kunjungan', label: 'Kunjungan' },
+				{ path: '/warung', label: 'Warung' },
+				{ path: '/produk', label: 'Produk' },
+				{ path: '/laporan', label: 'Laporan' }
+			];
+			const index = parseInt(e.key) - 1;
+			if (index < navItems.length) {
+				push(navItems[index].path);
+			}
+		}
+	}
+	
+	window.addEventListener('keydown', handleKeydown);
+	return () => window.removeEventListener('keydown', handleKeydown);
+});
 
 async function handleLogout() {
 	await auth.logout();
@@ -35,7 +60,7 @@ async function handleLogout() {
 </script>
 
 <header class="sticky top-0 z-40 border-b border-coffee-100/60 bg-cream/95 pt-safe backdrop-blur">
-	<div class="mx-auto flex h-14 max-w-3xl items-center justify-between gap-3 px-4">
+	<div class="mx-auto flex h-14 max-w-3xl items-center justify-between gap-3 px-4 lg:max-w-5xl">
 		<div class="flex items-center gap-3">
 			{#if showBack}
 				<button
@@ -62,7 +87,7 @@ async function handleLogout() {
 			{/if}
 			<div>
 				<h1 class="text-lg font-bold text-coffee-900">{pageTitle}</h1>
-				<p class="text-[10px] font-medium text-coffee-500">{roleLabel}</p>
+					<p class="text-xs font-medium text-coffee-500">{roleLabel}</p>
 			</div>
 		</div>
 		{#if menuItems.length > 0}

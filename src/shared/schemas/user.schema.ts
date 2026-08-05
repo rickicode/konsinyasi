@@ -26,7 +26,7 @@ export const createUserSchema = z.object({
   name: z.string().min(1, 'Nama wajib diisi'),
   email: z.string().email('Format email tidak valid'),
   username: z.string().min(3, 'Username minimal 3 karakter'),
-  password: z.string().min(6, 'Password minimal 6 karakter'),
+  password: z.string().min(8, 'Password minimal 8 karakter'),
   role: userRoleSchema.optional().default('staff'),
 });
 
@@ -41,7 +41,7 @@ export const updateUserSchema = z.object({
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 export const resetPasswordSchema = z.object({
-  new_password: z.string().min(6, 'Password minimal 6 karakter'),
+  new_password: z.string().min(8, 'Password minimal 8 karakter'),
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

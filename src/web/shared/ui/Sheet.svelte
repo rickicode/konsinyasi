@@ -142,14 +142,17 @@
               <p id="sheet-desc" class="mt-0.5 text-sm text-coffee-500 truncate">{description}</p>
             {/if}
           </div>
-          <button
-            onclick={onClose}
-            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-coffee-500 transition-colors hover:bg-coffee-100 hover:text-coffee-700"
-            aria-label="Tutup"
-            type="button"
-          >
-            <Icon name="x" size={20} />
-          </button>
+        <button
+          onclick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-coffee-500 transition-colors hover:bg-coffee-100 hover:text-coffee-700"
+          aria-label="Tutup"
+          type="button"
+        >
+          <Icon name="x" size={20} />
+        </button>
         </div>
         {#if children}
           <div class="flex-1 overflow-y-auto {fullscreen ? 'px-4 py-4' : 'px-5 pb-2'}">

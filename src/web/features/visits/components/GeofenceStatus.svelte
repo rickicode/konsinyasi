@@ -32,77 +32,80 @@
   const statusClass = $derived(
     gpsReady
       ? isInside
-        ? 'border-success/30 bg-success-bg'
+        ? 'border-emerald-300/80 bg-emerald-50/70 shadow-sm'
         : canOverride
-          ? 'border-warning/30 bg-warning-bg'
-          : 'border-danger/30 bg-danger-bg'
-      : 'border-coffee-200 bg-cream'
+          ? 'border-amber-300/80 bg-amber-50/70 shadow-sm'
+          : 'border-red-300/80 bg-red-50/70 shadow-sm'
+      : 'border-coffee-200 bg-cream/70 shadow-sm'
   );
 </script>
 
-<Card variant="default" class="{statusClass} {className}">
+<Card variant="default" class="p-4 rounded-2xl {statusClass} {className}">
   {#snippet header()}
-    <div class="flex items-center gap-2">
-      <Icon name={gpsReady && isInside ? 'map-pinned' : 'map-pin'} size={20} />
-      <h2 class="text-sm font-bold text-coffee-900">Lokasi &amp; Geofence</h2>
+    <div class="flex items-center justify-between gap-2 pb-2 border-b border-coffee-100/50">
+      <div class="flex items-center gap-2">
+        <div class="flex h-7 w-7 items-center justify-center rounded-xl bg-white shadow-xs text-coffee-800">
+          <Icon name={gpsReady && isInside ? 'map-pinned' : 'map-pin'} size={18} />
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-coffee-900 leading-tight">Status Presensi GPS</h2>
+          <p class="text-xs text-coffee-500">Radius max: {formatDistance(radiusM)}</p>
+        </div>
+      </div>
+      {#if gpsReady}
+        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold shadow-2xs {isInside ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}">
+          {isInside ? 'Valid' : 'Luar Radius'}
+        </span>
+      {/if}
     </div>
   {/snippet}
 
-  <div class="space-y-2 text-sm">
+  <div class="space-y-2.5 text-xs pt-1">
     {#if gpsError}
-      <p class="font-medium text-danger" role="alert">GPS: {gpsError}</p>
+      <p class="font-semibold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200" role="alert">⚠️ GPS Error: {gpsError}</p>
     {:else if !gpsReady}
-      <p class="flex items-center gap-2 text-coffee-600">
-        <Icon name="loader-2" size={18} class="animate-spin" />
-        Menunggu sinyal GPS…
+      <p class="flex items-center gap-2 text-coffee-600 py-1">
+        <Icon name="loader-2" size={16} class="animate-spin text-coffee-500" />
+        Menghubungkan sinyal GPS presensi…
       </p>
     {:else}
-      <div class="flex items-center justify-between">
-        <span class="text-coffee-600">Jarak ke warung</span>
-        <span class="font-bold text-coffee-900">
-          {distanceM !== null ? formatDistance(distanceM) : '-'}
-        </span>
-      </div>
-      <div class="flex items-center justify-between">
-        <span class="text-coffee-600">Batas radius</span>
-        <span class="font-medium text-coffee-900">{formatDistance(radiusM)}</span>
-      </div>
-      {#if accuracy !== null}
-        <div class="flex items-center justify-between">
-          <span class="text-coffee-600">Akurasi GPS</span>
-          <span class="font-medium text-coffee-900">±{Math.round(accuracy)} m</span>
+      <div class="grid grid-cols-2 gap-2 bg-white/80 p-2.5 rounded-xl border border-coffee-100/60 shadow-xs">
+        <div>
+          <span class="text-coffee-500 block">Jarak ke Warung</span>
+          <span class="text-sm font-extrabold text-coffee-900">
+            {distanceM !== null ? formatDistance(distanceM) : '-'}
+          </span>
         </div>
-      {/if}
-
-      {#if isInside}
-        <p class="flex items-center gap-2 font-semibold text-success">
-          <Icon name="check-circle" size={18} />
-          Anda dalam radius warung
-        </p>
-      {:else}
-        <p class="flex items-center gap-2 font-semibold text-danger" role="alert">
-          <Icon name="alert-triangle" size={18} />
-          Anda di luar radius warung
-        </p>
-      {/if}
+        <div>
+          <span class="text-coffee-500 block">Akurasi GPS</span>
+          <span class="text-sm font-extrabold text-coffee-900">
+            ±{accuracy !== null ? Math.round(accuracy) : '-'} m
+          </span>
+        </div>
+      </div>
 
       {#if !isInside && canOverride}
-        <label class="mt-3 flex cursor-pointer items-center gap-2 text-coffee-800">
-          <input
-            type="checkbox"
-            bind:checked={override}
-            class="h-4 w-4 rounded border-coffee-300 text-coffee-700 focus:ring-coffee-500"
-          />
-          <span class="font-medium">Override geofence (pemilik)</span>
-        </label>
-        {#if override}
-          <Input
-            label="Alasan wajib diisi"
-            placeholder="Contoh: kunjungan darurat"
-            bind:value={overrideReason}
-            class="mt-2"
-          />
-        {/if}
+        <div class="mt-2 rounded-xl bg-amber-100/80 p-3 border border-amber-300/80 space-y-2">
+          <label class="flex cursor-pointer items-start gap-2.5 text-amber-900">
+            <input
+              type="checkbox"
+              bind:checked={override}
+              class="mt-0.5 h-4 w-4 rounded border-amber-400 text-amber-700 focus:ring-amber-500"
+            />
+            <div>
+              <span class="font-bold text-xs">Aktifkan Override Geofence</span>
+              <p class="text-xs text-amber-800/80 leading-snug">Wajib sertakan alasan kunjungan luar radius.</p>
+            </div>
+          </label>
+          {#if override}
+            <Input
+              label="Alasan Override"
+              placeholder="Contoh: pemilik kirim foto via WA"
+              bind:value={overrideReason}
+              class="bg-white"
+            />
+          {/if}
+        </div>
       {/if}
     {/if}
   </div>

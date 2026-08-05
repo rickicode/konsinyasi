@@ -6,12 +6,14 @@ import {
   geofenceUpdateSchema,
   brandUpdateSchema,
   brandSettingsSchema,
+  cycleAgeUpdateSchema,
 } from '@shared/schemas/settings.schema.js';
 import type {
   GeofenceSettings,
   GeofenceUpdateInput,
   BrandUpdateInput,
   BrandSettings,
+  CycleAgeUpdateInput,
 } from '@shared/schemas/settings.schema.js';
 import { queryKeys } from '$lib/api/query-keys.js';
 
@@ -39,6 +41,17 @@ export async function updateBrand(
 ): Promise<BrandSettings> {
   brandUpdateSchema.parse(input);
   return client.put('/api/settings/brand', input, brandSettingsSchema);
+}
+
+export async function updateCycleAge(
+  input: CycleAgeUpdateInput,
+  client: ApiClient = apiClient
+): Promise<{ cycle_red_hours: number; cycle_yellow_hours: number }> {
+  cycleAgeUpdateSchema.parse(input);
+  return client.put('/api/settings/cycle-age', input, z.object({
+    cycle_red_hours: z.number(),
+    cycle_yellow_hours: z.number(),
+  }));
 }
 
 // ---------------- queryOptions factories ----------------
@@ -69,6 +82,12 @@ export function updateGeofenceMutationOptions(client: ApiClient = apiClient) {
 export function updateBrandMutationOptions(client: ApiClient = apiClient) {
   return mutationOptions({
     mutationFn: (input: BrandUpdateInput) => updateBrand(input, client),
+  });
+}
+
+export function updateCycleAgeMutationOptions(client: ApiClient = apiClient) {
+  return mutationOptions({
+    mutationFn: (input: CycleAgeUpdateInput) => updateCycleAge(input, client),
   });
 }
 

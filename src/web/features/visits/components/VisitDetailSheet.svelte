@@ -137,14 +137,14 @@
         <div class="flex items-center gap-2">
           {#if isInsideGeofence}
             <span
-              class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+              class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
             >
               <Icon name="map-pin" size={12} />
               Di dalam radius
             </span>
           {:else}
             <span
-              class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700"
+              class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
             >
               <Icon name="map-pin-off" size={12} />
               Di luar radius
@@ -152,7 +152,7 @@
           {/if}
           {#if visit.geofence_override}
             <span
-              class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700"
+              class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700"
             >
               <Icon name="shield" size={12} />
               Override

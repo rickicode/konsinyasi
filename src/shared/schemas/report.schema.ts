@@ -32,6 +32,8 @@ export const dashboardItemSchema = z.object({
   open_cycles_count: z.number().int(),
   total_qty_dropped: z.number().int(),
   estimated_bill: z.number().optional(),
+  expired_count: z.number().int().optional(),
+  expiring_soon_count: z.number().int().optional(),
 });
 export type DashboardItem = z.infer<typeof dashboardItemSchema>;
 

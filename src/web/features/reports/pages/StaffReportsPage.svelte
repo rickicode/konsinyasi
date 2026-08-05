@@ -87,7 +87,7 @@
     </div>
   </header>
 
-  <div class="flex-1 space-y-4 overflow-y-auto px-4 pb-28">
+  <div class="flex-1 space-y-4 overflow-y-auto px-4 pb-2">
     <!-- ── Period Filter ── -->
     <Card variant="default" class="p-4">
       <div class="mb-3 flex items-center gap-2">

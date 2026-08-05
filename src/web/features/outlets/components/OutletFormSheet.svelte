@@ -154,11 +154,22 @@
     }
   }
 
-  function handleMapChange(newLat: number, newLng: number) {
+  async function handleMapChange(newLat: number, newLng: number) {
     lat = newLat;
     lng = newLng;
     latInput = String(newLat);
     lngInput = String(newLng);
+
+    // Auto-fill address when map marker is dragged
+    isFetchingAddress = true;
+    try {
+      const addr = await reverseGeocode(newLat, newLng);
+      if (addr) {
+        address = addr;
+      }
+    } finally {
+      isFetchingAddress = false;
+    }
   }
 
   function validate(): boolean {

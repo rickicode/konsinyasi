@@ -18,6 +18,7 @@ export interface DropDraft {
   qty: number;
   price: number;
   notes: string;
+  expires_at?: string;
 }
 
 interface VisitDraftSnapshot {
@@ -76,13 +77,13 @@ function isFresh(updatedAt: string): boolean {
  * Create a reactive visit draft store tied to a single outlet.
  *
  * The store validates the pickup equation
- *   qty_sold + qty_return_good + qty_return_damaged = qty_dropped
+ *   qty_sold + qty_remaining_good + qty_return_damaged = qty_dropped
  * and persists to localStorage with a TTL.
  */
 export function createVisitDraftStore() {
   let outletId = $state('');
   let idempotencyKey = $state('');
-  let pickups = new SvelteMap<string, PickupDraft>();
+  let pickups = $state(new SvelteMap<string, PickupDraft>());
   let drops = $state<DropDraft[]>([]);
   let override = $state(false);
   let overrideReason = $state('');
@@ -272,6 +273,53 @@ export function createVisitDraftStore() {
       this.setPickup(cycleId, field, Math.max(0, current + delta));
     },
 
+    /**
+     * Distribute pickup across multiple cycles for the same product.
+     * Fills cycles proportionally based on qty_dropped, respecting each cycle's capacity.
+     * Oldest stock (FIFO) gets filled first.
+     */
+    setPickupForProduct(
+      cycles: VisitCycleState[],
+      field: 'good' | 'damaged',
+      totalValue: number
+    ) {
+      const next = new SvelteMap(pickups);
+      let remaining = Math.max(0, Math.floor(totalValue));
+
+      // Sort cycles by dropped_at (oldest first) so older stock gets picked first
+      const sorted = [...cycles].sort((a, b) =>
+        Date.parse(a.dropped_at) - Date.parse(b.dropped_at)
+      );
+
+      for (const cycle of sorted) {
+        const existing = next.get(cycle.id) ?? { cycleId: cycle.id, good: 0, damaged: 0 };
+        const otherField = field === 'good' ? 'damaged' : 'good';
+        const otherValue = existing[otherField];
+        // Max for this field is qty_dropped minus the other field's value
+        const maxForField = Math.max(0, cycle.qty_dropped - otherValue);
+        const allocated = Math.min(remaining, maxForField);
+
+        next.set(cycle.id, { ...existing, [field]: allocated });
+        remaining -= allocated;
+      }
+
+      pickups = next;
+    },
+
+    /**
+     * Compute total pickup across multiple cycles for a given field.
+     */
+    getTotalPickupForCycles(cycles: VisitCycleState[], field: 'good' | 'damaged'): number {
+      return cycles.reduce((sum, c) => sum + (pickups.get(c.id)?.[field] ?? 0), 0);
+    },
+
+    /**
+     * Compute total sold across multiple cycles.
+     */
+    getTotalSoldForCycles(cycles: VisitCycleState[]): number {
+      return cycles.reduce((sum, c) => sum + this.computedSold(c.id, c.qty_dropped), 0);
+    },
+
     computedSold(cycleId: string, qtyDropped: number): number {
       const input = pickups.get(cycleId) ?? { good: 0, damaged: 0 };
       return Math.max(0, qtyDropped - input.good - input.damaged);
@@ -293,16 +341,24 @@ export function createVisitDraftStore() {
       });
     },
 
-    addDrop(product: { id: string; name: string; price: number }, qty: number, notesValue = '') {
-      const item: DropDraft = {
-        id: crypto.randomUUID(),
-        productId: product.id,
-        productName: product.name,
-        qty: Math.max(1, Math.floor(qty)),
-        notes: notesValue,
-        price: product.price,
-      };
-      drops = [...drops, item];
+    addDrop(product: { id: string; name: string; price: number }, qty: number, notesValue = '', expiresAt?: string) {
+      const existing = drops.find((d) => d.productId === product.id);
+      if (existing) {
+        drops = drops.map((d) =>
+          d.id === existing.id ? { ...d, qty: d.qty + Math.max(1, Math.floor(qty)) } : d
+        );
+      } else {
+        const item: DropDraft = {
+          id: crypto.randomUUID(),
+          productId: product.id,
+          productName: product.name,
+          qty: Math.max(1, Math.floor(qty)),
+          notes: notesValue,
+          price: product.price,
+          expires_at: expiresAt?.trim() || undefined,
+        };
+        drops = [...drops, item];
+      }
     },
 
     updateDrop(id: string, updates: Partial<DropDraft>) {
@@ -335,14 +391,15 @@ export function createVisitDraftStore() {
           return {
             cycle_id: cycle.id,
             qty_sold: this.computedSold(cycle.id, cycle.qty_dropped),
-            qty_return_good: input.good,
-            qty_return_damaged: input.damaged,
+            qty_remaining_good: input.good,  // Good products stay at warung
+            qty_return_damaged: input.damaged,  // Only damaged pulled back
           };
         }),
         drops: drops.map((drop) => ({
           product_id: drop.productId,
           qty_dropped: drop.qty,
           notes: drop.notes || undefined,
+          expires_at: drop.expires_at || undefined,
         })),
         geofence_override: override || undefined,
         geofence_override_reason: override ? overrideReason : undefined,

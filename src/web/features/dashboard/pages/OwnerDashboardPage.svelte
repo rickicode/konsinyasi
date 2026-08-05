@@ -14,6 +14,7 @@
     Package,
     Store,
     AlertTriangle,
+    ChevronDown,
   } from 'lucide-svelte';
   import { dashboardQueryOptions } from '../api/index.js';
   import { queryKeys } from '$lib/api/query-keys.js';
@@ -67,28 +68,30 @@
     await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     await query.refetch();
   }
+
+  let showAllKpis = $state(false);
 </script>
 
 <section class="flex h-full flex-col bg-milk">
-  <!-- ── Header ── -->
-  <header class="px-4 pb-3 pt-safe">
-    <div class="flex items-center justify-between">
-      <div>
+  <PullToRefresh onRefresh={handleRefresh} class="flex-1">
+    <div class="space-y-5 px-4 pb-2 pt-safe">
+      <header>
         <h1 class="text-xl font-bold text-coffee-900">Dashboard</h1>
         <p class="text-sm text-coffee-500">Ringkasan bisnis dan keuangan</p>
-      </div>
-      <button
-        onclick={() => query.refetch()}
-        class="rounded-xl p-2 text-coffee-500 transition-colors hover:bg-coffee-100 hover:text-coffee-700"
-        aria-label="Refresh"
-      >
-        <RefreshCw size={18} class={query.isFetching ? 'animate-spin' : ''} />
-      </button>
-    </div>
-  </header>
+      </header>
 
-  <PullToRefresh onRefresh={handleRefresh} class="flex-1">
-    <div class="space-y-5 px-4 pb-28 pt-2">
+      {#if geo.coords}
+        <div class="flex items-center gap-3 rounded-xl bg-coffee-700 px-3 py-2.5">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/15">
+            <MapPin size={18} class="text-white" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-bold text-white">Lokasi Aktif</p>
+            <p class="truncate text-xs text-white/75">{geo.coords.latitude.toFixed(4)}, {geo.coords.longitude.toFixed(4)}</p>
+          </div>
+          <span class="shrink-0 rounded-lg bg-white/20 px-2.5 py-1 text-xs font-semibold text-white">✓ Aktif</span>
+        </div>
+      {/if}
       {#if query.isPending}
         <div class="grid grid-cols-2 gap-3">
           {#each Array(4) as _}
@@ -104,177 +107,131 @@
         />
       {:else if data}
         <!-- ══════════════════════════════════════════ -->
-        <!-- KPI Hari Ini (Owner only)                  -->
+        <!-- Ringkasan Hari Ini — compact on mobile       -->
         <!-- ══════════════════════════════════════════ -->
         {#if data.today}
           <div>
-            <div class="mb-3 flex items-center gap-2">
-              <Activity size={16} class="text-coffee-600" />
-              <h2 class="text-sm font-bold text-coffee-800">Hari Ini</h2>
+            <div class="mb-2 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <Activity size={16} class="text-coffee-600" />
+                <h2 class="text-sm font-bold text-coffee-800">Hari Ini</h2>
+              </div>
+              <button
+                type="button"
+                class="flex items-center gap-1 text-xs font-semibold text-coffee-500 transition-colors hover:text-coffee-700"
+                onclick={() => (showAllKpis = !showAllKpis)}
+              >
+                {showAllKpis ? 'Sederhana' : 'Semua'}
+                <ChevronDown size={14} class="transition-transform {showAllKpis ? 'rotate-180' : ''}" />
+              </button>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <!-- Kunjungan -->
-              <Card variant="dashboard" class="p-4">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <p class="text-xs font-semibold text-coffee-500">Kunjungan</p>
-                    <p class="mt-1 text-2xl font-extrabold text-coffee-900">{data.today.visits}</p>
-                  </div>
-                  <div class="rounded-lg bg-blue-100 p-2">
-                    <MapPin size={16} class="text-blue-600" />
-                  </div>
-                </div>
+            <!-- Primary metrics — always visible -->
+            <div class="grid grid-cols-3 gap-2">
+              <Card variant="dashboard" class="p-3">
+                <p class="text-xs font-semibold text-coffee-500">Kunjungan</p>
+                <p class="mt-1 text-xl font-extrabold text-coffee-900">{data.today.visits}</p>
               </Card>
+              <Card variant="dashboard" class="p-3">
+                <p class="text-xs font-semibold text-coffee-500">Pendapatan</p>
+                <p class="mt-1 text-sm font-extrabold text-coffee-900">
+                  {formatRupiah(data.today.revenue)}
+                </p>
+              </Card>
+              <Card variant="dashboard" class="p-3">
+                <p class="text-xs font-semibold text-coffee-500">Perhatian</p>
+                <p class="text-xs text-coffee-400">Warung stok >4 hari</p>
+                <p class="mt-1 text-xl font-extrabold {redCount > 0 ? 'text-danger' : 'text-coffee-900'}">
+                  {data.summary.urgent_count}
+                </p>
+              </Card>
+            </div>
 
-              <!-- Pendapatan Hari Ini -->
-              <Card variant="dashboard" class="p-4">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <p class="text-xs font-semibold text-coffee-500">Pendapatan</p>
+            <!-- Secondary metrics — collapsible -->
+            {#if showAllKpis}
+              <div class="mt-2 grid grid-cols-2 gap-2">
+                <Card variant="dashboard" class="p-3">
+                  <p class="text-xs font-semibold text-coffee-500">Botol Terjual</p>
+                  <p class="mt-1 text-xl font-extrabold text-coffee-900">{data.today.bottles_sold}</p>
+                </Card>
+                <Card variant="dashboard" class="p-3">
+                  <p class="text-xs font-semibold text-coffee-500">Staff Aktif</p>
+                  <p class="mt-1 text-xl font-extrabold text-coffee-900">{data.today.active_staff}</p>
+                </Card>
+                <Card variant="dashboard" class="p-3">
+                  <p class="text-xs font-semibold text-coffee-500">Total Warung</p>
+                  <p class="mt-1 text-xl font-extrabold text-coffee-900">{data.summary.total_outlets}</p>
+                </Card>
+                <Card variant="dashboard" class="p-3">
+                  <p class="text-xs font-semibold text-coffee-500">Botol di Pasar</p>
+                  <p class="text-xs text-coffee-400">Botol yang sedang dititipkan</p>
+                  <p class="mt-1 text-xl font-extrabold text-coffee-900">{data.summary.total_bottles_in_market}</p>
+                </Card>
+                {#if data.summary.estimated_bill != null}
+                  <Card variant="dashboard" class="col-span-2 p-3">
+                    <p class="text-xs font-semibold text-coffee-500">Est. Tagihan</p>
+                    <p class="text-xs text-coffee-400">Perkiraan tagihan dari semua warung</p>
                     <p class="mt-1 text-lg font-extrabold text-coffee-900">
-                      {formatRupiah(data.today.revenue)}
+                      {formatRupiah(data.summary.estimated_bill)}
                     </p>
-                  </div>
-                  <div class="rounded-lg bg-green-100 p-2">
-                    <DollarSign size={16} class="text-green-600" />
-                  </div>
-                </div>
-              </Card>
-
-              <!-- Botol Terjual -->
-              <Card variant="dashboard" class="p-4">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <p class="text-xs font-semibold text-coffee-500">Botol Terjual</p>
-                    <p class="mt-1 text-2xl font-extrabold text-coffee-900">{data.today.bottles_sold}</p>
-                  </div>
-                  <div class="rounded-lg bg-amber-100 p-2">
-                    <ShoppingCart size={16} class="text-amber-600" />
-                  </div>
-                </div>
-              </Card>
-
-              <!-- Staff Aktif -->
-              <Card variant="dashboard" class="p-4">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <p class="text-xs font-semibold text-coffee-500">Staff Aktif</p>
-                    <p class="mt-1 text-2xl font-extrabold text-coffee-900">{data.today.active_staff}</p>
-                  </div>
-                  <div class="rounded-lg bg-purple-100 p-2">
-                    <Users size={16} class="text-purple-600" />
-                  </div>
-                </div>
-              </Card>
-            </div>
+                  </Card>
+                {/if}
+              </div>
+            {/if}
           </div>
         {/if}
 
         <!-- ══════════════════════════════════════════ -->
-        <!-- Status Warung (Ringkasan)                   -->
+        <!-- Prioritas Warung (moved up)                  -->
         <!-- ══════════════════════════════════════════ -->
         <div>
-          <div class="mb-3 flex items-center gap-2">
-            <Store size={16} class="text-coffee-600" />
-            <h2 class="text-sm font-bold text-coffee-800">Status Warung</h2>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Total Warung -->
-            <Card variant="dashboard" class="p-4">
-              <div class="flex items-start justify-between">
-                <div>
-                  <p class="text-xs font-semibold text-coffee-500">Total Warung</p>
-                  <p class="mt-1 text-2xl font-extrabold text-coffee-900">{data.summary.total_outlets}</p>
-                </div>
-                <div class="rounded-lg bg-orange-100 p-2">
-                  <Store size={16} class="text-orange-600" />
-                </div>
-              </div>
-            </Card>
-
-            <!-- Botol di Pasar -->
-            <Card variant="dashboard" class="p-4">
-              <div class="flex items-start justify-between">
-                <div>
-                  <p class="text-xs font-semibold text-coffee-500">Botol di Pasar</p>
-                  <p class="mt-1 text-2xl font-extrabold text-coffee-900">{data.summary.total_bottles_in_market}</p>
-                </div>
-                <div class="rounded-lg bg-amber-100 p-2">
-                  <Package size={16} class="text-amber-600" />
-                </div>
-              </div>
-            </Card>
-
-            <!-- Estimasi Tagihan -->
-            {#if data.summary.estimated_bill != null}
-              <Card variant="dashboard" class="p-4">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <p class="text-xs font-semibold text-coffee-500">Est. Tagihan</p>
-                    <p class="mt-1 text-lg font-extrabold text-coffee-900">
-                      {formatRupiah(data.summary.estimated_bill)}
-                    </p>
-                  </div>
-                  <div class="rounded-lg bg-green-100 p-2">
-                    <DollarSign size={16} class="text-green-600" />
-                  </div>
-                </div>
-              </Card>
-            {/if}
-
-            <!-- Butuh Perhatian -->
-            <Card variant="dashboard" class="p-4">
-              <div class="flex items-start justify-between">
-                <div>
-                  <p class="text-xs font-semibold text-coffee-500">Butuh Perhatian</p>
-                  <p class="mt-1 text-2xl font-extrabold {redCount > 0 ? 'text-danger' : 'text-coffee-900'}">
-                    {data.summary.urgent_count}
-                  </p>
-                </div>
-                <div class="rounded-lg {redCount > 0 ? 'bg-red-100' : 'bg-coffee-100'} p-2">
-                  <AlertTriangle size={16} class={redCount > 0 ? 'text-red-600' : 'text-coffee-500'} />
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
-
-        <!-- ══════════════════════════════════════════ -->
-        <!-- Traffic Light Summary                       -->
-        <!-- ══════════════════════════════════════════ -->
-        <Card variant="default" class="p-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="flex items-center gap-1.5">
-                <div class="h-3 w-3 rounded-full bg-red-500"></div>
-                <span class="text-xs font-semibold text-coffee-700">Merah</span>
-                <span class="text-xs font-bold text-red-600">{redCount}</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <div class="h-3 w-3 rounded-full bg-yellow-400"></div>
-                <span class="text-xs font-semibold text-coffee-700">Kuning</span>
-                <span class="text-xs font-bold text-yellow-600">{yellowCount}</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <div class="h-3 w-3 rounded-full bg-green-500"></div>
-                <span class="text-xs font-semibold text-coffee-700">Hijau</span>
-                <span class="text-xs font-bold text-green-600">{greenCount}</span>
-              </div>
+          <div class="mb-2 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <AlertTriangle size={16} class="text-coffee-600" />
+              <h2 class="text-sm font-bold text-coffee-800">Prioritas Warung</h2>
             </div>
-            <span class="text-xs text-coffee-400">
-              {sortedItems.length} warung
-            </span>
+            <div class="flex items-center gap-2">
+              <!-- Traffic light inline -->
+              <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-0.5">
+                  <div class="h-2 w-2 rounded-full bg-red-500"></div>
+                  <span class="text-xs font-bold text-red-600">{redCount}</span>
+                </div>
+                <div class="flex items-center gap-0.5">
+                  <div class="h-2 w-2 rounded-full bg-yellow-400"></div>
+                  <span class="text-xs font-bold text-yellow-600">{yellowCount}</span>
+                </div>
+                <div class="flex items-center gap-0.5">
+                  <div class="h-2 w-2 rounded-full bg-green-500"></div>
+                  <span class="text-xs font-bold text-green-600">{greenCount}</span>
+                </div>
+              </div>
+              <span class="rounded-full bg-coffee-100 px-2 py-0.5 text-xs font-semibold text-coffee-700">
+                {sortedItems.length}
+              </span>
+            </div>
           </div>
-        </Card>
+
+          {#if sortedItems.length === 0}
+            <EmptyState
+              title="Tidak ada prioritas"
+              description="Semua warung dalam kondisi aman."
+            />
+          {:else}
+            <div class="space-y-3">
+              {#each sortedItems as item (item.id)}
+                <OwnerUrgencyCard {item} distance={distanceFor(item)} />
+              {/each}
+            </div>
+          {/if}
+        </div>
 
         <!-- ══════════════════════════════════════════ -->
         <!-- Kunjungan Terakhir                          -->
         <!-- ══════════════════════════════════════════ -->
         {#if data.recent_visits && data.recent_visits.length > 0}
           <div>
-            <div class="mb-3 flex items-center justify-between">
+            <div class="mb-2 flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <Clock size={16} class="text-coffee-600" />
                 <h2 class="text-sm font-bold text-coffee-800">Kunjungan Terakhir</h2>
@@ -314,34 +271,6 @@
             </div>
           </div>
         {/if}
-
-        <!-- ══════════════════════════════════════════ -->
-        <!-- Prioritas Warung                            -->
-        <!-- ══════════════════════════════════════════ -->
-        <div>
-          <div class="mb-3 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <AlertTriangle size={16} class="text-coffee-600" />
-              <h2 class="text-sm font-bold text-coffee-800">Prioritas Warung</h2>
-            </div>
-            <span class="rounded-full bg-coffee-100 px-2.5 py-0.5 text-xs font-semibold text-coffee-700">
-              {sortedItems.length}
-            </span>
-          </div>
-
-          {#if sortedItems.length === 0}
-            <EmptyState
-              title="Tidak ada prioritas"
-              description="Semua warung dalam kondisi aman."
-            />
-          {:else}
-            <div class="space-y-3">
-              {#each sortedItems as item (item.id)}
-                <OwnerUrgencyCard {item} distance={distanceFor(item)} />
-              {/each}
-            </div>
-          {/if}
-        </div>
       {/if}
     </div>
   </PullToRefresh>

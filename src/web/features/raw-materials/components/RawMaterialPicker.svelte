@@ -164,7 +164,7 @@ function clearSearch() {
                   <Icon name="package-open" size={20} class="text-orange-400" />
                 </div>
                 <div class="flex min-w-0 flex-1 flex-col">
-                  <span class="truncate text-[13px] font-semibold leading-snug text-coffee-900">
+                  <span class="truncate text-sm font-semibold leading-snug text-coffee-900">
                     {item.name}
                   </span>
                   <div class="mt-0.5 flex items-center gap-2">
@@ -172,7 +172,7 @@ function clearSearch() {
                       {formatRupiah(item.price_per_base_unit)}
                     </span>
                     <span
-                      class="inline-flex items-center gap-1 rounded-full bg-coffee-50 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-coffee-500"
+                      class="inline-flex items-center gap-1 rounded-full bg-coffee-50 px-1.5 py-0.5 text-xs font-semibold leading-none text-coffee-500"
                     >
                       {uomBySymbol[item.base_unit]?.name ?? item.base_unit}
                     </span>

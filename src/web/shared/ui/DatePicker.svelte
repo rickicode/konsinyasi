@@ -23,7 +23,13 @@
   }: Props = $props();
 
   let isOpen = $state(false);
-  let viewDate = $state(value ? parseDate(value) : new Date());
+  let viewDate = $state(new Date());
+
+  $effect(() => {
+    if (value) {
+      viewDate = parseDate(value);
+    }
+  });
   let containerRef = $state<HTMLDivElement | null>(null);
 
   function parseDate(str: string): Date {
@@ -176,7 +182,7 @@
       <!-- Day headers -->
       <div class="mb-1 grid grid-cols-7 gap-1">
         {#each ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'] as dayName}
-          <div class="text-center text-[10px] font-semibold text-coffee-400">
+          <div class="text-center text-xs font-semibold text-coffee-400">
             {dayName}
           </div>
         {/each}

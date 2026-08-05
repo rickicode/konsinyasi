@@ -33,27 +33,30 @@
   }
 
   // --- Kunjungi tab (existing outlet list) ---
-  const outletsQuery = createInfiniteQuery(() => outletsInfiniteQueryOptions());
+  const outletsQuery = createInfiniteQuery(() => outletsInfiniteQueryOptions(debouncedSearch));
 
   let search = $state('');
+  let debouncedSearch = $state('');
+  let searchTimeout: ReturnType<typeof setTimeout> | null = null;
   let searchFocused = $state(false);
 
+
+  // Debounce search input
+  $effect(() => {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      debouncedSearch = search;
+    }, 300);
+    return () => { if (searchTimeout) clearTimeout(searchTimeout); };
+  });
   const hasNextPage = $derived(outletsQuery.hasNextPage ?? false);
   const allOutlets = $derived(outletsQuery.data?.pages.flatMap((page) => page.data) ?? []);
-  const filtered = $derived(
-    allOutlets.filter((outlet) => {
-      const term = search.trim().toLowerCase();
-      return (
-        !term ||
-        outlet.name.toLowerCase().includes(term) ||
-        (outlet.address ?? '').toLowerCase().includes(term)
-      );
-    })
-  );
+  // Server-side filtering is now handled by the API
+  // Client-side sort only (distance requires geolocation)
 
   const sorted = $derived.by(() => {
-    if (!geolocation.coords) return filtered;
-    return [...filtered].sort((a, b) => {
+    if (!geolocation.coords) return allOutlets;
+    return [...allOutlets].sort((a, b) => {
       const da = geolocation.distanceTo(a.latitude, a.longitude) ?? Infinity;
       const db = geolocation.distanceTo(b.latitude, b.longitude) ?? Infinity;
       return da - db;
@@ -110,13 +113,13 @@
       <!-- Title -->
       <div class="flex items-center gap-2.5">
         <div
-          class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 shadow-sm shadow-pink-200"
+          class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-coffee-600 to-coffee-700 shadow-sm shadow-coffee-200"
         >
           <Icon name="map-pin" size={18} class="text-white" />
         </div>
         <div>
           <h1 class="text-base font-bold tracking-tight text-coffee-900">Kunjungan</h1>
-          <p class="text-[11px] font-medium text-coffee-400">
+          <p class="text-xs font-medium text-coffee-400">
             {activeTab === 'kunjungi'
               ? 'Pilih warung untuk kunjungan hari ini'
               : 'Riwayat kunjungan yang telah dilakukan'}
@@ -125,7 +128,7 @@
       </div>
 
       <!-- Tabs -->
-      <div class="card-master p-1">
+      <div class="rounded-xl border border-coffee-200 bg-cream p-1">
         <div class="flex" role="tablist" aria-label="Navigasi kunjungan">
           <button
             type="button"
@@ -257,7 +260,7 @@
                   >
                     <!-- Thumbnail -->
                     <div
-                      class="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-pink-50 to-rose-50"
+                      class="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-coffee-50 to-coffee-100/50"
                     >
                       {#if outlet.photo_key}
                         <img
@@ -280,7 +283,7 @@
                     </div>
                     <!-- Content -->
                     <div class="flex min-w-0 flex-1 flex-col">
-                      <span class="truncate text-[13px] font-semibold text-coffee-900 leading-snug"
+                      <span class="truncate text-sm font-semibold text-coffee-900 leading-snug"
                         >{outlet.name}</span
                       >
                       <span class="mt-0.5 truncate text-xs text-coffee-500"
@@ -289,14 +292,14 @@
                       <div class="mt-1.5 flex items-center gap-2">
                         {#if distance !== null}
                           <span
-                            class="inline-flex items-center gap-1 text-[11px] font-medium text-coffee-600"
+                            class="inline-flex items-center gap-1 text-xs font-medium text-coffee-600"
                           >
                             <Icon name="navigation" size={11} />
                             {formatDistance(distance)}
                           </span>
                         {/if}
                         <span
-                          class="inline-flex items-center gap-1 rounded-full bg-pink-50 px-2 py-0.5 text-[10px] font-semibold text-pink-600"
+                          class="inline-flex items-center gap-1 rounded-full bg-pink-50 px-2 py-0.5 text-xs font-semibold text-pink-600"
                         >
                           <Icon name="map-pin" size={10} />
                           Kunjungi
@@ -392,7 +395,7 @@
                     </div>
                     <!-- Content -->
                     <div class="flex min-w-0 flex-1 flex-col">
-                      <span class="truncate text-[13px] font-semibold text-coffee-900 leading-snug"
+                      <span class="truncate text-sm font-semibold text-coffee-900 leading-snug"
                         >{visit.outlet_name}</span
                       >
                       <div class="mt-0.5 flex items-center gap-2 text-xs text-coffee-500">
@@ -403,7 +406,7 @@
                       <div class="mt-1 flex items-center gap-2">
                         {#if visit.geofence_override}
                           <span
-                            class="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600"
+                            class="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-blue-600"
                           >
                             <Icon name="shield" size={9} />
                             Override
@@ -411,7 +414,7 @@
                         {/if}
                         {#if visit.status === 'voided'}
                           <span
-                            class="inline-flex items-center gap-0.5 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-600"
+                            class="inline-flex items-center gap-0.5 rounded-full bg-red-50 px-1.5 py-0.5 text-xs font-semibold text-red-600"
                           >
                             <Icon name="x-circle" size={9} />
                             Dibatalkan

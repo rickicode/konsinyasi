@@ -10,9 +10,9 @@
   let { summary }: Props = $props();
 </script>
 
-<div class="grid grid-cols-2 gap-3">
+<div class="grid grid-cols-2 gap-2">
   <!-- Total Warung -->
-  <Card variant="dashboard" class="p-4">
+  <Card variant="dashboard" class="p-3">
     <div class="flex items-start justify-between gap-3">
       <div>
         <p class="text-xs font-semibold text-coffee-500">Total warung</p>
@@ -27,10 +27,11 @@
   </Card>
 
   <!-- Botol di Pasar -->
-  <Card variant="dashboard" class="p-4">
+  <Card variant="dashboard" class="p-3">
     <div class="flex items-start justify-between gap-3">
       <div>
         <p class="text-xs font-semibold text-coffee-500">Botol di pasar</p>
+        <p class="text-xs text-coffee-400">Botol yang sedang dititipkan</p>
         <p class="mt-1 text-2xl font-extrabold text-coffee-900">
           {summary.total_bottles_in_market}
         </p>
@@ -44,7 +45,7 @@
   </Card>
 
   <!-- Butuh Perhatian -->
-  <Card variant="dashboard" class="col-span-2 p-4">
+  <Card variant="dashboard" class="col-span-2 p-3">
     <div class="flex items-start justify-between gap-3">
       <div>
         <p class="text-xs font-semibold text-coffee-500">Butuh perhatian</p>
