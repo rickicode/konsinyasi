@@ -111,7 +111,7 @@
           {#if isFirstStep}
             <button
               type="button"
-              class="text-sm font-medium text-coffee-500 transition-colors hover:text-coffee-700"
+              class="min-h-[44px] px-4 text-sm font-medium text-coffee-500 transition-colors hover:text-coffee-700 active:text-coffee-900"
               onclick={skipOnboarding}
             >
               Lewati
@@ -119,7 +119,7 @@
           {:else}
             <button
               type="button"
-              class="flex items-center gap-1 text-sm font-medium text-coffee-500 transition-colors hover:text-coffee-700"
+              class="flex min-h-[44px] items-center gap-1 px-4 text-sm font-medium text-coffee-500 transition-colors hover:text-coffee-700 active:text-coffee-900"
               onclick={prevStep}
             >
               <Icon name="arrow-left" size={16} />

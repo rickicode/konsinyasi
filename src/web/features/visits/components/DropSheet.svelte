@@ -115,7 +115,7 @@
       <input
         type="date"
         bind:value={expiresAt}
-        class="mt-1.5 w-full rounded-xl border border-coffee-200 bg-white px-3 py-2.5 text-sm text-coffee-900 focus:border-coffee-400 focus:outline-none"
+        class="mt-1.5 w-full min-h-11 rounded-xl border border-coffee-200 bg-white px-3 py-2.5 text-base text-coffee-900 focus:border-coffee-400 focus:outline-none"
         min={new Date().toISOString().split('T')[0]}
       />
       <p class="mt-1 text-xs text-coffee-400">Kosongkan jika tidak ada batas expired</p>

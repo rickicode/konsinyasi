@@ -284,6 +284,10 @@ export const visit_submissions = sqliteTable(
     amount_collected_total: integer('amount_collected_total').notNull().default(0),
     qty_sold_total: integer('qty_sold_total').notNull().default(0),
     qty_remaining_total: integer('qty_remaining_total').notNull().default(0),  // Good products stay at warung
+    // Per-visit deltas: only what changed during THIS visit (avoids double
+    // counting when a cycle is picked up across multiple visits).
+    amount_collected_delta: integer('amount_collected_delta').notNull().default(0),
+    qty_sold_delta: integer('qty_sold_delta').notNull().default(0),
     status: text('status', { enum: ['committed', 'voided'] })
       .notNull()
       .default('committed'),

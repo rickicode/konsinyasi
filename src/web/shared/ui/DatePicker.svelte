@@ -165,7 +165,7 @@
         <button
           type="button"
           onclick={prevMonth}
-          class="rounded-lg p-1.5 text-coffee-600 transition-colors hover:bg-coffee-100"
+          class="min-h-11 min-w-11 rounded-lg p-1.5 text-coffee-600 transition-colors hover:bg-coffee-100 active:bg-coffee-200"
         >
           <ChevronLeft size={18} />
         </button>
@@ -173,7 +173,7 @@
         <button
           type="button"
           onclick={nextMonth}
-          class="rounded-lg p-1.5 text-coffee-600 transition-colors hover:bg-coffee-100"
+          class="min-h-11 min-w-11 rounded-lg p-1.5 text-coffee-600 transition-colors hover:bg-coffee-100 active:bg-coffee-200"
         >
           <ChevronRight size={18} />
         </button>
@@ -192,14 +192,13 @@
       <div class="grid grid-cols-7 gap-1">
         {#each calendarDays as day}
           {#if day === null}
-            <div class="h-9"></div>
+            <div class="min-h-11"></div>
           {:else}
             <button
               type="button"
               onclick={() => selectDay(day)}
               disabled={isDisabled(day)}
-              class="flex h-9 w-full items-center justify-center rounded-lg text-sm font-medium transition-all
-                {isSelected(day)
+              class="flex min-h-11 w-full items-center justify-center rounded-lg text-sm font-medium transition-all active:scale-[0.97] {isSelected(day)
                   ? 'bg-coffee-700 text-white'
                   : isToday(day)
                     ? 'bg-coffee-100 text-coffee-900 font-bold'
@@ -218,14 +217,14 @@
         <button
           type="button"
           onclick={() => { onchange?.(formatDate(new Date())); isOpen = false; }}
-          class="flex-1 rounded-lg bg-coffee-100 px-3 py-2 text-xs font-semibold text-coffee-700 transition-colors hover:bg-coffee-200"
+          class="flex-1 rounded-lg bg-coffee-100 px-3 py-2 text-xs font-semibold text-coffee-700 transition-all min-h-11 flex items-center justify-center hover:bg-coffee-200 active:bg-coffee-300"
         >
           Hari ini
         </button>
         <button
           type="button"
           onclick={() => { onchange?.(''); isOpen = false; }}
-          class="flex-1 rounded-lg bg-coffee-100 px-3 py-2 text-xs font-semibold text-coffee-700 transition-colors hover:bg-coffee-200"
+          class="flex-1 rounded-lg bg-coffee-100 px-3 py-2 text-xs font-semibold text-coffee-700 transition-all min-h-11 flex items-center justify-center hover:bg-coffee-200 active:bg-coffee-300"
         >
           Reset
         </button>

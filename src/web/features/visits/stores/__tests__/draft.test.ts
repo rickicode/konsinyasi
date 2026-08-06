@@ -8,6 +8,9 @@ const cycles: VisitCycleState[] = [
     product_id: 'product-1',
     product_name: 'Produk A',
     qty_dropped: 10,
+    qty_sold: 0,
+    qty_remaining_good: 0,
+    qty_return_damaged: 0,
     dropped_at: '2026-07-23T00:00:00.000Z',
     age_hours: 0,
     color: 'green',
@@ -17,11 +20,28 @@ const cycles: VisitCycleState[] = [
     product_id: 'product-2',
     product_name: 'Produk B',
     qty_dropped: 5,
+    qty_sold: 0,
+    qty_remaining_good: 0,
+    qty_return_damaged: 0,
     dropped_at: '2026-07-23T00:00:00.000Z',
     age_hours: 1,
     color: 'yellow',
   },
 ];
+
+/** A cycle that was already picked up once: 10 dropped, 3 sold, 7 remaining. */
+const partiallyPickedCycle: VisitCycleState = {
+  id: 'cycle-3',
+  product_id: 'product-1',
+  product_name: 'Produk A',
+  qty_dropped: 10,
+  qty_sold: 3,
+  qty_remaining_good: 7,
+  qty_return_damaged: 0,
+  dropped_at: '2026-07-20T00:00:00.000Z',
+  age_hours: 72,
+  color: 'yellow',
+};
 
 describe('createVisitDraftStore', () => {
   let store: ReturnType<typeof createVisitDraftStore>;
@@ -56,8 +76,31 @@ describe('createVisitDraftStore', () => {
 
   it('resets pickups for all provided cycles after load', () => {
     store.load('outlet-1', cycles);
-    expect(store.pickups.get('cycle-1')).toEqual({ cycleId: 'cycle-1', good: 0, damaged: 0 });
-    expect(store.pickups.get('cycle-2')).toEqual({ cycleId: 'cycle-2', good: 0, damaged: 0 });
+    expect(store.pickups.get('cycle-1')).toEqual({ cycleId: 'cycle-1', good: 10, damaged: 0 });
+    expect(store.pickups.get('cycle-2')).toEqual({ cycleId: 'cycle-2', good: 5, damaged: 0 });
+  });
+
+  it('pre-fills pickups from the current recorded state so untouched cycles are no-ops', () => {
+    store.load('outlet-1', [partiallyPickedCycle]);
+    expect(store.pickups.get('cycle-3')).toEqual({ cycleId: 'cycle-3', good: 7, damaged: 0 });
+    // Untouched submission must keep the previously recorded figures.
+    const sub = store.buildSubmission({ lat: 0, lng: 0, accuracy: null }, [partiallyPickedCycle]);
+    expect(sub.pickups).toEqual([
+      { cycle_id: 'cycle-3', qty_sold: 3, qty_remaining_good: 7, qty_return_damaged: 0 },
+    ]);
+  });
+
+  it('pre-fills a freshly dropped cycle with the full drop so it is not marked sold', () => {
+    store.load('outlet-1', cycles);
+    expect(store.pickups.get('cycle-1')).toEqual({ cycleId: 'cycle-1', good: 10, damaged: 0 });
+    const sub = store.buildSubmission({ lat: 0, lng: 0, accuracy: null }, cycles);
+    // Untouched fresh cycle: nothing sold, everything still at the warung.
+    expect(sub.pickups[0]).toEqual({
+      cycle_id: 'cycle-1',
+      qty_sold: 0,
+      qty_remaining_good: 10,
+      qty_return_damaged: 0,
+    });
   });
 
   describe('pickup input math', () => {
@@ -88,12 +131,21 @@ describe('createVisitDraftStore', () => {
       expect(store.computedSold('cycle-1', 10)).toBe(0);
     });
 
-    it('validates the pickup equation good + damaged + sold = qty_dropped', () => {
+    it('validates remaining stock against what was left at the warung', () => {
       store.setPickup('cycle-1', 'good', 2);
       store.setPickup('cycle-1', 'damaged', 1);
-      expect(store.isPickupValid('cycle-1', 10)).toBe(true);
+      expect(store.isPickupValid(cycles[0])).toBe(true);
       store.setPickup('cycle-1', 'good', 12);
-      expect(store.isPickupValid('cycle-1', 10)).toBe(false);
+      expect(store.isPickupValid(cycles[0])).toBe(false);
+    });
+
+    it('rejects remaining stock that exceeds the previous recorded state', () => {
+      store.load('outlet-1', [partiallyPickedCycle]);
+      // Pre-filled good=7 equals the previous remaining -> valid no-op.
+      expect(store.isPickupValid(partiallyPickedCycle)).toBe(true);
+      // Counting more stock than was left at the warung is invalid.
+      store.setPickup('cycle-3', 'good', 8);
+      expect(store.isPickupValid(partiallyPickedCycle)).toBe(false);
     });
 
     it('validates all cycles at once', () => {
@@ -194,7 +246,8 @@ describe('createVisitDraftStore', () => {
       const sub = store.buildSubmission({ lat: 0, lng: 0, accuracy: null }, cycles);
       expect(sub.pickups).toEqual([
         { cycle_id: 'cycle-1', qty_sold: 7, qty_remaining_good: 2, qty_return_damaged: 1 },
-        { cycle_id: 'cycle-2', qty_sold: 5, qty_remaining_good: 0, qty_return_damaged: 0 },
+        // Untouched cycle: nothing sold, everything still at the warung.
+        { cycle_id: 'cycle-2', qty_sold: 0, qty_remaining_good: 5, qty_return_damaged: 0 },
       ]);
     });
 
@@ -236,7 +289,7 @@ describe('createVisitDraftStore', () => {
       storage['konsi_visit_draft_v2_outlet-1'] = JSON.stringify(makeSnapshot(stale));
       store.load('outlet-1', cycles);
       expect(store.idempotencyKey).toBe('idempotency-test');
-      expect(store.pickups.get('cycle-1')).toEqual({ cycleId: 'cycle-1', good: 0, damaged: 0 });
+      expect(store.pickups.get('cycle-1')).toEqual({ cycleId: 'cycle-1', good: 10, damaged: 0 });
       expect(store.drops).toEqual([]);
       expect(store.override).toBe(false);
     });
@@ -244,7 +297,7 @@ describe('createVisitDraftStore', () => {
     it('ignores corrupted storage', () => {
       storage['konsi_visit_draft_v2_outlet-1'] = 'not-json';
       store.load('outlet-1', cycles);
-      expect(store.pickups.get('cycle-1')).toEqual({ cycleId: 'cycle-1', good: 0, damaged: 0 });
+      expect(store.pickups.get('cycle-1')).toEqual({ cycleId: 'cycle-1', good: 10, damaged: 0 });
     });
 
     it('ignores snapshots for a different outlet', () => {

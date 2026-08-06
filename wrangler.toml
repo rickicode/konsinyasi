@@ -10,6 +10,9 @@ PUBLIC_R2_CDN_URL = "https://cdn.kopi.hijitoko.com"
 # production vars — debug stack traces are enabled per-environment via
 # `wrangler secret put DEBUG` only when needed.
 ALLOWED_ORIGINS = "https://konsi.rickicode.workers.dev"
+# Worker version — inject at deploy time via `wrangler deploy --var WORKER_VERSION:...`
+# or set to a commit SHA in CI. Used by /api/health for version tracking.
+WORKER_VERSION = "dev"
 
 [dev]
 port = 8787
@@ -27,3 +30,15 @@ database_id = "7fb6dcae-5315-44df-90de-f1ddf2ba06fe"
 [[r2_buckets]]
 binding = "PHOTOS"
 bucket_name = "konsi"
+
+# ── Observability ──────────────────────────────────────────────────────
+# Workers Logs: full-fidelity structured log ingestion.
+# Logs are queryable via `wrangler tail` and the Cloudflare dashboard.
+# Enable Logpush in the Cloudflare dashboard (Analytics > Logpush) to
+# forward logs to R2/S3/etc. for long-term retention.
+[observability]
+head_sampling_rate = 1  # 100% of requests — use 0.1 for 10% sampling in high-traffic.
+
+[observability.logs]
+enabled = true
+invocation_logs = true

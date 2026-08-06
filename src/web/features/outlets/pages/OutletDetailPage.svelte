@@ -317,14 +317,14 @@
                     <span class="text-xs text-coffee-400">
                       {visit.status === 'voided'
                         ? 'Dibatalkan'
-                        : formatRupiah(visit.amount_collected_total ?? 0)}
+                        : formatRupiah(visit.amount_collected_delta ?? visit.amount_collected_total ?? 0)}
                     </span>
                   </div>
                   {#if visit.status !== 'voided' && canVoid}
                     <button
                       type="button"
                       onclick={() => openVoid(visit.idempotency_key)}
-                      class="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 active:scale-95"
+                      class="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
                     >
                       Void
                     </button>

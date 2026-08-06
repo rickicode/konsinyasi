@@ -51,6 +51,7 @@ const dropDraftSchema = z.object({
   qty: z.number().int().positive(),
   price: z.number().nonnegative(),
   notes: z.string(),
+  expires_at: z.string().optional(),
 });
 
 export const visitDraftSnapshotSchema = z.object({
@@ -91,10 +92,29 @@ export function createVisitDraftStore() {
   let isLoaded = $state(false);
   let lastUpdatedAt = $state<string | null>(null);
 
+  /**
+   * Effective "good" stock currently at the warung. For cycles that were
+   * already picked up this equals the stored qty_remaining_good, but for a
+   * freshly dropped cycle (never picked, stored remaining is 0) it equals the
+   * full drop — all bottles are still physically at the warung. Pre-filling
+   * with this value makes an untouched cycle a true no-op instead of silently
+   * marking every skipped cycle as fully sold.
+   */
+  function effectiveRemainingGood(cycle: VisitCycleState): number {
+    return Math.max(
+      0,
+      (cycle.qty_dropped ?? 0) - (cycle.qty_sold ?? 0) - (cycle.qty_return_damaged ?? 0)
+    );
+  }
+
   function resetPickups(cycles: VisitCycleState[]) {
     const next = new SvelteMap<string, PickupDraft>();
     for (const cycle of cycles) {
-      next.set(cycle.id, { cycleId: cycle.id, good: 0, damaged: 0 });
+      next.set(cycle.id, {
+        cycleId: cycle.id,
+        good: effectiveRemainingGood(cycle),
+        damaged: cycle.qty_return_damaged ?? 0,
+      });
     }
     pickups = next;
   }
@@ -126,8 +146,12 @@ export function createVisitDraftStore() {
       const saved = snap.pickups?.[cycle.id];
       next.set(cycle.id, {
         cycleId: cycle.id,
-        good: typeof saved?.good === 'number' ? Math.max(0, saved.good) : 0,
-        damaged: typeof saved?.damaged === 'number' ? Math.max(0, saved.damaged) : 0,
+        good:
+          typeof saved?.good === 'number' ? Math.max(0, saved.good) : effectiveRemainingGood(cycle),
+        damaged:
+          typeof saved?.damaged === 'number'
+            ? Math.max(0, saved.damaged)
+            : (cycle.qty_return_damaged ?? 0),
       });
     }
     pickups = next;
@@ -275,8 +299,12 @@ export function createVisitDraftStore() {
 
     /**
      * Distribute pickup across multiple cycles for the same product.
-     * Fills cycles proportionally based on qty_dropped, respecting each cycle's capacity.
-     * Oldest stock (FIFO) gets filled first.
+     *
+     * FIFO accounting: units sold/pulled come from the OLDEST batches first, so
+     * whatever "good" stock remains belongs to the NEWEST batches. Remaining
+     * good is therefore allocated newest-first (LIFO), while damaged pull-back
+     * starts from the oldest stock (FIFO) — matching the expiry "Wajib tarik"
+     * prioritisation shown in the form.
      */
     setPickupForProduct(
       cycles: VisitCycleState[],
@@ -286,17 +314,18 @@ export function createVisitDraftStore() {
       const next = new SvelteMap(pickups);
       let remaining = Math.max(0, Math.floor(totalValue));
 
-      // Sort cycles by dropped_at (oldest first) so older stock gets picked first
-      const sorted = [...cycles].sort((a, b) =>
+      const oldestFirst = [...cycles].sort((a, b) =>
         Date.parse(a.dropped_at) - Date.parse(b.dropped_at)
       );
+      const fillOrder = field === 'good' ? [...oldestFirst].reverse() : oldestFirst;
 
-      for (const cycle of sorted) {
+      for (const cycle of fillOrder) {
         const existing = next.get(cycle.id) ?? { cycleId: cycle.id, good: 0, damaged: 0 };
         const otherField = field === 'good' ? 'damaged' : 'good';
         const otherValue = existing[otherField];
-        // Max for this field is qty_dropped minus the other field's value
-        const maxForField = Math.max(0, cycle.qty_dropped - otherValue);
+        // Max for this field: drop minus already-sold-minus-other-field so stock
+        // can never exceed what is physically at the warung.
+        const maxForField = Math.max(0, cycle.qty_dropped - cycle.qty_sold - otherValue);
         const allocated = Math.min(remaining, maxForField);
 
         next.set(cycle.id, { ...existing, [field]: allocated });
@@ -325,27 +354,42 @@ export function createVisitDraftStore() {
       return Math.max(0, qtyDropped - input.good - input.damaged);
     },
 
-    isPickupValid(cycleId: string, qtyDropped: number): boolean {
-      const input = pickups.get(cycleId) ?? { good: 0, damaged: 0 };
-      const total = input.good + input.damaged + this.computedSold(cycleId, qtyDropped);
-      return total === qtyDropped;
+    /**
+     * A pickup line is valid when the counted remaining stock does not exceed
+     * what was left at the warung after the previous visit. Equivalent to
+     * requiring cumulative sold to never decrease.
+     */
+    isPickupValid(cycle: VisitCycleState): boolean {
+      const input = pickups.get(cycle.id) ?? { good: 0, damaged: 0 };
+      return input.good + input.damaged <= cycle.qty_dropped - cycle.qty_sold;
     },
 
     allPickupsValid(cycles: VisitCycleState[]): boolean {
-      // Only validate cycles that staff has started picking (good + damaged > 0)
-      // Skip cycles with no input (staff chose to leave them at outlet)
-      return cycles.every((cycle) => {
-        const input = pickups.get(cycle.id) ?? { good: 0, damaged: 0 };
-        if (input.good === 0 && input.damaged === 0) return true; // not started, ok
-        return this.isPickupValid(cycle.id, cycle.qty_dropped);
-      });
+      return cycles.every((cycle) => this.isPickupValid(cycle));
+    },
+
+    /**
+     * Total stock still accountable at the warung across cycles (drop minus
+     * already-sold) — the upper bound for combined good + damaged input.
+     */
+    getTotalPickupCapacityForCycles(cycles: VisitCycleState[]): number {
+      return cycles.reduce((sum, c) => sum + Math.max(0, c.qty_dropped - c.qty_sold), 0);
     },
 
     addDrop(product: { id: string; name: string; price: number }, qty: number, notesValue = '', expiresAt?: string) {
       const existing = drops.find((d) => d.productId === product.id);
       if (existing) {
+        // Merging the same product again adds quantity and keeps the newest
+        // notes/expiry so nothing the staff typed is silently discarded.
         drops = drops.map((d) =>
-          d.id === existing.id ? { ...d, qty: d.qty + Math.max(1, Math.floor(qty)) } : d
+          d.id === existing.id
+            ? {
+                ...d,
+                qty: d.qty + Math.max(1, Math.floor(qty)),
+                notes: notesValue || d.notes,
+                expires_at: expiresAt?.trim() || d.expires_at,
+              }
+            : d
         );
       } else {
         const item: DropDraft = {

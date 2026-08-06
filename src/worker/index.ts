@@ -2,11 +2,14 @@ import { Hono } from 'hono';
 import type { Env } from './types.js';
 import { AppError } from './lib/errors.js';
 import { logger } from './lib/logger.js';
-import { cors } from 'hono/cors';
-import { secureHeaders } from 'hono/secure-headers';
+import { corsMiddleware } from './middleware/cors.js';
+import { securityHeaders } from './middleware/security.js';
 import { optionalAuth, requireAuth } from './lib/session.js';
 import { requirePermission } from './lib/rbac.js';
 import { createRateLimitMiddleware } from './middleware/rateLimit.js';
+import { requestContext, logError } from './middleware/error-tracking.js';
+import { analyticsMiddleware } from './lib/analytics.js';
+import { cacheMiddleware } from './middleware/cache.js';
 import auth from './routes/auth.js';
 import users from './routes/users.js';
 import settings from './routes/settings.js';
@@ -25,76 +28,66 @@ import labelsPrint from './routes/labels-print.js';
 
 const app = new Hono<Env>({ strict: false });
 
+// Request context middleware: attaches request metadata (requestId, clientIp, etc.)
+// to the Hono context for structured logging throughout the request lifecycle.
+app.use('*', requestContext);
+
+// Analytics middleware: tracks request latency, status codes, and error rates.
+app.use('*', analyticsMiddleware);
+
 // Global middleware: register CORS and security headers before any routes so Hono
 // runs them for every API response. Previously CORS was after routes and was skipped.
-app.use(
-  '*',
-  cors({
-    // CORS origin policy:
-    // - ALLOWED_ORIGINS unset/empty (local dev) → allow any origin.
-    // - ALLOWED_ORIGINS configured (production) → restrict to allow-list;
-    //   unknown origins get no CORS headers at all.
-    origin: (origin, c) => {
-      const raw: string = (c.env?.ALLOWED_ORIGINS ?? '').trim();
-      if (raw === '') return '*';
-      const allowed: string[] = raw
-        .split(',')
-        .map((o) => o.trim())
-        .filter(Boolean);
-      if (allowed.length === 0) return '*';
-      return allowed.includes(origin ?? '') ? origin : null;
-    },
-    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
-    maxAge: 86400,
-  })
-);
-app.use(
-  '*',
-  secureHeaders({
-    contentSecurityPolicy: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
-      imgSrc: [
-        "'self'",
-        'data:',
-        'blob:',
-        'https://konsi.rickicode.workers.dev',
-        'https://cdn.kopi.hijitoko.com',
-        'https://*.tile.openstreetmap.org',
-        'https://server.arcgisonline.com',
-      ],
-      connectSrc: [
-        "'self'",
-        'https://konsi.rickicode.workers.dev',
-        'https://nominatim.openstreetmap.org',
-      ],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      objectSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"],
-      frameAncestors: ["'none'"],
-    },
-    strictTransportSecurity: 'max-age=63072000; includeSubDomains',
-    xFrameOptions: 'DENY',
-    referrerPolicy: 'strict-origin-when-cross-origin',
-  })
-);
+app.use('*', corsMiddleware());
+app.use('*', securityHeaders());
 
 app.get('/api/health', async (c) => {
   const started = Date.now();
+  const checks: Record<string, { status: string; latency_ms?: number; error?: string }> = {};
+
+  // D1 database check
   try {
+    const d1Start = Date.now();
     await c.env.DB.prepare('SELECT 1').all();
-    return c.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - started });
-    return c.json({ status: 'ok', db: 'ok', latency_ms: Date.now() - started });
+    checks.d1 = { status: 'ok', latency_ms: Date.now() - d1Start };
   } catch (err) {
-    logger.error('health check db probe failed', {
-      code: 'HEALTH_DB_ERROR',
+    checks.d1 = {
+      status: 'error',
+      latency_ms: Date.now() - started,
       error: err instanceof Error ? err.message : String(err),
-    });
-    return c.json({ status: 'degraded', db: 'error', latency_ms: Date.now() - started }, 503);
+    };
   }
+
+  // R2 bucket check (if configured)
+  if (c.env.PHOTOS) {
+    try {
+      const r2Start = Date.now();
+      await c.env.PHOTOS.list({ limit: 1 });
+      checks.r2 = { status: 'ok', latency_ms: Date.now() - r2Start };
+    } catch (err) {
+      checks.r2 = {
+        status: 'error',
+        latency_ms: Date.now() - started,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  const allOk = Object.values(checks).every((c) => c.status === 'ok');
+  const totalLatency = Date.now() - started;
+
+  const body = {
+    status: allOk ? 'ok' : 'degraded',
+    version: c.env.WORKER_VERSION ?? 'unknown',
+    timestamp: new Date().toISOString(),
+    checks,
+    latency_ms: totalLatency,
+  };
+
+  if (!allOk) {
+    logger.warn('health check degraded', { code: 'HEALTH_DEGRADED', checks });
+  }
+
+  return c.json(body, allOk ? 200 : 503);
 });
 
 app.use('/api/auth/logout', requireAuth);
@@ -167,6 +160,15 @@ app.use(
 // is protected exactly once.
 app.put('/api/settings/geofence', requirePermission('settings:write'));
 
+// ── Response caching ────────────────────────────────────────────
+// Cache GET responses for frequently-accessed read endpoints.
+// Placed after permission guards so unauthenticated / unauthorized
+// requests are rejected before we touch the cache.
+app.use('/api/products', cacheMiddleware({ resource: 'products', ttl: 300 }));
+app.use('/api/outlets', cacheMiddleware({ resource: 'outlets', ttl: 300 }));
+app.use('/api/raw-materials', cacheMiddleware({ resource: 'raw-materials', ttl: 300 }));
+app.use('/api/settings', cacheMiddleware({ resource: 'settings', ttl: 600 }));
+
 app.use('/api/dashboard', requirePermission('dashboard:read'));
 app.use('/api/reports', requirePermission('reports:read'));
 app.use('/api/analytics/*', requirePermission('reports:read'));
@@ -208,20 +210,21 @@ app.route('/api/labels', labels);
 
 app.onError((err, c) => {
   if (err instanceof AppError) {
+    logError(c, err, { code: err.code, expected: true });
     return c.json({ code: err.code, message: err.message }, err.status as 200);
   }
+
   // c.env may be undefined in unit tests, so guard the DEBUG read.
   const isDebug = c.env?.DEBUG === '1' || c.env?.DEBUG === 'true';
   const message = err.message ?? 'Terjadi kesalahan server';
-  // Log a redacted summary in production; avoid leaking full stack traces.
-  // Stack is only attached in debug mode via the structured logger.
-  logger.error('unhandled error', {
+
+  // Structured error logging with request context enrichment.
+  logError(c, err, {
     code: 'INTERNAL_ERROR',
     message,
-    path: c.req.path,
-    method: c.req.method,
-    ...((isDebug && err instanceof Error && { stack: err.stack }) ?? {}),
+    ...(isDebug && err instanceof Error && { stack: err.stack }),
   });
+
   if (isDebug) {
     return c.json({ code: 'INTERNAL_ERROR', message, stack: err.stack }, 500);
   }

@@ -69,20 +69,20 @@ cp .env.example .env
 storefront-astro/
 ├── public/
 │   ├── favicon.svg
+│   ├── og-image.svg
+│   ├── og-image.png
 │   ├── robots.txt
-│   └── sitemap.xml
+│   └── (sitemap-index.xml generated at build)
 ├── src/
 │   ├── components/
 │   │   ├── Header.astro
 │   │   ├── LocationBanner.astro
-│   │   ├── Stats.astro
-│   │   ├── WarungCard.astro
-│   │   ├── MapOverlay.astro
 │   │   └── DetailModal.astro
 │   ├── layouts/
 │   │   └── BaseLayout.astro
 │   ├── pages/
-│   │   └── index.astro
+│   │   ├── index.astro
+│   │   └── produk.astro
 │   ├── scripts/
 │   │   └── app.ts
 │   └── styles/
@@ -107,7 +107,8 @@ storefront-astro/
 - ✅ Twitter Card meta tags
 - ✅ JSON-LD Structured Data
 - ✅ robots.txt
-- ✅ sitemap.xml
+- ✅ sitemap-index.xml (generated via @astrojs/sitemap)
+- ✅ og-image.png (1200x630, generated from og-image.svg via scripts/generate-og-image.js)
 - ✅ Canonical URLs
 
 ## License

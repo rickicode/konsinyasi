@@ -41,8 +41,8 @@
     }
   }
 
-  let dialogEl: HTMLDivElement | null = null;
-  let previousFocus: HTMLElement | null = null;
+  let dialogEl = $state<HTMLDivElement | null>(null);
+  let previousFocus = $state<HTMLElement | null>(null);
 
   // Save the previously focused element when opening and restore it on close.
   $effect(() => {

@@ -59,7 +59,7 @@
     onclick={decrement}
     {disabled}
     aria-label="Kurangi"
-    class="flex h-10 w-10 items-center justify-center rounded-lg text-coffee-700 transition-colors hover:bg-coffee-100 active:bg-coffee-200 disabled:cursor-not-allowed disabled:opacity-50"
+    class="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-coffee-700 transition-colors hover:bg-coffee-100 active:bg-coffee-200 disabled:cursor-not-allowed disabled:opacity-50"
   >
     <Icon name="minus" size={18} />
   </button>
@@ -71,14 +71,14 @@
     oninput={onInput}
     onblur={onBlur}
     {disabled}
-    class="h-10 w-14 appearance-none border-x border-coffee-100 bg-transparent text-center text-base font-semibold text-coffee-900 outline-none focus:bg-coffee-50 disabled:opacity-50"
+    class="min-h-11 w-14 appearance-none border-x border-coffee-100 bg-transparent text-center text-base font-semibold text-coffee-900 outline-none focus:bg-coffee-50 disabled:opacity-50"
   />
   <button
     type="button"
     onclick={increment}
     {disabled}
     aria-label="Tambah"
-    class="flex h-10 w-10 items-center justify-center rounded-lg text-coffee-700 transition-colors hover:bg-coffee-100 active:bg-coffee-200 disabled:cursor-not-allowed disabled:opacity-50"
+    class="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-coffee-700 transition-colors hover:bg-coffee-100 active:bg-coffee-200 disabled:cursor-not-allowed disabled:opacity-50"
   >
     <Icon name="plus" size={18} />
   </button>

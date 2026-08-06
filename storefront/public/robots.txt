@@ -1,7 +1,5 @@
-# Konsi - Temukan Kopi
-# https://kopi.hijitoko.com
-
 User-agent: *
 Allow: /
 
-Sitemap: https://kopi.hijitoko.com/sitemap.xml
+# Sitemap
+Sitemap: https://kopi.hijitoko.com/sitemap-index.xml

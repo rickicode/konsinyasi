@@ -129,7 +129,7 @@ import { push } from 'svelte-spa-router';
           <button
             type="button"
             onclick={openCreateModal}
-            class="flex h-9 items-center gap-1.5 rounded-xl bg-coffee-900 px-3.5 text-xs font-semibold text-white shadow-sm transition-all active:scale-95 hover:bg-coffee-800"
+            class="flex min-h-11 items-center gap-1.5 rounded-xl bg-coffee-900 px-3.5 text-xs font-semibold text-white shadow-sm transition-all active:scale-95 hover:bg-coffee-800 active:bg-coffee-950"
           >
             <Icon name="plus" size={16} />
             <span>Tambah</span>
@@ -152,12 +152,12 @@ import { push } from 'svelte-spa-router';
           bind:value={search}
           onfocus={() => (searchFocused = true)}
           onblur={() => (searchFocused = false)}
-          class="w-full rounded-xl border border-coffee-200/80 bg-white/90 py-2.5 pl-10 pr-4 text-sm text-coffee-900 placeholder:text-coffee-300 transition-all focus:border-coffee-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-coffee-200/50"
+          class="w-full rounded-xl border border-coffee-200/80 bg-white/90 py-2.5 pl-10 pr-4 text-base text-coffee-900 placeholder:text-coffee-300 transition-all focus:border-coffee-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-coffee-200/50"
         />
         {#if search.trim()}
           <button
             type="button"
-            class="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-coffee-300 transition-colors hover:bg-coffee-50 hover:text-coffee-600"
+            class="absolute right-2.5 top-1/2 -translate-y-1/2 flex min-h-11 min-w-11 items-center justify-center rounded-lg text-coffee-300 transition-colors hover:bg-coffee-50 hover:text-coffee-600 active:bg-coffee-100"
             onclick={() => (search = '')}
             aria-label="Hapus pencarian"
           >
@@ -170,7 +170,7 @@ import { push } from 'svelte-spa-router';
       <div class="flex gap-2">
         <select
           bind:value={statusFilter}
-          class="flex-1 rounded-lg border border-coffee-200/80 bg-white/90 px-3 py-2 text-xs font-medium text-coffee-700 transition-all focus:border-coffee-400 focus:outline-none focus:ring-2 focus:ring-coffee-200/50"
+          class="flex-1 rounded-lg border border-coffee-200/80 bg-white/90 px-3 py-2.5 text-base font-medium text-coffee-700 transition-all min-h-11 focus:border-coffee-400 focus:outline-none focus:ring-2 focus:ring-coffee-200/50"
         >
           {#each statusOptions as opt (opt.value)}
             <option value={opt.value}>{opt.label}</option>
@@ -178,7 +178,7 @@ import { push } from 'svelte-spa-router';
         </select>
         <select
           bind:value={sortBy}
-          class="flex-1 rounded-lg border border-coffee-200/80 bg-white/90 px-3 py-2 text-xs font-medium text-coffee-700 transition-all focus:border-coffee-400 focus:outline-none focus:ring-2 focus:ring-coffee-200/50"
+          class="flex-1 rounded-lg border border-coffee-200/80 bg-white/90 px-3 py-2.5 text-base font-medium text-coffee-700 transition-all min-h-11 focus:border-coffee-400 focus:outline-none focus:ring-2 focus:ring-coffee-200/50"
         >
           {#each sortOptions as opt (opt.value)}
             <option value={opt.value}>{opt.label}</option>

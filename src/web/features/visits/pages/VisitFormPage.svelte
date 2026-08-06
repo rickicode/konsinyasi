@@ -199,10 +199,10 @@
       <div class="flex items-center justify-between py-1.5">
         <div>
           <span class="text-xs font-medium text-coffee-600 block">Total Setoran Kas</span>
-          <span class="text-xs text-coffee-400">{visitResult.qty_sold_total} unit terjual</span>
+          <span class="text-xs text-coffee-400">{visitResult.qty_sold_delta ?? visitResult.qty_sold_total} unit terjual</span>
         </div>
         <span class="text-lg font-extrabold text-emerald-700">
-          {formatRupiah(visitResult.amount_collected_total)}
+          {formatRupiah(visitResult.amount_collected_delta ?? visitResult.amount_collected_total)}
         </span>
       </div>
 
@@ -226,7 +226,7 @@
             <div class="flex items-center justify-between py-2 text-xs">
               <span class="font-bold text-coffee-900">{cycle.product_name}</span>
               <div class="text-right">
-                <span class="font-extrabold text-emerald-700 block">{cycle.qty_sold} terjual</span>
+                <span class="font-extrabold text-emerald-700 block">{cycle.qty_sold_delta ?? cycle.qty_sold} terjual</span>
                 <span class="text-coffee-500 block text-xs mt-0.5">({cycle.qty_remaining_good} sisa di warung · {cycle.qty_return_damaged} rusak ditarik)</span>
               </div>
             </div>
@@ -269,7 +269,7 @@
     </div>
   </section>
 {:else}
-  <section class="space-y-4 py-2 pb-24" aria-label="Form kunjungan">
+  <section class="space-y-4 py-2 pb-32" aria-label="Form kunjungan">
     <!-- Header -->
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
@@ -278,7 +278,7 @@
           size="sm"
           onclick={() => push('/kunjungan')}
           aria-label="Kembali ke daftar warung"
-          class="h-10 w-10 rounded-2xl bg-white border border-coffee-100 p-0 text-coffee-800 shadow-sm hover:bg-coffee-50 active:scale-95"
+          class="min-h-11 min-w-11 rounded-2xl bg-white border border-coffee-100 p-0 text-coffee-800 shadow-sm hover:bg-coffee-50 active:scale-95 active:bg-coffee-100"
         >
           <Icon name="arrow-left" size={20} />
         </Button>
@@ -317,7 +317,7 @@
             href="https://www.google.com/maps?q={outlet.latitude},{outlet.longitude}"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
+            class="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95 active:bg-emerald-800"
             aria-label="Buka navigasi Google Maps"
           >
             <Navigation size={18} />
@@ -406,7 +406,7 @@
                   </div>
                   <button
                     type="button"
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-coffee-400 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95"
+                    class="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-coffee-400 transition-all hover:bg-red-50 hover:text-red-600 active:scale-95 active:bg-red-100"
                     onclick={() => draft.removeDrop(drop.id)}
                     disabled={submitMutation.isPending}
                     aria-label="Hapus {drop.productName}"
@@ -496,7 +496,7 @@
       </div>
 
       <!-- Sticky Bottom Floating Action Bar for Mobile -->
-      <div class="fixed inset-x-0 bottom-0 z-30 border-t border-coffee-200/80 bg-white/95 p-3.5 backdrop-blur-md shadow-lg max-w-3xl mx-auto">
+      <div class="fixed inset-x-0 bottom-0 z-30 border-t border-coffee-200/80 bg-white/95 p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] backdrop-blur-md shadow-lg max-w-3xl mx-auto">
         <Button
           type="button"
           variant="primary"

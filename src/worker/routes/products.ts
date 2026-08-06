@@ -6,6 +6,7 @@ import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination
 import { consignment_cycles, product_recipes, products } from '../db/schema.js';
 import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
 import { validateUuidParam } from '../lib/validation.js';
+import { invalidateResourceCache } from '../lib/cache.js';
 import {
   buildImageUrl,
   deleteImageFromR2,
@@ -279,6 +280,7 @@ productsRoute.post('/', async (c) => {
     fetchRecipeLines(db, id),
   ]);
   const row = rowResult[0];
+  await invalidateResourceCache(new URL(c.req.url).origin, 'products');
   return c.json(pickProduct(row!, recipeLines, owner, c.env.PUBLIC_R2_CDN_URL), 201);
 });
 
@@ -338,6 +340,7 @@ productsRoute.patch('/:id', async (c) => {
     fetchRecipeLines(db, id),
   ]);
   const row = rowResult[0];
+  await invalidateResourceCache(new URL(c.req.url).origin, 'products', [id]);
   return c.json(pickProduct(row!, recipeLines, owner, c.env.PUBLIC_R2_CDN_URL));
 });
 
@@ -380,6 +383,7 @@ productsRoute.delete('/:id', async (c) => {
       updated_at: new Date().toISOString(),
     })
     .where(eq(products.id, id));
+  await invalidateResourceCache(new URL(c.req.url).origin, 'products', [id]);
   return c.json({ ok: true });
 });
 
@@ -420,6 +424,7 @@ productsRoute.post('/:id/photo', async (c) => {
       updated_at: new Date().toISOString(),
     })
     .where(eq(products.id, id));
+  await invalidateResourceCache(new URL(c.req.url).origin, 'products', [id]);
   return c.json({ photo_key: uploaded.key, url: uploaded.url });
 });
 
@@ -448,6 +453,7 @@ productsRoute.delete('/:id/photo', async (c) => {
       })
       .where(eq(products.id, id));
   }
+  await invalidateResourceCache(new URL(c.req.url).origin, 'products', [id]);
   return c.json({ ok: true });
 });
 

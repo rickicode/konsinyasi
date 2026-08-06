@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, lt, sql } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '../db/schema.js';
 import type { SafeUser } from '../types.js';
@@ -7,6 +7,113 @@ import { deleteImageFromR2, isSafeImageKey } from './image-processing.js';
 
 function nowUtcIso(): string {
   return new Date().toISOString();
+}
+
+type PreviousVisit = {
+  idempotency_key: string;
+  created_at: string;
+  response_json: string;
+};
+
+type ClosedCycleState = {
+  cycle_id: string;
+  qty_sold: number;
+  qty_remaining_good: number;
+  qty_return_damaged: number;
+  amount_collected: number;
+};
+
+/**
+ * Find the most recent committed visit for an outlet that happened strictly
+ * before `beforeCreatedAt`. Used to restore cycle state when a visit is voided:
+ * un-picking a cycle must return it to the state it had before this visit ran,
+ * not to a blanket zero (which would wipe out prior pickups of the same cycle).
+ */
+async function findPreviousCommittedVisit(
+  db: DrizzleD1Database<typeof schema>,
+  outletId: string,
+  beforeCreatedAt: string
+): Promise<PreviousVisit | undefined> {
+  const rows = await db
+    .select({
+      idempotency_key: schema.visit_submissions.idempotency_key,
+      created_at: schema.visit_submissions.created_at,
+      response_json: schema.visit_submissions.response_json,
+    })
+    .from(schema.visit_submissions)
+    .where(
+      and(
+        eq(schema.visit_submissions.outlet_id, outletId),
+        eq(schema.visit_submissions.status, 'committed'),
+        lt(schema.visit_submissions.created_at, beforeCreatedAt)
+      )
+    )
+    .orderBy(desc(schema.visit_submissions.created_at))
+    .limit(1);
+  return rows[0];
+}
+
+/**
+ * Derive the state a picked-up cycle should be restored to, based on the
+ * previous committed visit's recorded response. Falls back to a fresh-drop
+ * state (all zero, open) when the previous visit is unavailable.
+ */
+function restoreCycleState(
+  prevVisit: PreviousVisit | undefined,
+  cycleId: string
+): {
+  qty_sold: number;
+  qty_remaining_good: number;
+  qty_return_damaged: number;
+  amount_collected: number;
+  picked_up_at: string | null;
+  visit_submission_id: string | null;
+  status: 'open' | 'closed';
+} {
+  if (prevVisit) {
+    try {
+      const response = JSON.parse(prevVisit.response_json) as {
+        closed_cycles?: ClosedCycleState[];
+        dropped_cycles?: { cycle_id: string }[];
+      };
+      const closed = response.closed_cycles?.find((c) => c.cycle_id === cycleId);
+      if (closed) {
+        return {
+          qty_sold: closed.qty_sold,
+          qty_remaining_good: closed.qty_remaining_good,
+          qty_return_damaged: closed.qty_return_damaged,
+          amount_collected: closed.amount_collected,
+          picked_up_at: prevVisit.created_at,
+          visit_submission_id: prevVisit.idempotency_key,
+          status: closed.qty_remaining_good > 0 ? 'open' : 'closed',
+        };
+      }
+      const dropped = response.dropped_cycles?.some((d) => d.cycle_id === cycleId);
+      if (dropped) {
+        // Cycle was freshly dropped in the previous visit and never picked up.
+        return {
+          qty_sold: 0,
+          qty_remaining_good: 0,
+          qty_return_damaged: 0,
+          amount_collected: 0,
+          picked_up_at: null,
+          visit_submission_id: prevVisit.idempotency_key,
+          status: 'open',
+        };
+      }
+    } catch {
+      // Malformed response_json: fall through to the safe default below.
+    }
+  }
+  return {
+    qty_sold: 0,
+    qty_remaining_good: 0,
+    qty_return_damaged: 0,
+    amount_collected: 0,
+    picked_up_at: null,
+    visit_submission_id: null,
+    status: 'open',
+  };
 }
 
 async function hasNewerCommittedSubmission(
@@ -73,6 +180,7 @@ export async function voidVisit(
   const allCycles = await db
     .select({
       id: schema.consignment_cycles.id,
+      outlet_id: schema.consignment_cycles.outlet_id,
       picked_up_at: schema.consignment_cycles.picked_up_at,
     })
     .from(schema.consignment_cycles)
@@ -80,6 +188,23 @@ export async function voidVisit(
 
   const pickedUpCycles = allCycles.filter(c => c.picked_up_at !== null);
   const droppedCycles = allCycles.filter(c => c.picked_up_at === null);
+
+  // Look up the previous committed visit (for this outlet, before this one) so
+  // un-picking a cycle restores its prior quantities instead of zeroing them.
+  const submissionRows = await db
+    .select({
+      outlet_id: schema.visit_submissions.outlet_id,
+      created_at: schema.visit_submissions.created_at,
+    })
+    .from(schema.visit_submissions)
+    .where(eq(schema.visit_submissions.idempotency_key, idempotencyKey))
+    .limit(1);
+  const submission = submissionRows[0];
+  const outletId = submission?.outlet_id ?? allCycles[0]?.outlet_id;
+  const prevVisit =
+    pickedUpCycles.length > 0 && outletId && submission
+      ? await findPreviousCommittedVisit(db, outletId, submission.created_at)
+      : undefined;
 
   const submissionVoided = sql`EXISTS (
     SELECT 1
@@ -90,19 +215,20 @@ export async function voidVisit(
 
   const cycleStatements: unknown[] = [];
 
-  // 1. Un-pickup cycles: reset pickup data, keep them 'open'
+  // 1. Un-pickup cycles: restore the state they had before this visit ran.
   for (const cycle of pickedUpCycles) {
+    const restored = restoreCycleState(prevVisit, cycle.id);
     cycleStatements.push(
       db
         .update(schema.consignment_cycles)
         .set({
-          qty_sold: 0,
-          qty_remaining_good: 0,
-          qty_return_damaged: 0,
-          amount_collected: 0,
-          picked_up_at: null,
-          visit_submission_id: null,
-          status: 'open',
+          qty_sold: restored.qty_sold,
+          qty_remaining_good: restored.qty_remaining_good,
+          qty_return_damaged: restored.qty_return_damaged,
+          amount_collected: restored.amount_collected,
+          picked_up_at: restored.picked_up_at,
+          visit_submission_id: restored.visit_submission_id,
+          status: restored.status,
           updated_at: now,
         })
         .where(

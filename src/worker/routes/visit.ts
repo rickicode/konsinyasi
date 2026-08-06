@@ -39,6 +39,21 @@ function parseOptionalDate(value: string | undefined): string | undefined {
   return value;
 }
 
+/**
+ * Validate an optional drop expiry date. Must be YYYY-MM-DD and not before today.
+ * Returns the value, or undefined when empty. Throws ValidationError otherwise.
+ */
+function parseExpiryDate(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  // parseOptionalDate validates format and throws on invalid dates.
+  parseOptionalDate(value);
+  const today = new Date().toISOString().slice(0, 10);
+  if (value < today) {
+    throw new ValidationError('Tanggal expired tidak boleh di masa lalu');
+  }
+  return value;
+}
+
 const geofenceCoord = z
   .number({ invalid_type_error: 'Koordinat harus angka' })
   .finite({ message: 'Koordinat tidak valid' });
@@ -67,6 +82,7 @@ const visitSchema = z.object({
       z.object({
         product_id: z.string().min(1),
         qty_dropped: z.number().int().positive(),
+        expires_at: z.string().optional(),
         notes: z.string().optional(),
       })
     )
@@ -86,6 +102,8 @@ export const visitListColumns = {
   user_id: visit_submissions.user_id,
   response_json: visit_submissions.response_json,
   amount_collected_total: visit_submissions.amount_collected_total,
+  amount_collected_delta: visit_submissions.amount_collected_delta,
+  qty_sold_delta: visit_submissions.qty_sold_delta,
   qty_sold_total: visit_submissions.qty_sold_total,
   qty_remaining_total: visit_submissions.qty_remaining_total,
   distance_m: visit_submissions.distance_m,
@@ -126,9 +144,11 @@ export function pickVisitResult(result: VisitResult, includeFinancial: boolean):
   return {
     ...result,
     amount_collected_total: 0,
+    amount_collected_delta: 0,
     closed_cycles: result.closed_cycles.map((cycle) => ({
       ...cycle,
       amount_collected: 0,
+      amount_collected_delta: 0,
     })),
     dropped_cycles: result.dropped_cycles.map((cycle) => ({
       ...cycle,
@@ -203,6 +223,10 @@ visitRoute.get('/outlets/:id/visit', requirePermission('visit:read'), async (c) 
       color,
       expires_at: cycle.expires_at ?? undefined,
       expiry_status: expiryStatus,
+      // Current stock state so the form can pre-fill and validate pickups.
+      qty_sold: cycle.qty_sold,
+      qty_remaining_good: cycle.qty_remaining_good,
+      qty_return_damaged: cycle.qty_return_damaged,
       hpp_snapshot: includeFinancial ? cycle.hpp_snapshot : undefined,
       price_snapshot: includeFinancial ? cycle.price_snapshot : undefined,
     };
@@ -235,13 +259,18 @@ visitRoute.post('/outlets/:id/visit', requirePermission('visit:write'), async (c
   const outlet = outletRow as typeof outlets.$inferSelect;
 
   const data = parsed.data;
+  // Normalize + validate drop expiry dates (YYYY-MM-DD, not before today).
+  const drops = data.drops.map((drop) => ({
+    ...drop,
+    expires_at: parseExpiryDate(drop.expires_at),
+  }));
   const result = await processVisit({
     db,
     actor: user,
     outlet,
     idempotencyKey: data.idempotency_key,
     pickups: data.pickups,
-    drops: data.drops,
+    drops,
     clientLat: data.client_lat,
     clientLng: data.client_lng,
     clientAccuracyM: data.client_accuracy_m,
@@ -254,6 +283,7 @@ visitRoute.post('/outlets/:id/visit', requirePermission('visit:write'), async (c
 
 visitRoute.get('/visits', requirePermission('visit:read'), async (c) => {
   const user = c.get('user');
+  const includeFinancial = user.role === 'owner';
   const db = createClient(c.env);
   const { outlet_id, user_id, from, to, search } = c.req.query();
   const fromDate = parseOptionalDate(from);
@@ -329,7 +359,9 @@ visitRoute.get('/visits', requirePermission('visit:read'), async (c) => {
     distance_m: row.distance_m,
     geofence_radius_m: row.geofence_radius_m,
     geofence_override: row.geofence_override,
-    amount_collected_total: row.amount_collected_total,
+    amount_collected_total: includeFinancial ? row.amount_collected_total : 0,
+    amount_collected_delta: includeFinancial ? row.amount_collected_delta : 0,
+    qty_sold_delta: includeFinancial ? row.qty_sold_delta : 0,
     qty_sold_total: row.qty_sold_total,
     qty_remaining_total: row.qty_remaining_total,
     status: row.status,
@@ -605,6 +637,7 @@ visitRoute.delete(
 visitRoute.get('/cycles/:id/history', requirePermission('visit:read'), async (c) => {
   const cycleId = validateUuidParam(c.req.param('id'), 'cycleId');
   const user = c.get('user');
+  const includeFinancial = user.role === 'owner';
   const db = createClient(c.env);
 
   // Get cycle details
@@ -700,7 +733,7 @@ visitRoute.get('/cycles/:id/history', requirePermission('visit:read'), async (c)
       qty_sold: cycle.qty_sold,
       qty_remaining_good: cycle.qty_remaining_good,
       qty_return_damaged: cycle.qty_return_damaged,
-      amount_collected: cycle.amount_collected,
+      amount_collected: includeFinancial ? cycle.amount_collected : 0,
       status: cycle.status,
     },
     visits: cycleVisits,

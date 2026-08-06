@@ -9,6 +9,7 @@ import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
 import { recalculateAllProductsUsingMaterial } from '../services/hpp.js';
 import { validateUuidParam } from '../lib/validation.js';
+import { invalidateResourceCache } from '../lib/cache.js';
 
 async function validateBaseUnit(
   db: ReturnType<typeof createClient>,
@@ -120,6 +121,7 @@ rawMaterialsRoute.post('/', async (c) => {
     price_per_base_unit: parsed.data.price_per_base_unit,
   });
   const rows = await db.select().from(rawMaterials).where(eq(rawMaterials.id, id)).limit(1);
+  await invalidateResourceCache(new URL(c.req.url).origin, 'raw-materials');
   return c.json(pickRawMaterial(rows[0]), 201);
 });
 
@@ -176,6 +178,7 @@ rawMaterialsRoute.patch('/:id', async (c) => {
     await recalculateAllProductsUsingMaterial(db, id);
   }
   const rows = await db.select().from(rawMaterials).where(eq(rawMaterials.id, id)).limit(1);
+  await invalidateResourceCache(new URL(c.req.url).origin, 'raw-materials', [id]);
   return c.json(pickRawMaterial(rows[0]));
 });
 
@@ -204,6 +207,7 @@ rawMaterialsRoute.delete('/:id', async (c) => {
     .update(rawMaterials)
     .set({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .where(eq(rawMaterials.id, id));
+  await invalidateResourceCache(new URL(c.req.url).origin, 'raw-materials', [id]);
   return c.json({ ok: true });
 });
 

@@ -65,10 +65,12 @@ export type ProcessVisitInput = {
 export type ClosedCycleSummary = {
   cycle_id: string;
   product_name: string;
-  qty_sold: number;
-  qty_remaining_good: number;  // Good products stay at warung
-  qty_return_damaged: number;  // Damaged pulled back
-  amount_collected: number;
+  qty_sold: number;              // Cumulative sold since drop
+  qty_remaining_good: number;    // Good products stay at warung
+  qty_return_damaged: number;    // Damaged pulled back
+  amount_collected: number;      // Cumulative cash for the cycle
+  qty_sold_delta: number;        // Sold during this visit only
+  amount_collected_delta: number; // Cash collected during this visit only
 };
 
 export type DroppedCycleSummary = {
@@ -89,6 +91,9 @@ export type VisitResult = {
   amount_collected_total: number;
   qty_sold_total: number;
   qty_remaining_total: number;
+  // Per-visit deltas: what changed during this visit only.
+  amount_collected_delta: number;
+  qty_sold_delta: number;
 };
 
 export type OpenCycle = {
@@ -101,6 +106,9 @@ export type OpenCycle = {
   dropped_at: string;
   status: 'open' | 'closed' | 'voided';
   expires_at?: string | null;
+  qty_sold: number;
+  qty_remaining_good: number;
+  qty_return_damaged: number;
 };
 
 const openCycleColumns = {
@@ -113,6 +121,9 @@ const openCycleColumns = {
   dropped_at: schema.consignment_cycles.dropped_at,
   status: schema.consignment_cycles.status,
   expires_at: schema.consignment_cycles.expires_at,
+  qty_sold: schema.consignment_cycles.qty_sold,
+  qty_remaining_good: schema.consignment_cycles.qty_remaining_good,
+  qty_return_damaged: schema.consignment_cycles.qty_return_damaged,
 };
 
 function nowUtcIso(): string {
@@ -217,17 +228,23 @@ function checkGeofence(
 }
 
 function validateOpenCycleCoverage(pickups: PickupInput[], openCycles: OpenCycle[]): void {
-  if (openCycles.length === 0) return;
   const pickupIds = pickups.map((p) => p.cycle_id);
   const uniquePickupIds = new Set(pickupIds);
   if (uniquePickupIds.size !== pickupIds.length) {
     throw new ValidationError('Siklus penarikan tidak boleh duplikat');
   }
   const openCycleIds = new Set(openCycles.map((c) => c.id));
-  // Only validate that pickup IDs reference existing open cycles
+  // Every pickup ID must reference an existing open cycle.
   const invalid = [...uniquePickupIds].filter((id) => !openCycleIds.has(id));
   if (invalid.length > 0) {
     throw new ValidationError('Siklus tidak ditemukan atau sudah ditutup');
+  }
+  // Require ALL open cycles to be covered by pickups. A cycle omitted from the
+  // request would otherwise be silently marked as fully sold (qty_sold =
+  // qty_dropped), corrupting stock counts whenever a client forgets a cycle.
+  const uncovered = [...openCycleIds].filter((id) => !uniquePickupIds.has(id));
+  if (uncovered.length > 0) {
+    throw new ValidationError('Penarikan wajib mencakup semua siklus terbuka');
   }
 }
 type ProductContextRow = {
@@ -310,10 +327,27 @@ function processPickups(
 
       // Auto-calculate sold: what's not remaining is sold
       qty_sold = cycle.qty_dropped - qty_remaining_good - qty_return_damaged;
+
+      // Monotonicity: cumulative sold can never decrease and the remaining
+      // stock observed at the warung can never exceed what was left there
+      // after the previous visit. Guards against staff entry errors that
+      // would otherwise silently reverse previously recorded sales.
+      //
+      // NOTE: this cannot detect the inverse mistake — a client that reports
+      // "all sold" (qty_sold = qty_dropped) for a cycle the staff never
+      // touched. That is prevented client-side by pre-filling pickups from
+      // the recorded stock state; keep both in sync.
+      if (qty_sold < cycle.qty_sold) {
+        throw new ValidationError(
+          `Penjualan (${qty_sold}) tidak boleh kurang dari catatan sebelumnya (${cycle.qty_sold})`
+        );
+      }
     }
     // else: no input = all sold (qty_sold = qty_dropped, qty_remaining = 0)
 
     const amount = qty_sold * cycle.price_snapshot;
+    const qty_sold_delta = Math.max(0, qty_sold - cycle.qty_sold);
+    const amount_collected_delta = qty_sold_delta * cycle.price_snapshot;
     // Cycle stays open if there's still good stock at warung
     const cycleStatus = (qty_remaining_good > 0) ? 'open' : 'closed';
 
@@ -324,6 +358,8 @@ function processPickups(
       qty_remaining_good,
       qty_return_damaged,
       amount_collected: amount,
+      qty_sold_delta,
+      amount_collected_delta,
     });
 
     statements.push(
@@ -420,6 +456,13 @@ function buildVisitResult(
     amount_collected_total: closedSummaries.reduce((sum, cycle) => sum + cycle.amount_collected, 0),
     qty_sold_total: closedSummaries.reduce((sum, cycle) => sum + cycle.qty_sold, 0),
     qty_remaining_total: closedSummaries.reduce((sum, cycle) => sum + cycle.qty_remaining_good, 0),
+    // Deltas: only what changed during THIS visit (dashboard/reports must not
+    // sum cumulative totals across visits or revenue gets double-counted).
+    amount_collected_delta: closedSummaries.reduce(
+      (sum, cycle) => sum + cycle.amount_collected_delta,
+      0
+    ),
+    qty_sold_delta: closedSummaries.reduce((sum, cycle) => sum + cycle.qty_sold_delta, 0),
   };
 }
 
@@ -436,6 +479,8 @@ function buildVisitSubmissionInsert(
     amount_collected_total: result.amount_collected_total,
     qty_sold_total: result.qty_sold_total,
     qty_remaining_total: result.qty_remaining_total,
+    amount_collected_delta: result.amount_collected_delta,
+    qty_sold_delta: result.qty_sold_delta,
     client_latitude: input.clientLat,
     client_longitude: input.clientLng,
     client_accuracy_m: input.clientAccuracyM ?? null,

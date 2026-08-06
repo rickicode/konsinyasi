@@ -14,7 +14,7 @@ const {
   description,
   keywords = 'kopi, warung kopi, kopi terdekat, stok kopi, cari kopi, konsinyasi kopi',
   canonical = `${import.meta.env.VITE_BASE_URL || 'https://kopi.hijitoko.com'}${Astro.url.pathname}`,
-  ogImage = '/og-image.svg',
+  ogImage = '/og-image.png',
   jsonLd,
 } = Astro.props;
 
@@ -145,9 +145,31 @@ const fullOgImage = ogImage.startsWith('http') ? ogImage : `${baseUrl}${ogImage}
       from { transform: translateY(100%); }
       to { transform: translateY(0); }
     }
+
+    /* Skip Navigation Link */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 16px;
+      z-index: 9999;
+      padding: 12px 24px;
+      background: var(--coffee-700);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 0 0 12px 12px;
+      text-decoration: none;
+      transition: top 0.2s ease;
+    }
+    .skip-link:focus {
+      top: 0;
+      outline: 2px solid var(--coffee-900);
+      outline-offset: 2px;
+    }
   </style>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Langsung ke konten utama</a>
   <slot />
 </body>
 </html>

@@ -6,6 +6,7 @@ import { createClient } from '../db/client.js';
 import { app_settings } from '../db/schema.js';
 import { ForbiddenError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
+import { invalidateResourceCache } from '../lib/cache.js';
 import {
   buildImageUrl,
   deleteImageFromR2,
@@ -119,6 +120,7 @@ settings.put('/geofence', async (c) => {
     ensureSetting(db, BRAND_KEY, DEFAULT_BRAND_NAME),
     getBrandLogoKey(db),
   ]);
+  await invalidateResourceCache(new URL(c.req.url).origin, 'settings');
   return c.json({
     geofence_radius_m: parsed.data.radius_m,
     brand_name: brandValue,
@@ -149,6 +151,7 @@ settings.put('/brand', async (c) => {
     ensureSetting(db, GEOFENCE_KEY, '100'),
     getBrandLogoKey(db),
   ]);
+  await invalidateResourceCache(new URL(c.req.url).origin, 'settings');
   return c.json({
     geofence_radius_m: Number(geofenceValue),
     brand_name: parsed.data.brand_name,
@@ -183,6 +186,7 @@ settings.put('/cycle-age', async (c) => {
       .set({ value: String(parsed.data.cycle_yellow_hours), updated_by: user.id, updated_at: now })
       .where(eq(app_settings.key, CYCLE_YELLOW_HOURS_KEY)),
   ]);
+  await invalidateResourceCache(new URL(c.req.url).origin, 'settings');
   
   return c.json({
     cycle_red_hours: parsed.data.cycle_red_hours,
@@ -227,6 +231,7 @@ settings.put('/brand/logo', async (c) => {
       updated_at: now,
     });
   }
+  await invalidateResourceCache(new URL(c.req.url).origin, 'settings');
   return c.json({ logo_url: uploaded.url });
 });
 
@@ -244,6 +249,7 @@ settings.delete('/brand/logo', async (c) => {
     }
     await db.delete(app_settings).where(eq(app_settings.key, BRAND_LOGO_KEY));
   }
+  await invalidateResourceCache(new URL(c.req.url).origin, 'settings');
   return c.json({ ok: true });
 });
 

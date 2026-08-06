@@ -71,7 +71,7 @@
       <span
         role="button"
         tabindex="0"
-        class="flex h-8 w-8 items-center justify-center rounded-xl text-coffee-300 transition-all hover:bg-coffee-50 hover:text-coffee-600"
+        class="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-coffee-300 transition-all hover:bg-coffee-50 hover:text-coffee-600 active:bg-coffee-100"
         onclick={(e) => {
           e.stopPropagation();
           onedit();

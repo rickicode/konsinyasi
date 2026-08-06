@@ -407,10 +407,10 @@
           {#each statusOptions as option (option.value)}
             <button
               type="button"
-              class="flex-1 rounded-lg py-2 text-sm font-semibold transition-all {status ===
+              class="flex-1 min-h-11 rounded-lg py-2 text-sm font-semibold transition-all active:scale-[0.97] {status ===
               option.value
                 ? 'bg-coffee-700 text-white shadow-sm'
-                : 'text-coffee-600 hover:bg-coffee-100'}"
+                : 'text-coffee-600 hover:bg-coffee-100 active:bg-coffee-200'}"
               aria-pressed={status === option.value}
               onclick={() => (status = option.value as 'active' | 'inactive')}
             >
@@ -425,9 +425,9 @@
         <div class="flex rounded-xl border border-coffee-200 bg-cream p-1">
           <button
             type="button"
-            class="flex-1 rounded-lg py-2 text-sm font-semibold transition-all {is_public === 1
+            class="flex-1 min-h-11 rounded-lg py-2 text-sm font-semibold transition-all active:scale-[0.97] {is_public === 1
               ? 'bg-coffee-700 text-white shadow-sm'
-              : 'text-coffee-600 hover:bg-coffee-100'}"
+              : 'text-coffee-600 hover:bg-coffee-100 active:bg-coffee-200'}"
             aria-pressed={is_public === 1}
             onclick={() => (is_public = 1)}
           >
@@ -435,9 +435,9 @@
           </button>
           <button
             type="button"
-            class="flex-1 rounded-lg py-2 text-sm font-semibold transition-all {is_public === 0
+            class="flex-1 min-h-11 rounded-lg py-2 text-sm font-semibold transition-all active:scale-[0.97] {is_public === 0
               ? 'bg-coffee-700 text-white shadow-sm'
-              : 'text-coffee-600 hover:bg-coffee-100'}"
+              : 'text-coffee-600 hover:bg-coffee-100 active:bg-coffee-200'}"
             aria-pressed={is_public === 0}
             onclick={() => (is_public = 0)}
           >

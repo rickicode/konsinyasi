@@ -52,6 +52,7 @@ publicRoute.get('/warungs', async (c) => {
       product_name: products.name,
       qty_dropped: consignment_cycles.qty_dropped,
       qty_sold: consignment_cycles.qty_sold,
+      qty_return_damaged: consignment_cycles.qty_return_damaged,
       price_snapshot: consignment_cycles.price_snapshot,
       dropped_at: consignment_cycles.dropped_at,
     })
@@ -76,18 +77,22 @@ publicRoute.get('/warungs', async (c) => {
       // Skip warungs with no stock
       if (cycles.length === 0) return null;
 
-      // Calculate products - aggregate by product_id
+      // Calculate products - aggregate by product_id.
+      // Only count units still physically at the warung: dropped minus sold minus
+      // damaged pulled back (sold = dropped - remaining_good - damaged, so
+      // dropped - sold - damaged = remaining good at the warung).
       const productMap = new Map<string, { id: string; name: string; qty: number; price: number }>();
       
       cycles.forEach((cycle) => {
+        const available = Math.max(0, cycle.qty_dropped - cycle.qty_sold - cycle.qty_return_damaged);
         const existing = productMap.get(cycle.product_id);
         if (existing) {
-          existing.qty += cycle.qty_dropped;
+          existing.qty += available;
         } else {
           productMap.set(cycle.product_id, {
             id: cycle.product_id,
             name: cycle.product_name,
-            qty: cycle.qty_dropped,
+            qty: available,
             price: cycle.price_snapshot,
           });
         }
@@ -155,6 +160,7 @@ publicRoute.get('/warungs/:id', async (c) => {
       product_name: products.name,
       qty_dropped: consignment_cycles.qty_dropped,
       qty_sold: consignment_cycles.qty_sold,
+      qty_return_damaged: consignment_cycles.qty_return_damaged,
       price_snapshot: consignment_cycles.price_snapshot,
       dropped_at: consignment_cycles.dropped_at,
     })
@@ -169,14 +175,14 @@ publicRoute.get('/warungs/:id', async (c) => {
     );
 
   const cdnBase = c.env.PUBLIC_R2_CDN_URL || c.env.PUBLIC_API_BASE_URL || '';
-  // Build products list
+  // Build products list - available = dropped minus sold minus damaged pulled back
   const productsList = openCycles
     .map((cycle) => {
-      const available = cycle.qty_dropped - cycle.qty_sold;
+      const available = cycle.qty_dropped - cycle.qty_sold - cycle.qty_return_damaged;
       return {
         id: cycle.product_id,
         name: cycle.product_name,
-        available_qty: available,
+        available_qty: Math.max(0, available),
         price: cycle.price_snapshot,
         dropped_at: cycle.dropped_at,
       };

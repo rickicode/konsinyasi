@@ -113,7 +113,7 @@ describe('voidVisit', () => {
   });
 
   it('returns ConflictError when submission is missing', async () => {
-    const db = new StubDb([[], [changes(0)], []]);
+    const db = new StubDb([[], [], [changes(0)], []]);
     await expect(
       voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
@@ -121,14 +121,14 @@ describe('voidVisit', () => {
   });
 
   it('returns ConflictError when submission is already voided', async () => {
-    const db = new StubDb([[], [changes(0)], [{ ...committedSubmission, status: 'voided' }]]);
+    const db = new StubDb([[], [], [changes(0)], [{ ...committedSubmission, status: 'voided' }]]);
     await expect(
       voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
   });
 
   it('returns ConflictError when a newer committed visit exists', async () => {
-    const db = new StubDb([[], [changes(0)], [committedSubmission], [{ count: 1 }]]);
+    const db = new StubDb([[], [], [changes(0)], [committedSubmission], [{ count: 1 }]]);
     await expect(
       voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);
@@ -139,6 +139,7 @@ describe('voidVisit', () => {
     const droppedCycle = { id: 'cycle-dropped', picked_up_at: null };
     const db = new StubDb([
       [closedCycle, droppedCycle],
+      [], // submission lookup (not found, no prev visit lookup)
       [changes(1), changes(1), changes(1)],
       [],
       [],
@@ -152,8 +153,53 @@ describe('voidVisit', () => {
     expect(batchCalls[0]?.args).toBe(3);
   });
 
+  it('restores picked-up cycle state from the previous committed visit', async () => {
+    // Cycle was picked up before by visit key-0 (sold 3, 7 remaining) and then
+    // picked up again by this visit (key-1). Voiding key-1 must restore the
+    // earlier quantities instead of zeroing them.
+    const pickedCycle = { id: 'cycle-1', outlet_id: 'outlet-1', picked_up_at: '2026-01-02T00:00:00Z' };
+    const prevVisit = {
+      idempotency_key: 'key-0',
+      created_at: '2026-01-01T00:00:00Z',
+      response_json: JSON.stringify({
+        closed_cycles: [
+          {
+            cycle_id: 'cycle-1',
+            qty_sold: 3,
+            qty_remaining_good: 7,
+            qty_return_damaged: 0,
+            amount_collected: 30000,
+          },
+        ],
+        dropped_cycles: [],
+      }),
+    };
+    const db = new StubDb([
+      [pickedCycle], // allCycles
+      [{ outlet_id: 'outlet-1', created_at: '2026-01-02T00:00:00Z' }], // submission lookup
+      [prevVisit], // previous committed visit
+      [changes(1), changes(1)], // void update + cycle restore
+      [],
+      [],
+    ]);
+    await expect(
+      voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
+    ).resolves.toBeUndefined();
+
+    const setCalls = db.calls.filter((c) => c.op === 'set');
+    const cycleSet = setCalls[setCalls.length - 1];
+    const values = (cycleSet?.args as unknown[] | undefined)?.[0] as Record<string, unknown>;
+    expect(values.qty_sold).toBe(3);
+    expect(values.qty_remaining_good).toBe(7);
+    expect(values.qty_return_damaged).toBe(0);
+    expect(values.amount_collected).toBe(30000);
+    expect(values.picked_up_at).toBe('2026-01-01T00:00:00Z');
+    expect(values.visit_submission_id).toBe('key-0');
+    expect(values.status).toBe('open');
+  });
+
   it('rejects a second void even when select still sees committed', async () => {
-    const db = new StubDb([[], [changes(0)], [committedSubmission], [{ count: 0 }]]);
+    const db = new StubDb([[], [], [changes(0)], [committedSubmission], [{ count: 0 }]]);
     await expect(
       voidVisit(db as unknown as DrizzleD1Database<typeof schema>, owner, 'key-1', 'salah input')
     ).rejects.toBeInstanceOf(ConflictError);

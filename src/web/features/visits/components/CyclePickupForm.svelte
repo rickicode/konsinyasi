@@ -111,10 +111,11 @@ function computeSold(cycleId: string, qtyDropped: number) {
   return Math.max(0, qtyDropped - input.good - input.damaged);
 }
 
-function computeValid(cycleId: string, qtyDropped: number) {
-  const input = getInput(cycleId);
-  const total = input.good + input.damaged + computeSold(cycleId, qtyDropped);
-  return total === qtyDropped;
+function computeValid(cycle: VisitCycleState) {
+  // Remaining stock (good + damaged) can never exceed what was left at the
+  // warung after the previous visit — equivalent to sold never decreasing.
+  const input = getInput(cycle.id);
+  return input.good + input.damaged <= cycle.qty_dropped - cycle.qty_sold;
 }
 </script>
 
@@ -132,7 +133,8 @@ function computeValid(cycleId: string, qtyDropped: number) {
       {/if}
     </div>
     <p class="text-xs text-coffee-500 leading-relaxed">
-      Hitung sisa botol di warung. Sistem otomatis menghitung jumlah terjual.
+      Hitung sisa botol di warung. Sistem otomatis menghitung jumlah terjual. Angka sisa sudah
+      terisi dari catatan kunjungan sebelumnya.
     </p>
   </div>
 
@@ -207,7 +209,7 @@ function computeValid(cycleId: string, qtyDropped: number) {
                       </div>
                       <QtyStepper
                         value={getInput(cycle.id).good}
-                        max={cycle.qty_dropped - getInput(cycle.id).damaged}
+                        max={Math.max(0, cycle.qty_dropped - cycle.qty_sold - getInput(cycle.id).damaged)}
                         onChange={(value) => draft.setPickup(cycle.id, 'good', value)}
                         disabled={!editable}
                       />
@@ -217,11 +219,11 @@ function computeValid(cycleId: string, qtyDropped: number) {
                     <div class="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-coffee-100/50 shadow-xs">
                       <div class="min-w-0">
                         <p class="text-xs font-bold text-coffee-900">Sisa Kondisi Rusak</p>
-                        <p class="text-xs text-coffee-500">Kadaluwarsa / rusak</p>
+                        <p class="text-xs text-coffee-500">Kadaluwarsa / rusak — terisi dari catatan sebelumnya</p>
                       </div>
                       <QtyStepper
                         value={getInput(cycle.id).damaged}
-                        max={cycle.qty_dropped - getInput(cycle.id).good}
+                        max={Math.max(0, cycle.qty_dropped - cycle.qty_sold - getInput(cycle.id).good)}
                         onChange={(value) => draft.setPickup(cycle.id, 'damaged', value)}
                         disabled={!editable}
                       />
@@ -247,13 +249,13 @@ function computeValid(cycleId: string, qtyDropped: number) {
                   </div>
                 {/if}
 
-                {#if !computeValid(cycle.id, cycle.qty_dropped)}
+                {#if !computeValid(cycle)}
                   <div class="flex items-start gap-2 rounded-lg bg-red-50 p-3">
                     <Icon name="alert-triangle" size={16} class="mt-0.5 text-danger" />
                     <div>
-                      <p class="text-xs font-semibold text-danger">Jumlah tidak sesuai</p>
+                      <p class="text-xs font-semibold text-danger">Sisa melebihi stok fisik</p>
                       <p class="text-xs text-red-600">
-                        Sisa ({getInput(cycle.id).good + getInput(cycle.id).damaged}) + terjual ({computeSold(cycle.id, cycle.qty_dropped)}) harus sama dengan dititip ({cycle.qty_dropped})
+                        Sisa ({getInput(cycle.id).good + getInput(cycle.id).damaged}) tidak boleh melebihi stok di warung ({cycle.qty_dropped - cycle.qty_sold}).
                       </p>
                     </div>
                   </div>
@@ -276,7 +278,7 @@ function computeValid(cycleId: string, qtyDropped: number) {
                     </div>
                     <QtyStepper
                       value={totalInputGood}
-                      max={totalDropped - totalInputDamaged}
+                      max={Math.max(0, draft.getTotalPickupCapacityForCycles(productCycles) - totalInputDamaged)}
                       onChange={(value) => draft.setPickupForProduct(productCycles, 'good', value)}
                       disabled={!editable}
                     />
@@ -287,7 +289,7 @@ function computeValid(cycleId: string, qtyDropped: number) {
                     </div>
                     <QtyStepper
                       value={totalInputDamaged}
-                      max={totalDropped - totalInputGood}
+                      max={Math.max(0, draft.getTotalPickupCapacityForCycles(productCycles) - totalInputGood)}
                       onChange={(value) => draft.setPickupForProduct(productCycles, 'damaged', value)}
                       disabled={!editable}
                     />

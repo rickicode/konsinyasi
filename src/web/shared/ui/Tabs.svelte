@@ -30,10 +30,10 @@
         use:linkAction
         href={item.href}
         class={cn(
-          'flex-1 rounded-lg px-3 py-2 text-center text-sm font-semibold transition-colors min-h-11 flex items-center justify-center',
+          'flex-1 rounded-lg px-3 py-2 text-center text-sm font-semibold transition-all min-h-11 flex items-center justify-center active:scale-[0.97]',
           active
             ? 'bg-coffee-700 text-white shadow-sm'
-            : 'text-coffee-600 hover:bg-coffee-100 hover:text-coffee-800'
+            : 'text-coffee-600 hover:bg-coffee-100 hover:text-coffee-800 active:bg-coffee-200'
         )}
         aria-current={active ? 'page' : undefined}
         onclick={() => onClick(item.id)}
@@ -44,10 +44,10 @@
       <a
         href={item.href}
         class={cn(
-          'flex-1 rounded-lg px-3 py-2 text-center text-sm font-semibold transition-colors min-h-11 flex items-center justify-center',
+          'flex-1 rounded-lg px-3 py-2 text-center text-sm font-semibold transition-all min-h-11 flex items-center justify-center active:scale-[0.97]',
           active
             ? 'bg-coffee-700 text-white shadow-sm'
-            : 'text-coffee-600 hover:bg-coffee-100 hover:text-coffee-800'
+            : 'text-coffee-600 hover:bg-coffee-100 hover:text-coffee-800 active:bg-coffee-200'
         )}
         aria-current={active ? 'page' : undefined}
         onclick={() => onClick(item.id)}

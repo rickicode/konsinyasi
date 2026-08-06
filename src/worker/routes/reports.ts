@@ -331,8 +331,10 @@ reportsRoute.get('/staff', async (c) => {
       id: visit_submissions.idempotency_key,
       outlet_name: outlets.name,
       created_at: visit_submissions.created_at,
-      amount_collected: visit_submissions.amount_collected_total,
-      qty_sold: visit_submissions.qty_sold_total,
+      // Per-visit cash: the cumulative total would overstate what was actually
+      // collected when a cycle spans multiple visits.
+      amount_collected: visit_submissions.amount_collected_delta,
+      qty_sold: visit_submissions.qty_sold_delta,
     })
     .from(visit_submissions)
     .leftJoin(outlets, eq(visit_submissions.outlet_id, outlets.id))

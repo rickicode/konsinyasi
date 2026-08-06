@@ -24,7 +24,7 @@
   {href}
   use:linkAction
   class={cn(
-    'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors min-h-11 min-w-11',
+    'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors min-h-11 min-w-11 active:scale-95 active:bg-coffee-200',
     active
       ? 'bg-coffee-700 text-white shadow-sm'
       : 'text-coffee-600 hover:bg-coffee-100 hover:text-coffee-800',

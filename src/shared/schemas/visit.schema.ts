@@ -79,6 +79,9 @@ export const visitResultSchema = z.object({
   amount_collected_total: z.number(),
   qty_sold_total: z.number(),
   qty_remaining_total: z.number(),  // Good products stay at warung
+  // Per-visit deltas: cash/qty collected during THIS visit only.
+  amount_collected_delta: z.number().optional(),
+  qty_sold_delta: z.number().optional(),
 });
 
 export type VisitResult = z.infer<typeof visitResultSchema>;
@@ -101,6 +104,11 @@ export const visitCycleStateSchema = z.object({
   expiry_status: z.enum(['none', 'ok', 'expiring', 'expired']).optional(),
   hpp_snapshot: z.number().optional(),
   price_snapshot: z.number().optional(),
+  // Current stock state so the form can pre-fill pickups and validate that
+  // remaining counts never increase between visits.
+  qty_sold: z.number().int().nonnegative(),
+  qty_remaining_good: z.number().int().nonnegative(),
+  qty_return_damaged: z.number().int().nonnegative(),
 });
 
 export type VisitCycleState = z.infer<typeof visitCycleStateSchema>;

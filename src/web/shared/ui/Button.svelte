@@ -47,7 +47,7 @@
     success: 'bg-success text-white shadow-md hover:bg-success/90 active:bg-success/80',
   };
   const sizeClasses: Record<Size, string> = {
-    sm: 'min-h-9 min-w-9 px-3 py-2 text-sm',
+    sm: 'min-h-11 min-w-11 px-3 py-2 text-sm',
     md: 'min-h-11 min-w-11 px-4 py-2.5 text-base',
     lg: 'min-h-14 min-w-14 px-6 py-3 text-base',
   };

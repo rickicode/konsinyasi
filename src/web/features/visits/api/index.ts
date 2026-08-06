@@ -42,6 +42,8 @@ export interface VisitListItem {
   geofence_radius_m: number;
   geofence_override: boolean;
   amount_collected_total: number;
+  amount_collected_delta?: number;
+  qty_sold_delta?: number;
   qty_sold_total: number;
   qty_remaining_total: number;
   status: 'committed' | 'voided';
@@ -60,6 +62,8 @@ const visitListItemSchema = z.object({
   geofence_radius_m: z.number(),
   geofence_override: z.boolean(),
   amount_collected_total: z.number(),
+  amount_collected_delta: z.number().optional(),
+  qty_sold_delta: z.number().optional(),
   qty_sold_total: z.number(),
   qty_remaining_total: z.number(),
   status: z.enum(['committed', 'voided']),

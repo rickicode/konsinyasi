@@ -306,7 +306,6 @@ async function load() {
     const data = await res.json();
     warungs = data.warungs || [];
     renderList();
-    renderList();
     updateJsonLd();
 
     // Try to get location automatically
@@ -542,7 +541,7 @@ function renderList() {
     const dist = w._dist != null ? formatDist(w._dist) : null;
     const totalStock = w.products.reduce((sum, p) => sum + p.available_qty, 0);
     const thumbHtml = w.photo_url
-      ? `<img src="${esc(w.photo_url)}" alt="${esc(w.name)}" loading="lazy" decoding="async" class="warung-card__thumb-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      ? `<img src="${esc(w.photo_url)}" alt="${esc(w.name)}" width="56" height="56" loading="lazy" decoding="async" class="warung-card__thumb-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
       : '';
 
     const placeholderHtml = `

@@ -22,11 +22,12 @@
         type="button"
         role="tab"
         aria-selected={active === tab.key}
-        class="flex-1 rounded-xl px-2 py-2.5 text-xs font-bold transition-colors"
+        class="flex-1 min-h-11 rounded-xl px-2 py-2.5 text-xs font-bold transition-all active:scale-[0.97]"
         class:bg-coffee-700={active === tab.key}
         class:text-white={active === tab.key}
         class:text-coffee-600={active !== tab.key}
         class:hover:bg-coffee-100={active !== tab.key}
+		class:active:bg-coffee-200={active !== tab.key}
         onclick={() => onselect(tab.key)}
       >
         {tab.label}

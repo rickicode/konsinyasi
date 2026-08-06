@@ -169,7 +169,7 @@
             <span class="text-sm text-coffee-600">Total Setoran</span>
           </div>
           <span class="text-lg font-bold text-coffee-900">
-            {formatRupiah(visit.amount_collected_total)}
+            {formatRupiah(visit.amount_collected_delta ?? visit.amount_collected_total)}
           </span>
         </div>
       </div>

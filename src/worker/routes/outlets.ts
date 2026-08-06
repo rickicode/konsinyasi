@@ -9,6 +9,7 @@ import { AppError, ConflictError, ValidationError } from '../lib/errors.js';
 import { requirePermission } from '../lib/rbac.js';
 import { buildImageUrl, processImageUpload } from '../services/image-processing.js';
 import { validateUuidParam } from '../lib/validation.js';
+import { invalidateResourceCache } from '../lib/cache.js';
 
 function isCoordInvalid(lat: number, lng: number): boolean {
   return Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001;
@@ -211,6 +212,7 @@ outletsRoute.post('/', async (c) => {
   });
   const rows = await db.select(outletColumns).from(outlets).where(eq(outlets.id, id)).limit(1);
   const cdnBase = c.env.PUBLIC_R2_CDN_URL;
+  await invalidateResourceCache(new URL(c.req.url).origin, 'outlets');
   return c.json(pickOutlet(rows[0], cdnBase), 201);
 });
 
@@ -258,6 +260,7 @@ outletsRoute.patch('/:id', async (c) => {
   await db.update(outlets).set(setValues).where(eq(outlets.id, id));
   const rows = await db.select(outletColumns).from(outlets).where(eq(outlets.id, id)).limit(1);
   const cdnBase = c.env.PUBLIC_R2_CDN_URL;
+  await invalidateResourceCache(new URL(c.req.url).origin, 'outlets', [id]);
   return c.json(pickOutlet(rows[0], cdnBase));
 });
 
@@ -287,6 +290,7 @@ outletsRoute.delete('/:id', async (c) => {
       updated_at: new Date().toISOString(),
     })
     .where(eq(outlets.id, id));
+  await invalidateResourceCache(new URL(c.req.url).origin, 'outlets', [id]);
   return c.json({ ok: true });
 });
 
@@ -345,6 +349,7 @@ outletsRoute.post('/:id/photo', async (c) => {
     }
   }
   await db.update(outlets).set(updateValues).where(eq(outlets.id, id));
+  await invalidateResourceCache(new URL(c.req.url).origin, 'outlets', [id]);
   return c.json({ photo_key: uploaded.key, url: uploaded.url });
 });
 

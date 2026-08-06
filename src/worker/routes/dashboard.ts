@@ -148,8 +148,11 @@ dashboardRoute.get('/', async (c) => {
     const [todayRow] = await db
       .select({
         visits: sql<number>`count(*)`.as('visits'),
-        revenue: sql<number>`coalesce(sum(${visit_submissions.amount_collected_total}), 0)`.as('revenue'),
-        bottles_sold: sql<number>`coalesce(sum(${visit_submissions.qty_sold_total}), 0)`.as('bottles_sold'),
+        // Use per-visit deltas: amount_collected_total/qty_sold_total are
+        // cumulative snapshots and summing them across visits double-counts
+        // cycles that are picked up more than once.
+        revenue: sql<number>`coalesce(sum(${visit_submissions.amount_collected_delta}), 0)`.as('revenue'),
+        bottles_sold: sql<number>`coalesce(sum(${visit_submissions.qty_sold_delta}), 0)`.as('bottles_sold'),
       })
       .from(visit_submissions)
       .where(
@@ -178,8 +181,8 @@ dashboardRoute.get('/', async (c) => {
         .select({
           id: visit_submissions.idempotency_key,
           outlet_name: outlets.name,
-          amount: visit_submissions.amount_collected_total,
-          qty: visit_submissions.qty_sold_total,
+          amount: visit_submissions.amount_collected_delta,
+          qty: visit_submissions.qty_sold_delta,
           created_at: visit_submissions.created_at,
         })
         .from(visit_submissions)

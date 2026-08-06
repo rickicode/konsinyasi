@@ -134,11 +134,12 @@
             type="button"
             role="tab"
             aria-selected={activeTab === 'kunjungi'}
-            class="flex-1 rounded-xl px-2 py-2.5 text-xs font-bold transition-colors"
+            class="flex-1 min-h-11 rounded-xl px-2 py-2.5 text-xs font-bold transition-all active:scale-[0.97]"
             class:bg-coffee-700={activeTab === 'kunjungi'}
             class:text-white={activeTab === 'kunjungi'}
             class:text-coffee-600={activeTab !== 'kunjungi'}
             class:hover:bg-coffee-100={activeTab !== 'kunjungi'}
+			class:active:bg-coffee-200={activeTab !== 'kunjungi'}
             onclick={() => selectTab('kunjungi')}
           >
             Kunjungi
@@ -147,11 +148,12 @@
             type="button"
             role="tab"
             aria-selected={activeTab === 'riwayat'}
-            class="flex-1 rounded-xl px-2 py-2.5 text-xs font-bold transition-colors"
+            class="flex-1 min-h-11 rounded-xl px-2 py-2.5 text-xs font-bold transition-all active:scale-[0.97]"
             class:bg-coffee-700={activeTab === 'riwayat'}
             class:text-white={activeTab === 'riwayat'}
             class:text-coffee-600={activeTab !== 'riwayat'}
             class:hover:bg-coffee-100={activeTab !== 'riwayat'}
+			class:active:bg-coffee-200={activeTab !== 'riwayat'}
             onclick={() => selectTab('riwayat')}
           >
             Riwayat
@@ -175,12 +177,12 @@
             bind:value={search}
             onfocus={() => (searchFocused = true)}
             onblur={() => (searchFocused = false)}
-            class="w-full rounded-xl border border-coffee-200/80 bg-white/90 py-2.5 pl-10 pr-9 text-sm text-coffee-900 placeholder:text-coffee-300 transition-all focus:border-coffee-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-coffee-200/50"
+            class="w-full rounded-xl border border-coffee-200/80 bg-white/90 py-2.5 pl-10 pr-9 text-base text-coffee-900 placeholder:text-coffee-300 transition-all focus:border-coffee-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-coffee-200/50"
           />
           {#if search.trim()}
             <button
               type="button"
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-coffee-300 transition-colors hover:bg-coffee-50 hover:text-coffee-600"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 flex min-h-11 min-w-11 items-center justify-center rounded-lg text-coffee-300 transition-colors hover:bg-coffee-50 hover:text-coffee-600 active:bg-coffee-100"
               onclick={() => (search = '')}
               aria-label="Hapus pencarian"
             >
@@ -425,7 +427,7 @@
                     <!-- Amount & Arrow -->
                     <div class="flex flex-col items-end gap-1">
                       <span class="text-sm font-bold text-coffee-900">
-                        {formatRupiah(visit.amount_collected_total)}
+                        {formatRupiah(visit.amount_collected_delta ?? visit.amount_collected_total)}
                       </span>
                       <Icon
                         name="chevron-right"

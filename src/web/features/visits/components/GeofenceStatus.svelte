@@ -33,9 +33,11 @@
     gpsReady
       ? isInside
         ? 'border-emerald-300/80 bg-emerald-50/70 shadow-sm'
-        : canOverride
-          ? 'border-amber-300/80 bg-amber-50/70 shadow-sm'
-          : 'border-red-300/80 bg-red-50/70 shadow-sm'
+        : override
+          ? 'border-blue-300/80 bg-blue-50/70 shadow-sm'
+          : canOverride
+            ? 'border-amber-300/80 bg-amber-50/70 shadow-sm'
+            : 'border-red-300/80 bg-red-50/70 shadow-sm'
       : 'border-coffee-200 bg-cream/70 shadow-sm'
   );
 </script>
@@ -53,8 +55,14 @@
         </div>
       </div>
       {#if gpsReady}
-        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold shadow-2xs {isInside ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}">
-          {isInside ? 'Valid' : 'Luar Radius'}
+        <span
+          class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold shadow-2xs {isInside
+            ? 'bg-emerald-600 text-white'
+            : override
+              ? 'bg-blue-600 text-white'
+              : 'bg-red-600 text-white'}"
+        >
+          {isInside ? 'Valid' : override ? 'Override Aktif' : 'Luar Radius'}
         </span>
       {/if}
     </div>

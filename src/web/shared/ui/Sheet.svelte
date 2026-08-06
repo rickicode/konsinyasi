@@ -147,7 +147,7 @@
             e.stopPropagation();
             onClose();
           }}
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-coffee-500 transition-colors hover:bg-coffee-100 hover:text-coffee-700"
+          class="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-coffee-500 transition-colors hover:bg-coffee-100 hover:text-coffee-700 active:bg-coffee-200"
           aria-label="Tutup"
           type="button"
         >

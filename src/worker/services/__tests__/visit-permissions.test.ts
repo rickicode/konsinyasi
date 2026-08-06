@@ -68,16 +68,20 @@ const sampleVisitResult: VisitResult = {
   geofence_radius_m: 100,
   geofence_override: false,
   amount_collected_total: 5000,
+  amount_collected_delta: 5000,
   qty_sold_total: 1,
+  qty_sold_delta: 1,
   qty_remaining_total: 0,
   closed_cycles: [
     {
       cycle_id: 'cycle-1',
       product_name: 'Produk A',
       qty_sold: 1,
+      qty_sold_delta: 1,
       qty_remaining_good: 0,
       qty_return_damaged: 0,
       amount_collected: 5000,
+      amount_collected_delta: 5000,
     },
   ],
   dropped_cycles: [
@@ -132,15 +136,19 @@ describe('pickVisitResult', () => {
   it('redacts financial data for non-owner', () => {
     const result = pickVisitResult(sampleVisitResult, false);
     expect(result.closed_cycles[0].amount_collected).toBe(0);
+    expect(result.closed_cycles[0].amount_collected_delta).toBe(0);
     expect(result.dropped_cycles[0].price).toBe(0);
     expect(result.amount_collected_total).toBe(0);
+    expect(result.amount_collected_delta).toBe(0);
   });
 
   it('returns the full result for owner', () => {
     const result = pickVisitResult(sampleVisitResult, true);
     expect(result.closed_cycles[0].amount_collected).toBe(5000);
+    expect(result.closed_cycles[0].amount_collected_delta).toBe(5000);
     expect(result.dropped_cycles[0].price).toBe(3000);
     expect(result.amount_collected_total).toBe(5000);
+    expect(result.amount_collected_delta).toBe(5000);
   });
 
   it('returns a new object for non-owner without mutating the original', () => {

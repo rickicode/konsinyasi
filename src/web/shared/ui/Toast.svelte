@@ -87,7 +87,7 @@
     </div>
     <button
       onclick={onClose}
-      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-coffee-500 transition-colors hover:bg-black/5 hover:text-coffee-700"
+      class="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-coffee-500 transition-colors hover:bg-black/5 hover:text-coffee-700 active:bg-black/10"
       aria-label="Tutup notifikasi"
       type="button"
     >
