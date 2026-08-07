@@ -204,6 +204,12 @@ const jsonLd = {
   }
 </style>
 
+<script is:inline define:vars={{ apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '' }}>
+  // Must match index.astro — without it, API fetches would go to the Pages
+  // origin (kopi.hijitoko.com) and return an HTML page instead of JSON.
+  window.__API_BASE_URL__ = apiBaseUrl;
+</script>
+
 <script is:inline>
   const API_BASE = window.__API_BASE_URL__ || '';
 

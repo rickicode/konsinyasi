@@ -1,0 +1,4 @@
+# Cloudflare Pages redirects (wrangler.jsonc `redirects` is ignored by Pages)
+# Pages serves /produk (produk.html) directly; keep the trailing-slash URL working.
+/produk/  /produk  308
+/home     /        301

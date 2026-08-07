@@ -5,7 +5,11 @@ export default defineConfig({
   integrations: [sitemap()],
   site: 'https://kopi.hijitoko.com',
   output: 'static',
+  // `file` format + `never` trailing slash → pages served at /produk
+  // (produk.html), not redirected to /produk/ by Cloudflare Pages.
+  trailingSlash: 'never',
   build: {
+    format: 'file',
     outDir: 'dist',
     empty: true,
   },

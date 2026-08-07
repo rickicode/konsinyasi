@@ -1,0 +1,15 @@
+# Cloudflare Pages headers (wrangler.jsonc `headers` is ignored by Pages)
+# Security headers — previously configured in wrangler.jsonc but never applied.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(self)
+
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML: always revalidate so users never sit on stale pages (e.g. old scripts).
+/*.html
+  Cache-Control: no-cache
