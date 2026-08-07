@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { push } from 'svelte-spa-router';
+  import { push } from '@keenmate/svelte-spa-router';
   import LoginForm from '../components/LoginForm.svelte';
   import { getAuth } from '../stores/auth.svelte';
   import { getAppConfig } from '$lib/stores/app-config.svelte.js';

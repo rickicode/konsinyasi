@@ -1,5 +1,5 @@
 <script lang="ts">
-import { router, replace } from 'svelte-spa-router';
+import { replace, querystring } from '@keenmate/svelte-spa-router';
 import { allowedMasterSections, type MasterSection } from '$lib/role.js';
 import { getAuth } from '$lib/stores/auth.svelte.js';
 import MasterTabs from '../components/MasterTabs.svelte';
@@ -11,7 +11,7 @@ const auth = getAuth();
 const tabs = $derived(allowedMasterSections(auth.role ?? ''));
 
 const active = $derived.by((): MasterSection => {
-  const params = new URLSearchParams(router.querystring ?? '');
+  const params = new URLSearchParams(querystring() ?? '');
   const raw = params.get('tab') as MasterSection | null;
   if (raw && tabs.some((t) => t.key === raw)) return raw;
   return tabs[0]?.key ?? 'produk';

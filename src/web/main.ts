@@ -1,9 +1,16 @@
 import { mount } from 'svelte';
 import { registerSW } from 'virtual:pwa-register';
 import { pwaInfo } from 'virtual:pwa-info';
+import { setHashRoutingEnabled, setBasePath } from '@keenmate/svelte-spa-router';
 import { toast } from '$lib/stores/toast.svelte.js';
 import './app.css';
 import App from './App.svelte';
+
+// History mode: clean URLs (no #/ fragments). Requires the server to serve
+// index.html for all routes — already configured via wrangler.toml
+// `not_found_handling = "single-page-application"`.
+setHashRoutingEnabled(false);
+setBasePath(import.meta.env.BASE_URL || '/');
 
 if (pwaInfo) {
   console.log('[PWA] manifest path:', pwaInfo.webManifest.linkTag);

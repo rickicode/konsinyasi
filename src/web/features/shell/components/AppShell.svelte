@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { router } from 'svelte-spa-router';
+  import { location } from '@keenmate/svelte-spa-router';
   import OfflineBanner from '../../../shared/providers/OfflineBanner.svelte';
   import { getAuth } from '../../auth/stores/auth.svelte.js';
   import { reducedMotionClass } from '$lib/utils/animations.js';
@@ -17,7 +17,7 @@
 
   const auth = getAuth();
   const motionClass = $derived(reducedMotionClass());
-  const current = $derived(router.location ?? '/');
+  const current = $derived(location() ?? '/');
 
   const hideShellPaths = ['/login'];
   const isLogin = $derived(hideShellPaths.includes(current));

@@ -4,7 +4,7 @@
    * This file is kept for backward compatibility
    */
   import { onMount } from 'svelte';
-  import { replace } from 'svelte-spa-router';
+  import { replace } from '@keenmate/svelte-spa-router';
   import { getAuth } from '$lib/stores/auth.svelte.js';
 
   const auth = getAuth();

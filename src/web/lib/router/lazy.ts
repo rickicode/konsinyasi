@@ -1,6 +1,6 @@
-import { wrap } from 'svelte-spa-router/wrap';
+import { wrap } from '@keenmate/svelte-spa-router/wrap';
 import type { Component } from 'svelte';
-import type { RoutePrecondition } from 'svelte-spa-router';
+import type { RoutePrecondition } from '@keenmate/svelte-spa-router/wrap';
 
 /**
  * Helper for svelte-spa-router async route wrapping.

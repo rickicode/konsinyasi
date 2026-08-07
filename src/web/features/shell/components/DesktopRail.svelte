@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { link, router } from 'svelte-spa-router';
+  import { link, location } from '@keenmate/svelte-spa-router';
   import { getAuth } from '$lib/stores/auth.svelte';
   import { getAppConfig } from '$lib/stores/app-config.svelte.js';
   import { bottomNavTabs, topMenuTabs } from '$lib/role.js';
@@ -8,7 +8,7 @@
   const auth = getAuth();
   const appConfig = getAppConfig();
   const items = $derived([...bottomNavTabs(auth.role ?? ''), ...topMenuTabs(auth.role ?? '')]);
-  const current = $derived(router.location ?? '/');
+  const current = $derived(location() ?? '/');
 </script>
 
 <aside

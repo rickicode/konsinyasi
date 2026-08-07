@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { router } from 'svelte-spa-router';
+  import { location } from '@keenmate/svelte-spa-router';
   import OfflineBanner from '../../../shared/providers/OfflineBanner.svelte';
   import { reducedMotionClass } from '$lib/utils/animations.js';
   import StaffTopBar from './StaffTopBar.svelte';
@@ -14,7 +14,7 @@
   let { children }: Props = $props();
 
   const motionClass = $derived(reducedMotionClass());
-  const current = $derived(router.location ?? '/');
+  const current = $derived(location() ?? '/');
   const hideShellPaths = ['/login'];
   const isLogin = $derived(hideShellPaths.includes(current));
   const isVisitForm = $derived(current.startsWith('/kunjungan/'));

@@ -1,16 +1,6 @@
-<script module lang="ts">
-  // Seed the router with the location from the pathname BEFORE the <Router>
-  // component mounts. This makes deep links (/kunjungan/123) render the right
-  // page and keeps the address bar clean (no #/ fragments) even though
-  // svelte-spa-router navigates internally via the hash.
-  import { initCleanUrl } from './lib/router/clean-url.js';
-
-  initCleanUrl();
-</script>
-
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Router, { router } from 'svelte-spa-router';
+  import { Router, location, querystring } from '@keenmate/svelte-spa-router';
   import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
   import { setAuthContext, auth } from './lib/stores/auth.svelte';
   import { setNetworkContext, network } from './lib/stores/network.svelte';
@@ -45,7 +35,7 @@
   // page title below updates on every in-app navigation, deep link and
   // back/forward traversal.
   const currentRoute = $derived(
-    router.location + (router.querystring ? `?${router.querystring}` : '')
+    location() + (querystring() ? `?${querystring()}` : '')
   );
 
   function updateFavicon(logoUrl: string | null) {

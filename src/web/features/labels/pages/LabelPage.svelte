@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { link } from 'svelte-spa-router';
+  import { link } from '@keenmate/svelte-spa-router';
   import { Plus, Tag, Trash2, Printer, Search, X } from 'lucide-svelte';
   import DatePicker from '../../../shared/ui/DatePicker.svelte';
   import { cn } from '$lib/utils/cn.js';

@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { link, router } from 'svelte-spa-router';
+  import { link, location } from '@keenmate/svelte-spa-router';
   import { getAuth } from '$lib/stores/auth.svelte';
   import { bottomNavTabs } from '$lib/role.js';
   import Icon from '../../../shared/ui/icons/Icon.svelte';
 
   const auth = getAuth();
   const items = $derived(bottomNavTabs(auth.role ?? ''));
-  const current = $derived(router.location ?? '/');
+  const current = $derived(location() ?? '/');
 </script>
 
 <nav

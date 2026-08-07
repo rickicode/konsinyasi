@@ -74,8 +74,8 @@ Setiap halaman sekarang memiliki title yang unik di browser tab.
 ### How it works:
 
 1. User navigates to a route (`push` / `replace` / `use:link` / back-forward)
-2. The router's reactive `location` changes (`src/web/lib/router/clean-url.ts` keeps the address bar clean — no `#/` fragments)
-3. `App.svelte` derives the current route from `router.location` and calls `updatePageTitle()`
+2. The router (`@keenmate/svelte-spa-router`, history mode) updates the URL bar with clean paths — no `#/` fragments (configured in `main.ts` via `setHashRoutingEnabled(false)`)
+3. `App.svelte` derives the current route from `location()` and calls `updatePageTitle()`
 4. Document title is updated
 5. TopBar shows the same title
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createQuery } from '@tanstack/svelte-query';
   import { ArrowLeft, Package, RefreshCw, Store } from 'lucide-svelte';
-  import { link } from 'svelte-spa-router';
+  import { link } from '@keenmate/svelte-spa-router';
   import { productAnalyticsQueryOptions } from '../api/index.js';
   import { analyticsFilters } from '../stores/analytics-filters.svelte.js';
   import Card from '../../../shared/ui/Card.svelte';
@@ -10,10 +10,11 @@
   import { formatRupiah, formatDate } from '$lib/utils/format.js';
 
   interface Props {
-    id: string;
+    routeParams?: Record<string, string>;
   }
 
-  let { id }: Props = $props();
+  let { routeParams = {} }: Props = $props();
+  const id = $derived(routeParams.id ?? '');
 
   const filters = $derived(analyticsFilters.filters);
   const query = createQuery(() => productAnalyticsQueryOptions(id, filters));

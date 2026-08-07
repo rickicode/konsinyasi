@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@keenmate/svelte-spa-router':
+        specifier: ^5.3.0
+        version: 5.3.0(svelte@5.56.8(@typescript-eslint/types@8.66.0))
       '@tanstack/svelte-query':
         specifier: ^6.0.0
         version: 6.1.38(svelte@5.56.8(@typescript-eslint/types@8.66.0))
@@ -29,9 +32,6 @@ importers:
       lucide-svelte:
         specifier: ^1.0.0
         version: 1.0.1(svelte@5.56.8(@typescript-eslint/types@8.66.0))
-      svelte-spa-router:
-        specifier: ^5.1.1
-        version: 5.1.1(svelte@5.56.8(@typescript-eslint/types@8.66.0))
       tailwind-merge:
         specifier: 3.6.0
         version: 3.6.0
@@ -1595,6 +1595,11 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@keenmate/svelte-spa-router@5.3.0':
+    resolution: {integrity: sha512-WpQzW4tXXQRlENJ76G4nnVhGFv0b0RZNeZ5YO3xJP++uPJGKGboAlPEtJUfwWGMnNysUJpqq2BNg6qHLzp7KWg==}
+    peerDependencies:
+      svelte: ^5.0.0
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     resolution: {integrity: sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==}
@@ -3591,11 +3596,6 @@ packages:
       svelte:
         optional: true
 
-  svelte-spa-router@5.1.1:
-    resolution: {integrity: sha512-/9PiiyS2jQIXlP+NlKRcPl/Bgwm6WTCTmJq8TZw5IShEbozwcfpX2V3YEL4lAVgJJ2Ni+ipAH7aYVEupeNwtHA==}
-    peerDependencies:
-      svelte: ^5.0.0
-
   svelte-toolbelt@0.10.6:
     resolution: {integrity: sha512-YWuX+RE+CnWYx09yseAe4ZVMM7e7GRFZM6OYWpBKOb++s+SQ8RBIMMe+Bs/CznBMc0QPLjr+vDBxTAkozXsFXQ==}
     engines: {node: '>=18', pnpm: '>=8.7.0'}
@@ -5299,6 +5299,11 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@keenmate/svelte-spa-router@5.3.0(svelte@5.56.8(@typescript-eslint/types@8.66.0))':
+    dependencies:
+      regexparam: 2.0.2
+      svelte: 5.56.8(@typescript-eslint/types@8.66.0)
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
@@ -7415,11 +7420,6 @@ snapshots:
       postcss-selector-parser: 7.1.4
       semver: 7.8.5
     optionalDependencies:
-      svelte: 5.56.8(@typescript-eslint/types@8.66.0)
-
-  svelte-spa-router@5.1.1(svelte@5.56.8(@typescript-eslint/types@8.66.0)):
-    dependencies:
-      regexparam: 2.0.2
       svelte: 5.56.8(@typescript-eslint/types@8.66.0)
 
   svelte-toolbelt@0.10.6(svelte@5.56.8(@typescript-eslint/types@8.66.0)):

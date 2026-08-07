@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
-import { push } from 'svelte-spa-router';
+import { push } from '@keenmate/svelte-spa-router';
   import { getAuth } from '$lib/stores/auth.svelte.js';
   import { useGeolocation, formatAccuracy } from '$lib/stores/geolocation.svelte.js';
   import { outletsInfiniteQueryOptions } from '../api/index.js';

@@ -1,16 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { link } from 'svelte-spa-router';
+  import { link } from '@keenmate/svelte-spa-router';
   import { ArrowLeft, Printer, Minus, Plus } from 'lucide-svelte';
   import { useToast } from '$lib/stores/toast.svelte.js';
   import { fetchBatch, labelGenerateUrl, type ProductBatch } from '../api/index.js';
 
   type Props = {
-    params?: Record<string, string>;
+    routeParams?: Record<string, string>;
   };
 
-  let { params = {} }: Props = $props();
-  const batchId = $derived(params.batchId ?? '');
+  let { routeParams = {} }: Props = $props();
+  const batchId = $derived(routeParams.batchId ?? '');
 
   const toast = useToast();
 

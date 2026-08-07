@@ -37,7 +37,7 @@
 | Mobile TODOs Plan              | ✅ Selesai | `mobile/docs/MOBILE_UI_SEPARATION_TODOS.md`                 |
 | Image Processing Service       | ✅ Selesai | `src/worker/services/image-processing.ts`                   |
 | Product Photo Upload           | ✅ Selesai | `POST/DELETE /api/products/:id/photo` + UI                   |
-| Clean URLs (hapus #)           | ✅ Selesai | `src/web/lib/router/clean-url.ts` + integration test          |
+| Clean URLs (hapus #)           | ✅ Selesai | Migrasi `@keenmate/svelte-spa-router` history mode + 7 test   |
 | Brand name konsisten           | ✅ Selesai | `page-title.ts` + `PlaceCoffeePage`                          |
 | FormattedInput untuk settings  | ✅ Selesai | `src/web/shared/ui/FormattedInput.svelte`                    |
 | Harga resep per item           | ✅ Selesai | `RecipeEditor.svelte`                                        |

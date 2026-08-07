@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { push } from 'svelte-spa-router';
+  import { push } from '@keenmate/svelte-spa-router';
   import Button from '../../../shared/ui/Button.svelte';
 </script>
 

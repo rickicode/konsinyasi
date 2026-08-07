@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { router, replace } from 'svelte-spa-router';
+  import { replace, location } from '@keenmate/svelte-spa-router';
   import { getAuth } from '$lib/stores/auth.svelte';
 
   type Props = {
@@ -12,7 +12,7 @@
   let { children, publicPaths = ['/login'] }: Props = $props();
 
   const auth = $derived(getAuth());
-  const current = $derived(router.location ?? '/');
+  const current = $derived(location() ?? '/');
   const isPublic = $derived(publicPaths.includes(current));
 
   $effect(() => {

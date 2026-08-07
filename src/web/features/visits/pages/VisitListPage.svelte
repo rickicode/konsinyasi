@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
-  import { router, replace, push } from 'svelte-spa-router';
+  import { replace, push, location, querystring } from '@keenmate/svelte-spa-router';
   import { outletsInfiniteQueryOptions } from '../../outlets/api/index.js';
   import { visitHistoryInfiniteQueryOptions } from '../api/index.js';
   import type { VisitListItem } from '../api/index.js';
@@ -22,7 +22,7 @@
 
   // --- Tab state via URL query param ---
   const activeTab = $derived.by((): VisitTab => {
-    const params = new URLSearchParams(router.querystring ?? '');
+    const params = new URLSearchParams(querystring() ?? '');
     const raw = params.get('tab') as VisitTab | null;
     if (raw === 'riwayat') return 'riwayat';
     return 'kunjungi';

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createQuery } from '@tanstack/svelte-query';
-  import { link } from 'svelte-spa-router';
+  import { link } from '@keenmate/svelte-spa-router';
   import {
     BarChart3,
     TrendingUp,

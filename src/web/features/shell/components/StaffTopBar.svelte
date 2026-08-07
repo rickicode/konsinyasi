@@ -1,5 +1,5 @@
 <script lang="ts">
-import { link, pop, push, router } from 'svelte-spa-router';
+import { link, pop, push, location } from '@keenmate/svelte-spa-router';
 import { ArrowLeft, Menu } from 'lucide-svelte';
 import { getAuth } from '$lib/stores/auth.svelte.js';
 import { getPageTitle } from '$lib/utils/page-title.js';
@@ -14,7 +14,7 @@ let { showBack = false }: Props = $props();
 let menuOpen = $state(false);
 
 const auth = getAuth();
-const current = $derived(router.location ?? '/');
+const current = $derived(location() ?? '/');
 const pageTitle = $derived(getPageTitle(current));
 
 type MenuItem = {

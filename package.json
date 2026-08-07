@@ -22,6 +22,7 @@
     "test:e2e:install": "playwright install --with-deps"
   },
   "dependencies": {
+    "@keenmate/svelte-spa-router": "^5.3.0",
     "@tanstack/svelte-query": "^6.0.0",
     "bits-ui": "^2.18.0",
     "clsx": "2.1.1",
@@ -29,7 +30,6 @@
     "hono": "^4.13.0",
     "leaflet": "^1.9.4",
     "lucide-svelte": "^1.0.0",
-    "svelte-spa-router": "^5.1.1",
     "tailwind-merge": "3.6.0",
     "zod": "^3.24.0"
   },

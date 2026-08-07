@@ -1,5 +1,5 @@
-import { replace } from 'svelte-spa-router';
-import type { RoutePrecondition } from 'svelte-spa-router';
+import { replace } from '@keenmate/svelte-spa-router';
+import type { RoutePrecondition } from '@keenmate/svelte-spa-router/wrap';
 import { auth } from '$lib/stores/auth.svelte';
 
 /**

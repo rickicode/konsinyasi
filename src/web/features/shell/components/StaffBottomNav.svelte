@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { link, router } from 'svelte-spa-router';
+  import { link, location } from '@keenmate/svelte-spa-router';
   import Icon from '../../../shared/ui/icons/Icon.svelte';
 
   type NavItem = {
@@ -16,7 +16,7 @@
     { path: '/profil', label: 'Profil', icon: 'user' },
   ];
 
-  const current = $derived(router.location ?? '/');
+  const current = $derived(location() ?? '/');
 </script>
 
 <nav

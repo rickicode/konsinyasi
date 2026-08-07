@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { link } from 'svelte-spa-router';
+  import { link } from '@keenmate/svelte-spa-router';
   import { BarChart3, Users, Settings, Home, FileText, Package, Store, Boxes } from 'lucide-svelte';
   import Card from '../../../shared/ui/Card.svelte';
 

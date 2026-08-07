@@ -3,18 +3,17 @@
 ## 🔴 Critical Issues
 
 ### 1. Routing Masih Hash-Based (`/#/`)
-**Status:** ✅ Fixed (clean-URL sync layer)
+**Status:** ✅ Fixed (migrasi ke history-mode router)
 **Problem:** App masih menggunakan `/#/warung` bukan `/warung`
 **Root Cause:** svelte-spa-router v5.x adalah hash-based by design — tidak ada opsi `useHash={false}` / history mode.
-**Fix Applied:**
-- `src/web/lib/router/clean-url.ts` (baru): sync layer yang menyimpan hash routing internal tapi membersihkan URL bar:
-  - Deep link `/kunjungan/123` langsung render halaman benar (router di-seed dari pathname)
-  - Legacy `#/...` di-rewrite ke URL bersih
-  - Back/forward antar URL bersih tetap bekerja (popstate listener)
-- `App.svelte`: `initCleanUrl()` dipanggil di `<script module>`; prop `useHash={false}` yang inert dihapus; page title sekarang dari `router.location` (bukan `window.location.hash`)
-- Semua link `#/analytics/...` di 3 halaman analytics diganti `/analytics/...` + `use:link`
-- `wrangler.toml` sudah punya `not_found_handling = "single-page-application"` ✓
-- Worker fallback serve index.html untuk non-API routes ✓
+**Fix Applied (sesi 2026-08-07):**
+- **Migrasi penuh ke `@keenmate/svelte-spa-router` v5.3.0** (router Svelte 5 runes, dual-mode hash/history):
+  - `main.ts`: `setHashRoutingEnabled(false)` + `setBasePath()` → URL 100% bersih, `#` tidak pernah muncul di address bar
+  - `clean-url.ts` + spec-nya **dihapus total** — tidak ada lagi kode legacy `#/` di repo
+  - Semua import `svelte-spa-router` → `@keenmate/svelte-spa-router` (30 file)
+  - API migration: `router.location` → `location()`, `router.querystring` → `querystring()`, prop route `params` → `routeParams` (5 halaman)
+  - `wrangler.toml` sudah punya `not_found_handling = "single-page-application"` ✓ (tidak berubah)
+  - Test baru `history-mode.integration.spec.ts` (7 test): deep-link, push/replace clean URL, routeParams, popstate, catch-all — 261/261 hijau
 
 ### 2. Brand Name Berubah-Ubah
 **Status:** ✅ Fixed
@@ -134,4 +133,4 @@ Yang TERSISA sebagai perbaikan sah: `try/finally` — jaring pengaman untuk non-
 - Cache invalidation bisa lebih granular
 - Error handling bisa lebih konsisten
 - Perlu integration tests untuk critical flows
-- Pertimbangkan migrasi ke router ber-history-mode native (mis. `@keenmate/svelte-spa-router` fork) jika ingin href DOM yang benar-benar bersih
+- ~~Pertimbangkan migrasi ke router ber-history-mode native~~ ✅ DONE (sesi 2026-08-07): migrasi ke `@keenmate/svelte-spa-router` history mode — URL & href DOM bersih tanpa `#`

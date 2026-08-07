@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
-  import { push } from 'svelte-spa-router';
+  import { push } from '@keenmate/svelte-spa-router';
   import { getAuth } from '$lib/stores/auth.svelte.js';
   import {
     useGeolocation,
@@ -20,17 +20,17 @@
   import Icon from '../../../shared/ui/icons/Icon.svelte';
 
   type Props = {
-    params?: Record<string, string>;
+    routeParams?: Record<string, string>;
   };
 
-  let { params = {} }: Props = $props();
+  let { routeParams = {} }: Props = $props();
 
   const queryClient = useQueryClient();
   const auth = getAuth();
   const toast = useToast();
   const geolocation = useGeolocation();
 
-  const id = $derived(params.id ?? '');
+  const id = $derived(routeParams.id ?? '');
   const detailQuery = createQuery(() => outletDetailQueryOptions(id));
   const outlet = $derived(detailQuery.data);
 

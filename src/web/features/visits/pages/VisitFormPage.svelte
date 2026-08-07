@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
   import { onMount } from 'svelte';
-  import { push } from 'svelte-spa-router';
+  import { push } from '@keenmate/svelte-spa-router';
   import { productPickerQueryOptions } from '../../products/api/index.js';
   import { queryKeys } from '$lib/api/query-keys.js';
   import { useGeolocation } from '$lib/stores/geolocation.svelte.js';
@@ -31,10 +31,10 @@
   import TextArea from '../../../shared/ui/TextArea.svelte';
 
   type Props = {
-    params?: Record<string, string>;
+    routeParams?: Record<string, string>;
   };
 
-  let { params = {} }: Props = $props();
+  let { routeParams = {} }: Props = $props();
 
   const auth = getAuth();
   const toast = useToast();
@@ -43,7 +43,7 @@
   const geolocation = useGeolocation();
   const draft = createVisitDraftStore();
 
-  const outletId = $derived(params.outletId ?? params.id ?? '');
+  const outletId = $derived(routeParams.outletId ?? routeParams.id ?? '');
   const prepQuery = createQuery(() => visitPrepQueryOptions(outletId));
   const pickerQuery = createQuery(() => productPickerQueryOptions());
   const submitMutation = createMutation(() => submitVisitMutationOptions());

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { link, pop, push, router } from 'svelte-spa-router';
+import { link, pop, push, location } from '@keenmate/svelte-spa-router';
 import { onMount } from 'svelte';
 import { ArrowLeft, Menu } from 'lucide-svelte';
 import { getAuth } from '$lib/stores/auth.svelte';
@@ -19,7 +19,7 @@ let menuOpen = $state(false);
 const auth = getAuth();
 const appConfig = getAppConfig();
 const menuItems = $derived(topMenuTabs(auth.role ?? ''));
-const current = $derived(router.location ?? '/');
+const current = $derived(location() ?? '/');
 const pageTitle = $derived(getPageTitle(current));
 const roleLabel = $derived(
 	auth.role === 'owner' ? 'Pemilik' : auth.role === 'staff' ? 'Staff Lapangan' : ''
