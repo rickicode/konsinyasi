@@ -9,7 +9,7 @@
           id="brand-logo-img" 
           src="" 
           alt="Logo" 
-          style="display: none; width: 100%; height: 100%; object-fit: contain; border-radius: 10px;"
+          style="display: none; width: 100%; height: 100%; object-fit: contain;"
           onerror="this.style.display='none'; document.getElementById('brand-logo-fallback').style.display='';"
         />
         <div id="brand-logo-fallback" class="logo-fallback">
@@ -57,11 +57,12 @@
     text-decoration: none;
     color: var(--coffee-800);
   }
+  /* The container has NO background on purpose: when a real (transparent)
+     brand logo is loaded, it must sit on the clean header with no brown box.
+     The brown chip belongs to the fallback icon only. */
   .logo-mark {
     width: 36px;
     height: 36px;
-    background: var(--coffee-700);
-    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -74,6 +75,8 @@
     justify-content: center;
     width: 100%;
     height: 100%;
+    background: var(--coffee-700);
+    border-radius: 10px;
   }
   .logo-text {
     font-size: 20px;
