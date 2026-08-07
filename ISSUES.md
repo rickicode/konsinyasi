@@ -35,15 +35,18 @@
 ## 🟡 UX Issues
 
 ### 4. FormattedInput untuk Semua Amount
-**Status:** Done untuk money fields & settings; QtyStepper sengaja tidak diubah
+**Status:** ✅ Done — semua input amount integer auto-format ribuan (10000 → 10.000)
 **Problem:** User mau semua input amount auto-format (10000 → 10.000)
-**Fix Applied:**
+**Fix Applied (sesi 2026-08-07):**
 - ProductForm & RawMaterialForm ✓ (sudah)
 - ReceiptPhotoUploader (amount bon) ✓ (sudah)
-- Settings: RadiusForm (geofence radius) → FormattedInput (prefix kosong)
-- Settings: cycle hours (jam kuning/merah) → FormattedInput (prefix kosong)
-- **Catatan deep-check:** `min`/`max` TIDAK dipakai di FormattedInput radius & jam — clamping saat mengetik membuat angka "ter-snap" (ketik 1 → jadi 20) dan display/value tidak sinkron. Validasi rentang tetap via submit (client error / schema worker).
-- VisitForm (kuantitas): TIDAK diubah — input qty pakai `QtyStepper` (+/−), bukan field amount; format ribuan di dalam stepper sempit (w-14) akan merusak UX. Reopen jika user tetap mau.
+- Settings: RadiusForm (radius) & cycle hours → FormattedInput (prefix kosong) ✓ (sudah)
+- **QtyStepper** (VisitForm drop qty, DropSheet titip, CyclePickupForm pickup) → display `toLocaleString('id-ID')`: angka mentah saat fokus, terformat saat blur/ketik. Input dilebarkan `w-14` → `w-20` agar muat "10.000".
+- **LabelPage** (jumlah batch) → FormattedInput (prefix kosong)
+- **LabelPrintPage** (jumlah label) → `QtyStepper` `min={1} max={1000}` (menggantikan tombol +/− manual + `type="number"`)
+- **UomManager** (faktor konversi) → state `number` + FormattedInput (prefix kosong); validasi integer > 0 tetap via submit
+- **Catatan deep-check:** `min`/`max` TIDAK dipakai di FormattedInput — clamping saat mengetik membuat angka "ter-snap" (ketik 1 → jadi 20) dan display/value tidak sinkron. Validasi rentang tetap via submit (client error / schema worker). QtyStepper mengecualikan ini: ia men-clamp value & display secara konsisten (bounds dari props `min`/`max`).
+- **Dikecualikan (bukan amount):** RecipeEditor kuantitas (mendukung desimal `step="any"` — format ribuan akan merusak 2.5 → 25) dan OutletFormSheet latitude/longitude (koordinat desimal). Reopen jika user tetap mau.
 
 ### 5. Harga Resep Per Item Tidak Muncul
 **Status:** ✅ Fixed
@@ -122,14 +125,14 @@ Yang TERSISA sebagai perbaikan sah: `try/finally` — jaring pengaman untuk non-
 1. **[DONE]** Fix routing ke clean URLs (hapus #)
 2. **[DONE]** Fix brand name consistency
 3. **[DONE]** Hapus text "Tarik ke bawah"
-4. **[DONE]** FormattedInput untuk semua amount (kecuali QtyStepper — lihat Issue 4)
+4. **[DONE]** FormattedInput untuk semua amount integer (QtyStepper, Label, LabelPrint, UomManager ikut; RecipeEditor & koordinat dikecualikan — lihat Issue 4)
 5. **[DONE]** Harga per item di recipe editor
 
 ---
 
 ## 🔧 Technical Debt
 
-- QtyStepper masih tampilkan angka mentah (tanpa ribuan separator) — by design
+- RecipeEditor kuantitas resep & lat/lng outlet sengaja tidak diformat ribuan (mendukung desimal) — lihat Issue 4
 - Cache invalidation bisa lebih granular
 - Error handling bisa lebih konsisten
 - Perlu integration tests untuk critical flows

@@ -57,12 +57,6 @@ function calculateUnitPrice(index: number): number | null {
   return Math.round(material.price_per_base_unit * (uom.multiplier / baseUom.multiplier));
 }
 
-const totalHpp = $derived(
-  lines.reduce((sum, _, i) => {
-    const price = calculateLinePrice(i);
-    return sum + (price ?? 0);
-  }, 0)
-);
 const selectedMaterials = $derived(
   lines.map((line) => materialById[line.raw_material_id] ?? null)
 );
@@ -248,13 +242,6 @@ $effect(() => {
       {/each}
     </ul>
   {/if}
-{#if lines.length > 0 && totalHpp > 0}
-  <div class="rounded-xl border border-coffee-200 bg-coffee-50 p-3 flex items-center justify-between">
-    <span class="text-sm font-medium text-coffee-700">Total HPP</span>
-    <span class="text-base font-bold text-coffee-900">{formatRupiah(totalHpp)}</span>
-  </div>
-{/if}
-
 <RawMaterialPicker
   open={pickerOpen}
   selectedId={pickerSelectedId}

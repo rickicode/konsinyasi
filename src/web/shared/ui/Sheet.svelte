@@ -79,13 +79,15 @@
 <svelte:window onkeydown={handleKeyDown} />
 {#if open}
   <div
+    role="presentation"
     class="fixed inset-0 z-[60] flex {fullscreen
       ? 'items-stretch'
       : 'items-end justify-center lg:items-center'} bg-coffee-950/50 backdrop-blur-sm"
     transition:fade={{ duration: 150 }}
-    style:pointer-events={persistent ? 'none' : undefined}
-    aria-hidden={persistent ? 'true' : undefined}
     onclick={(e) => {
+      // Backdrop always captures clicks so the page behind a modal can never be
+      // interacted with. For `persistent` sheets (forms with unsaved data) the
+      // click does NOT close — the user must close via the X / form buttons.
       if (!persistent && !fullscreen && e.target === e.currentTarget) {
         onClose();
       }

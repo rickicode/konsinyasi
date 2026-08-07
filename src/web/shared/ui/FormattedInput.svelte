@@ -28,7 +28,11 @@ let {
   disabled = false,
   readonly = false,
   required = false,
-  value = $bindable(0),
+  // NOTE: no fallback value. A fallback (e.g. $bindable(0)) combined with a
+  // parent that binds `bind:value={x}` where x is `undefined` throws
+  // `props_invalid_value` at runtime in Svelte 5. All callers bind their own
+  // state, and an undefined value is handled gracefully below.
+  value = $bindable<number | undefined>(),
   class: className = '',
   prefix = 'Rp',
   min,
@@ -39,15 +43,9 @@ let displayValue = $state('');
 let isFocused = $state(false);
 
 // Format number with thousand separators
-function formatNumber(num: number): string {
-  if (isNaN(num) || num === 0) return '';
+function formatNumber(num: number | undefined): string {
+  if (num === undefined || num === null || isNaN(num) || num === 0) return '';
   return num.toLocaleString('id-ID');
-}
-
-// Parse formatted string back to number
-function parseNumber(str: string): number {
-  const cleaned = str.replace(/[^0-9]/g, '');
-  return cleaned === '' ? 0 : parseInt(cleaned, 10);
 }
 
 // Initialize display value
@@ -82,7 +80,7 @@ function handleInput(e: Event) {
 function handleFocus() {
   isFocused = true;
   // Show raw number while editing
-  displayValue = value === 0 ? '' : String(value);
+  displayValue = value === undefined || value === null || value === 0 ? '' : String(value);
 }
 
 function handleBlur() {

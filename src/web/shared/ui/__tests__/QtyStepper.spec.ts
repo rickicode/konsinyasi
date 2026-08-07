@@ -74,4 +74,32 @@ describe('QtyStepper', () => {
     );
     expect((screen.getByDisplayValue('5') as HTMLInputElement).disabled).toBe(true);
   });
+
+  it('formats large values with thousand separators', () => {
+    render(QtyStepper, { props: { value: 12000 } });
+    expect(screen.getByDisplayValue('12.000')).toBeTruthy();
+  });
+
+  it('formats typed input with thousand separators', async () => {
+    render(QtyStepper, { props: { value: 0 } });
+    const input = screen.getByDisplayValue('0');
+    await fireEvent.input(input, { target: { value: '10000' } });
+    expect(screen.getByDisplayValue('10.000')).toBeTruthy();
+  });
+
+  it('shows the raw value while focused and the formatted value on blur', async () => {
+    render(QtyStepper, { props: { value: 12000 } });
+    const input = screen.getByDisplayValue('12.000');
+    await fireEvent.focus(input);
+    expect(screen.getByDisplayValue('12000')).toBeTruthy();
+    await fireEvent.blur(input);
+    expect(screen.getByDisplayValue('12.000')).toBeTruthy();
+  });
+
+  it('keeps the formatted display when the bound value changes externally', async () => {
+    render(QtyStepper, { props: { value: 999 } });
+    expect(screen.getByDisplayValue('999')).toBeTruthy();
+    await fireEvent.click(screen.getByRole('button', { name: 'Tambah' }));
+    expect(screen.getByDisplayValue('1.000')).toBeTruthy();
+  });
 });

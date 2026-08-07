@@ -3,6 +3,7 @@
   import { link } from '@keenmate/svelte-spa-router';
   import { Plus, Tag, Trash2, Printer, Search, X } from 'lucide-svelte';
   import DatePicker from '../../../shared/ui/DatePicker.svelte';
+  import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
   import { cn } from '$lib/utils/cn.js';
   import { useToast } from '$lib/stores/toast.svelte.js';
   import {
@@ -10,6 +11,7 @@
     fetchProducts,
     createBatch,
     deleteBatch,
+    labelGenerateUrl,
     type ProductBatch,
     type ProductPicker,
     type CreateBatchInput,
@@ -29,11 +31,9 @@
   let showPrintModal = $state(false);
   let selectedBatch = $state<ProductBatch | null>(null);
   let printTemplate = $state<'a4' | 'thermal'>('a4');
-  let hideTitle = $state(false);
 
   // Form state
   let formProductId = $state('');
-  let formBatchNumber = $state('');
   let formProductionDate = $state(todayStr());
   let formExpiredDate = $state(todayPlusDays(4));
   let formQuantity = $state(0);
@@ -100,7 +100,6 @@
 
   function resetForm() {
     formProductId = '';
-    formBatchNumber = '';
     formProductionDate = todayStr();
     formExpiredDate = todayPlusDays(4);
     formQuantity = 0;
@@ -115,52 +114,9 @@
   function handlePrint() {
     if (!selectedBatch) return;
 
-    const batch = selectedBatch;
-    const isThermal = printTemplate === 'thermal';
-    const prodDate = formatDateShort(batch.production_date);
-    const expDate = formatDateShort(batch.expired_date);
-
-    const fontSize = isThermal ? '16px' : '20px';
-    const smallFont = isThermal ? '13px' : '16px';
-    const padding = isThermal ? '8px 10px' : '14px 18px';
-    const margin = isThermal ? '3px' : '5px';
-    const width = isThermal ? 'width:58mm;' : '';
-
-    const labelContent = [
-      hideTitle ? '' : `<div style="font-size:${fontSize};font-weight:800;margin-bottom:6px;line-height:1.2">${batch.product_name}</div>`,
-      batch.batch_number ? `<div style="font-size:${smallFont};font-weight:600;margin-bottom:4px;color:#222">${batch.batch_number}</div>` : '',
-      `<div style="font-size:${fontSize};font-weight:800;margin-bottom:6px;line-height:1.2">${batch.product_name}</div>`,
-      batch.batch_number ? `<div style="font-size:${smallFont};font-weight:600;margin-bottom:4px;color:#222">${batch.batch_number}</div>` : '',
-      `<div style="font-size:${smallFont};font-weight:600;color:#222;line-height:1.5">Prod: ${prodDate}</div>`,
-      `<div style="font-size:${smallFont};font-weight:600;color:#222;line-height:1.5">Exp: ${expDate}</div>`,
-    ].join('');
-
-    const labelsHtml = Array(12).fill(
-      `<div style="border:1.5px dashed #888;padding:${padding};margin:${margin};text-align:center;display:inline-block;vertical-align:top;page-break-inside:avoid;${width}">${labelContent}</div>`
-    ).join('');
-
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Label - ${batch.product_name}</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding:20px; background:#f5f5f5; }
-  @media print {
-    body { background:white; padding:0; }
-    @page { size: ${isThermal ? '58mm auto' : 'A4'}; margin: ${isThermal ? '3mm' : '10mm'}; }
-  }
-</style>
-</head>
-<body>${labelsHtml}</body>
-</html>`;
-
-    const win = window.open('about:blank', '_blank');
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-      setTimeout(() => win.print(), 300);
+    const printWindow = window.open(labelGenerateUrl(selectedBatch.id, 12, printTemplate), '_blank');
+    if (printWindow) {
+      printWindow.onload = () => printWindow.print();
     }
 
     showPrintModal = false;
@@ -194,7 +150,6 @@
     try {
       const input: CreateBatchInput = {
         product_id: formProductId,
-        batch_number: formBatchNumber || null,
         production_date: formProductionDate,
         expired_date: formExpiredDate,
         quantity: formQuantity,
@@ -288,12 +243,6 @@
           </div>
         </div>
 
-        <!-- Hide Title Option -->
-        <label class="mb-5 flex items-center gap-2">
-          <input type="checkbox" bind:checked={hideTitle} class="h-4 w-4 rounded border-coffee-300 text-coffee-700 focus:ring-coffee-500">
-          <span class="text-sm text-coffee-700">Sembunyikan nama produk</span>
-        </label>
-
         <button
           onclick={handlePrint}
           class="flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-coffee-800 active:scale-[0.98]"
@@ -334,20 +283,6 @@
             </select>
           </div>
 
-          <!-- Batch Number -->
-          <div>
-            <label for="label-batch" class="mb-1 block text-sm font-medium text-coffee-700">
-              Nomor Batch <span class="text-coffee-400">(opsional)</span>
-            </label>
-            <input
-              id="label-batch"
-              type="text"
-              bind:value={formBatchNumber}
-              placeholder="contoh: B20260801-001"
-              class="w-full rounded-xl border border-coffee-200 bg-white px-3 py-2.5 text-sm focus:border-coffee-400 focus:outline-none focus:ring-2 focus:ring-coffee-200"
-            />
-          </div>
-
           <!-- Dates -->
           <div class="grid grid-cols-2 gap-3">
             <DatePicker
@@ -363,18 +298,7 @@
           </div>
 
           <!-- Quantity -->
-          <div>
-            <label for="label-qty" class="mb-1 block text-sm font-medium text-coffee-700">
-              Jumlah
-            </label>
-            <input
-              id="label-qty"
-              type="number"
-              min="0"
-              bind:value={formQuantity}
-              class="w-full rounded-xl border border-coffee-200 bg-white px-3 py-2.5 text-sm focus:border-coffee-400 focus:outline-none focus:ring-2 focus:ring-coffee-200"
-            />
-          </div>
+          <FormattedInput label="Jumlah" prefix="" placeholder="0" bind:value={formQuantity} />
 
           <!-- Notes -->
           <div>

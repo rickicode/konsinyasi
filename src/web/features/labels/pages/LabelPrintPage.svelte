@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { link } from '@keenmate/svelte-spa-router';
-  import { ArrowLeft, Printer, Minus, Plus } from 'lucide-svelte';
+  import { ArrowLeft, Printer } from 'lucide-svelte';
   import { useToast } from '$lib/stores/toast.svelte.js';
+  import QtyStepper from '../../../shared/ui/QtyStepper.svelte';
   import { fetchBatch, labelGenerateUrl, type ProductBatch } from '../api/index.js';
 
   type Props = {
@@ -26,14 +27,6 @@
   function formatDate(dateStr: string): string {
     const d = new Date(dateStr);
     return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
-  }
-
-  function incrementQty() {
-    if (printQty < 1000) printQty += 1;
-  }
-
-  function decrementQty() {
-    if (printQty > 1) printQty -= 1;
   }
 
   function handlePrint() {
@@ -135,27 +128,7 @@
       <div>
         <span class="mb-2 block text-sm font-medium text-coffee-700">Jumlah Label</span>
         <div class="flex items-center gap-3">
-          <button
-            onclick={decrementQty}
-            disabled={printQty <= 1}
-            class="flex h-11 w-11 items-center justify-center rounded-xl border border-coffee-200 bg-white text-coffee-600 transition-colors hover:bg-coffee-50 disabled:opacity-40"
-          >
-            <Minus size={18} />
-          </button>
-          <input
-            type="number"
-            min="1"
-            max="1000"
-            bind:value={printQty}
-            class="h-11 w-20 rounded-xl border border-coffee-200 bg-white text-center text-base font-semibold text-coffee-900 focus:border-coffee-400 focus:outline-none focus:ring-2 focus:ring-coffee-200"
-          />
-          <button
-            onclick={incrementQty}
-            disabled={printQty >= 1000}
-            class="flex h-11 w-11 items-center justify-center rounded-xl border border-coffee-200 bg-white text-coffee-600 transition-colors hover:bg-coffee-50 disabled:opacity-40"
-          >
-            <Plus size={18} />
-          </button>
+          <QtyStepper bind:value={printQty} min={1} max={1000} />
           <span class="text-sm text-coffee-500">label</span>
         </div>
       </div>
