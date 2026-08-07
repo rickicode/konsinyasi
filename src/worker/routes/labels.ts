@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Hono } from 'hono';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, like } from 'drizzle-orm';
 import { createClient } from '../db/client.js';
 import { buildPaginatedResponse, parsePaginationParams } from '../lib/pagination.js';
 import { product_batches, products } from '../db/schema.js';
@@ -11,7 +11,6 @@ import { validateUuidParam } from '../lib/validation.js';
 
 const createBatchSchema = z.object({
   product_id: z.string().min(1, 'Produk wajib dipilih'),
-  batch_number: z.string().optional().nullable(),
   production_date: z.string().min(1, 'Tanggal produksi wajib diisi'),
   expired_date: z.string().min(1, 'Tanggal expired wajib diisi'),
   quantity: z
@@ -25,7 +24,6 @@ const createBatchSchema = z.object({
 
 const updateBatchSchema = z.object({
   product_id: z.string().min(1, 'Produk wajib dipilih').optional(),
-  batch_number: z.string().optional().nullable(),
   production_date: z.string().min(1, 'Tanggal produksi wajib diisi').optional(),
   expired_date: z.string().min(1, 'Tanggal expired wajib diisi').optional(),
   quantity: z
@@ -35,6 +33,31 @@ const updateBatchSchema = z.object({
     .optional(),
   notes: z.string().optional().nullable(),
 });
+
+function batchCodePrefix(productionDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(productionDate.slice(0, 10));
+  if (!match) {
+    throw new ValidationError('Format tanggal produksi tidak valid');
+  }
+  return `B${match[3]}${match[2]}`;
+}
+
+async function nextBatchNumber(db: ReturnType<typeof createClient>, productionDate: string): Promise<string> {
+  const prefix = batchCodePrefix(productionDate);
+  const rows = await db
+    .select({ batch_number: product_batches.batch_number })
+    .from(product_batches)
+    .where(and(like(product_batches.batch_number, `${prefix}%`), isNull(product_batches.deleted_at)));
+
+  const nextSequence =
+    rows.reduce((max, row) => {
+      if (!row.batch_number?.startsWith(prefix)) return max;
+      const sequence = Number(row.batch_number.slice(prefix.length));
+      return Number.isInteger(sequence) ? Math.max(max, sequence) : max;
+    }, 0) + 1;
+
+  return `${prefix}${String(nextSequence).padStart(2, '0')}`;
+}
 
 const labelsRoute = new Hono<Env>();
 
@@ -154,11 +177,12 @@ labelsRoute.post('/batches', requirePermission('labels:write'), async (c) => {
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
+  const batchNumber = await nextBatchNumber(db, data.production_date);
 
   await db.insert(product_batches).values({
     id,
     product_id: data.product_id,
-    batch_number: data.batch_number || null,
+    batch_number: batchNumber,
     production_date: data.production_date,
     expired_date: data.expired_date,
     quantity: data.quantity ?? 0,
@@ -214,7 +238,6 @@ labelsRoute.patch('/batches/:id', requirePermission('labels:write'), async (c) =
 
   const setValues: Partial<typeof product_batches.$inferInsert> = {};
   if (data.product_id !== undefined) setValues.product_id = data.product_id;
-  if (data.batch_number !== undefined) setValues.batch_number = data.batch_number;
   if (data.production_date !== undefined) setValues.production_date = data.production_date;
   if (data.expired_date !== undefined) setValues.expired_date = data.expired_date;
   if (data.quantity !== undefined) setValues.quantity = data.quantity;

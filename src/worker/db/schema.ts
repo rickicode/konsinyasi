@@ -366,7 +366,7 @@ export const product_batches = sqliteTable(
     product_id: text('product_id')
       .notNull()
       .references(() => products.id, { onDelete: 'restrict' }),
-    batch_number: text('batch_number'),
+    batch_number: text('batch_number').notNull(),
     production_date: text('production_date').notNull(),
     expired_date: text('expired_date').notNull(),
     quantity: integer('quantity').notNull().default(0),
@@ -388,5 +388,6 @@ export const product_batches = sqliteTable(
     index('idx_product_batches_production_date').on(t.production_date),
     index('idx_product_batches_expired_date').on(t.expired_date),
     index('idx_product_batches_created_at').on(t.created_at),
+    uniqueIndex('idx_product_batches_batch_number_active').on(t.batch_number).where(isNull(t.deleted_at)),
   ]
 );

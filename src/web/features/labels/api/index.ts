@@ -2,7 +2,7 @@ export type ProductBatch = {
   id: string;
   product_id: string;
   product_name: string;
-  batch_number: string | null;
+  batch_number: string;
   production_date: string;
   expired_date: string;
   quantity: number;
@@ -13,7 +13,6 @@ export type ProductBatch = {
 
 export type CreateBatchInput = {
   product_id: string;
-  batch_number?: string | null;
   production_date: string;
   expired_date: string;
   quantity?: number;
@@ -22,7 +21,6 @@ export type CreateBatchInput = {
 
 export type UpdateBatchInput = {
   product_id?: string;
-  batch_number?: string | null;
   production_date?: string;
   expired_date?: string;
   quantity?: number;
@@ -78,7 +76,7 @@ export async function deleteBatch(id: string): Promise<void> {
 }
 
 export function labelGenerateUrl(batchId: string, qty: number, template: 'thermal' | 'a4'): string {
-  return `/api/labels/generate?batch_id=${encodeURIComponent(batchId)}&qty=${qty}&template=${template}`;
+  return `/api/labels/print/${encodeURIComponent(batchId)}?qty=${qty}&template=${template}`;
 }
 
 // Product picker types

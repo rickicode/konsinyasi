@@ -19,7 +19,6 @@ labelsPrintRoute.get('/:batchId', async (c) => {
       product_id: product_batches.product_id,
       product_name: products.name,
       batch_number: product_batches.batch_number,
-      production_date: product_batches.production_date,
       expired_date: product_batches.expired_date,
       quantity: product_batches.quantity,
     })
@@ -38,6 +37,10 @@ labelsPrintRoute.get('/:batchId', async (c) => {
     throw new AppError(400, 'EMPTY_BATCH', 'Batch tidak memiliki stok');
   }
 
+  const requestedQty = Number(c.req.query('qty'));
+  const printQty = Number.isInteger(requestedQty) ? Math.min(Math.max(requestedQty, 1), 1000) : 12;
+  const printTemplate = c.req.query('template') === 'thermal' ? 'thermal' : 'a4';
+
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     const day = String(d.getDate()).padStart(2, '0');
@@ -46,7 +49,6 @@ labelsPrintRoute.get('/:batchId', async (c) => {
     return `${day}/${month}/${year}`;
   };
 
-  const prodDate = formatDate(batch.production_date);
   const expDate = formatDate(batch.expired_date);
 
   const escapeHtml = (str: string) => str.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' }[c] as string));
@@ -108,18 +110,18 @@ labelsPrintRoute.get('/:batchId', async (c) => {
   <div class="controls">
     <label>Ukuran:
       <select id="template" onchange="renderLabels()">
-        <option value="a4">A4</option>
-        <option value="thermal">Thermal (58mm)</option>
+        <option value="a4"${printTemplate === 'a4' ? ' selected' : ''}>A4</option>
+        <option value="thermal"${printTemplate === 'thermal' ? ' selected' : ''}>Thermal (58mm)</option>
       </select>
     </label>
     <label>Jumlah:
-      <input type="number" id="qty" value="12" min="1" max="1000" onchange="renderLabels()" oninput="renderLabels()">
+      <input type="number" id="qty" value="${printQty}" min="1" max="1000" onchange="renderLabels()" oninput="renderLabels()">
     </label>
     <button class="btn-print" onclick="window.print()">Cetak</button>
   </div>
 
   <div class="info">
-    <strong>${batch.product_name}</strong>${batch.batch_number ? ' &middot; Batch: ' + batch.batch_number : ''} &middot; Prod: ${prodDate} &middot; Exp: ${expDate}
+    <strong>${batch.product_name}</strong>${batch.batch_number ? ' &middot; ' + batch.batch_number : ''} &middot; Exp: ${expDate}
   </div>
 
   <div class="preview" id="preview"></div>
@@ -127,7 +129,6 @@ labelsPrintRoute.get('/:batchId', async (c) => {
   <script>
     var batchName = '${batchName}';
     var batchNum = '${batchNum}';
-    var prodDate = '${prodDate}';
     var expDate = '${expDate}';
 
     function renderLabels() {
@@ -143,9 +144,8 @@ labelsPrintRoute.get('/:batchId', async (c) => {
 
       var labelContent = '<div class="label-product" style="font-size:' + fontSize + ';margin-bottom:4px">' + batchName + '</div>';
       if (batchNum) {
-        labelContent += '<div class="label-batch" style="font-size:' + smallFont + ';margin-bottom:2px">Batch: ' + batchNum + '</div>';
+        labelContent += '<div class="label-batch" style="font-size:' + smallFont + ';margin-bottom:2px">' + batchNum + '</div>';
       }
-      labelContent += '<div class="label-date" style="font-size:' + smallFont + '">Prod: ' + prodDate + '</div>';
       labelContent += '<div class="label-date" style="font-size:' + smallFont + '">Exp: ' + expDate + '</div>';
 
       var html = '';
