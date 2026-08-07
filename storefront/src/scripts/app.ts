@@ -1,5 +1,5 @@
 // app.ts - Main client-side application logic
-// Handles: geolocation, warung data, map, detail modal, brand updates
+// Handles: geolocation, warung data, map, detail modal
 
 interface Warung {
   id: string;
@@ -11,7 +11,7 @@ interface Warung {
   products: Array<{
     name: string;
     available_qty: number;
-    price: number;
+    price: number; // consumer-facing price from the API
   }>;
   _dist?: number;
 }

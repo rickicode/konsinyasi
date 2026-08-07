@@ -48,6 +48,8 @@ const jsonLd = {
     id: string;
     name: string;
     description?: string | null;
+    // Consumer-facing price (worker already resolves price_to_consumer,
+    // falling back to the outlet price for products without one).
     price: number;
     photo_url?: string | null;
   }
