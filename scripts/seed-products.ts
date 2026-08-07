@@ -53,10 +53,10 @@ async function main() {
 
   runSql(
     `
-    INSERT INTO products (id, name, hpp, hpp_override, price_to_outlet, status, created_at, updated_at) VALUES
-    ('${kopiSusuId}', 'Es Kopi Susu', 0, NULL, 18000, 'active', '${now}', '${now}'),
-    ('${saltedCaramelId}', 'Kopi Salted Caramel', 0, NULL, 22000, 'active', '${now}', '${now}'),
-    ('${americanoId}', 'Kopi Americano', 0, NULL, 15000, 'active', '${now}', '${now}');
+    INSERT INTO products (id, name, hpp, hpp_override, price_to_outlet, price_to_consumer, status, created_at, updated_at) VALUES
+    ('${kopiSusuId}', 'Es Kopi Susu', 0, NULL, 18000, 25000, 'active', '${now}', '${now}'),
+    ('${saltedCaramelId}', 'Kopi Salted Caramel', 0, NULL, 22000, 30000, 'active', '${now}', '${now}'),
+    ('${americanoId}', 'Kopi Americano', 0, NULL, 15000, 20000, 'active', '${now}', '${now}');
   `,
     'Products seeded'
   );

@@ -114,6 +114,7 @@ export const products = sqliteTable(
     hpp: integer('hpp').notNull().default(0),
     hpp_override: integer('hpp_override'),
     price_to_outlet: integer('price_to_outlet').notNull(),
+    price_to_consumer: integer('price_to_consumer').notNull().default(0),
     status: text('status', { enum: ['active', 'inactive'] })
       .notNull()
       .default('active'),
@@ -131,8 +132,10 @@ export const products = sqliteTable(
   (t) => [
     check('chk_products_hpp', sql`hpp >= 0`),
     check('chk_products_price', sql`price_to_outlet >= 0`),
+    check('chk_products_consumer_price', sql`price_to_consumer >= 0`),
     index('idx_products_deleted_at_name').on(t.deleted_at, t.name),
     index('idx_products_status_deleted_at_name').on(t.status, t.deleted_at, t.name),
+    index('idx_products_consumer_price').on(t.price_to_consumer),
     uniqueIndex('idx_products_name_active').on(t.name).where(isNull(t.deleted_at)),
   ]
 );

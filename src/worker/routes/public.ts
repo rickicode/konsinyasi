@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Env } from '../types.js';
 import { createClient } from '../db/client.js';
 import { app_settings, consignment_cycles, outlets, products } from '../db/schema.js';
@@ -53,7 +53,9 @@ publicRoute.get('/warungs', async (c) => {
       qty_dropped: consignment_cycles.qty_dropped,
       qty_sold: consignment_cycles.qty_sold,
       qty_return_damaged: consignment_cycles.qty_return_damaged,
-      price_snapshot: consignment_cycles.price_snapshot,
+      // Display price for customers = current consumer price (falls back to the
+      // outlet price for products that never had one set).
+      product_price: sql<number>`COALESCE(${products.price_to_consumer}, ${products.price_to_outlet})`,
       dropped_at: consignment_cycles.dropped_at,
     })
     .from(consignment_cycles)
@@ -93,7 +95,7 @@ publicRoute.get('/warungs', async (c) => {
             id: cycle.product_id,
             name: cycle.product_name,
             qty: available,
-            price: cycle.price_snapshot,
+            price: cycle.product_price,
           });
         }
       });
@@ -161,7 +163,9 @@ publicRoute.get('/warungs/:id', async (c) => {
       qty_dropped: consignment_cycles.qty_dropped,
       qty_sold: consignment_cycles.qty_sold,
       qty_return_damaged: consignment_cycles.qty_return_damaged,
-      price_snapshot: consignment_cycles.price_snapshot,
+      // Display price for customers = current consumer price (falls back to the
+      // outlet price for products that never had one set).
+      product_price: sql<number>`COALESCE(${products.price_to_consumer}, ${products.price_to_outlet})`,
       dropped_at: consignment_cycles.dropped_at,
     })
     .from(consignment_cycles)
@@ -183,7 +187,7 @@ publicRoute.get('/warungs/:id', async (c) => {
         id: cycle.product_id,
         name: cycle.product_name,
         available_qty: Math.max(0, available),
-        price: cycle.price_snapshot,
+        price: cycle.product_price,
         dropped_at: cycle.dropped_at,
       };
     })
@@ -211,6 +215,10 @@ publicRoute.get('/products', async (c) => {
       description: products.description,
       hpp: products.hpp,
       price_to_outlet: products.price_to_outlet,
+      price_to_consumer: products.price_to_consumer,
+      // Consistent with /warungs: a 0 consumer price falls back to the outlet
+      // price instead of showing as free.
+      price: sql<number>`COALESCE(${products.price_to_consumer}, ${products.price_to_outlet})`,
       photo_key: products.photo_key,
     })
     .from(products)
@@ -229,7 +237,7 @@ publicRoute.get('/products', async (c) => {
     name: p.name,
     description: p.description,
     hpp: p.hpp,
-    price: p.price_to_outlet,
+    price: p.price,
     photo_url: p.photo_key ? buildImageUrl(p.photo_key, cdnBase || undefined) : null,
   }));
 

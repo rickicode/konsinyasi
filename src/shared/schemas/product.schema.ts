@@ -37,6 +37,11 @@ export const productCreateSchema = z.object({
     .int('Harga outlet harus bilangan bulat')
     .nonnegative('Harga outlet tidak boleh negatif')
     .optional(),
+  price_to_consumer: z
+    .number({ invalid_type_error: 'Harga konsumen harus angka' })
+    .int('Harga konsumen harus bilangan bulat')
+    .nonnegative('Harga konsumen tidak boleh negatif')
+    .optional(),
   hpp_override: z
     .number({ invalid_type_error: 'Override HPP harus angka' })
     .int('Override HPP harus bilangan bulat')
@@ -56,6 +61,11 @@ export const productUpdateSchema = z.object({
     .number({ invalid_type_error: 'Harga outlet harus angka' })
     .int('Harga outlet harus bilangan bulat')
     .nonnegative('Harga outlet tidak boleh negatif')
+    .optional(),
+  price_to_consumer: z
+    .number({ invalid_type_error: 'Harga konsumen harus angka' })
+    .int('Harga konsumen harus bilangan bulat')
+    .nonnegative('Harga konsumen tidak boleh negatif')
     .optional(),
   hpp_override: z
     .number({ invalid_type_error: 'Override HPP harus angka' })
@@ -81,6 +91,7 @@ export const productResponseSchema = z.object({
   hpp: z.number().optional(),
   hpp_override: z.number().nullable().optional(),
   price_to_outlet: z.number().optional(),
+  price_to_consumer: z.number().optional(),
   photo_key: z.string().nullable().optional(),
   photo_url: z.string().nullable().optional(),
   description: z.string().nullable().optional(),

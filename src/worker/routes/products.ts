@@ -43,6 +43,11 @@ const createSchema = z.object({
     .int('Harga outlet harus bilangan bulat')
     .nonnegative('Harga outlet tidak boleh negatif')
     .optional(),
+  price_to_consumer: z
+    .number({ invalid_type_error: 'Harga konsumen harus angka' })
+    .int('Harga konsumen harus bilangan bulat')
+    .nonnegative('Harga konsumen tidak boleh negatif')
+    .optional(),
   hpp_override: z
     .number({ invalid_type_error: 'Override HPP harus angka' })
     .int('Override HPP harus bilangan bulat')
@@ -65,6 +70,11 @@ const updateSchema = z.object({
     .int('Harga outlet harus bilangan bulat')
     .nonnegative('Harga outlet tidak boleh negatif')
     .optional(),
+  price_to_consumer: z
+    .number({ invalid_type_error: 'Harga konsumen harus angka' })
+    .int('Harga konsumen harus bilangan bulat')
+    .nonnegative('Harga konsumen tidak boleh negatif')
+    .optional(),
   hpp_override: z
     .number({ invalid_type_error: 'Override HPP harus angka' })
     .int('Override HPP harus bilangan bulat')
@@ -82,6 +92,7 @@ export const productListColumns = {
   hpp: products.hpp,
   hpp_override: products.hpp_override,
   price_to_outlet: products.price_to_outlet,
+  price_to_consumer: products.price_to_consumer,
   status: products.status,
   photo_key: products.photo_key,
   deleted_at: products.deleted_at,
@@ -98,6 +109,7 @@ export type ProductListRow = Pick<
   | 'hpp'
   | 'hpp_override'
   | 'price_to_outlet'
+  | 'price_to_consumer'
   | 'status'
   | 'photo_key'
   | 'deleted_at'
@@ -118,6 +130,7 @@ type ProductResponse = {
   hpp?: number;
   hpp_override?: number | null;
   price_to_outlet?: number;
+  price_to_consumer?: number;
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -145,6 +158,7 @@ function pickProduct(
     response.hpp = row.hpp;
     response.hpp_override = row.hpp_override;
     response.price_to_outlet = row.price_to_outlet;
+    response.price_to_consumer = row.price_to_consumer;
     response.recipe_lines = recipeLines;
   }
   return response;
@@ -240,6 +254,10 @@ productsRoute.post('/', async (c) => {
   } else if (data.price_to_outlet === undefined) {
     throw new ValidationError('Harga outlet wajib diisi');
   }
+  if (owner && data.price_to_consumer === undefined) {
+    // Consumer price falls back to the outlet price when not provided.
+    data.price_to_consumer = data.price_to_outlet ?? 0;
+  }
 
   if (
     data.recipe_lines !== undefined &&
@@ -267,6 +285,7 @@ productsRoute.post('/', async (c) => {
     hpp: effectiveHpp,
     hpp_override: data.recipe_lines?.length ? null : (data.hpp_override ?? null),
     price_to_outlet: data.price_to_outlet ?? 0,
+    price_to_consumer: data.price_to_consumer ?? data.price_to_outlet ?? 0,
     status: data.status ?? 'active',
     is_public: data.is_public ? 1 : 0,
     created_at: now,
@@ -318,6 +337,9 @@ productsRoute.patch('/:id', async (c) => {
   if (data.is_public !== undefined) setValues.is_public = data.is_public ? 1 : 0;
   if (owner && data.price_to_outlet !== undefined) {
     setValues.price_to_outlet = data.price_to_outlet;
+  }
+  if (owner && data.price_to_consumer !== undefined) {
+    setValues.price_to_consumer = data.price_to_consumer;
   }
   if (owner && data.hpp_override !== undefined) {
     // Only allow override when the product currently has no recipe lines.

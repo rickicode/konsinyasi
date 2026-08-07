@@ -58,6 +58,7 @@ import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
   let status = $state<'active' | 'inactive'>('active');
   let is_public = $state(0);
   let priceInput = $state<number>(0);
+  let priceConsumerInput = $state<number>(0);
   let hppOverrideInput = $state<number | undefined>(undefined);
   let recipeLines = $state<RecipeLineInput[]>([]);
   let fieldErrors = $state<Record<string, string>>({});
@@ -87,6 +88,7 @@ import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
       status,
       is_public,
       priceInput,
+      priceConsumerInput,
       hppOverrideInput,
       recipeLines,
       photoFileName: photoFile ? photoFile.name : null,
@@ -114,6 +116,7 @@ import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
       status = product.status;
       is_public = product.is_public ? 1 : 0;
       priceInput = product.price_to_outlet ?? 0;
+      priceConsumerInput = product.price_to_consumer ?? product.price_to_outlet ?? 0;
       hppOverrideInput = product.hpp_override ?? undefined;
       recipeLines =
         product.recipe_lines?.map((l) => ({
@@ -141,6 +144,7 @@ import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
     status = 'active';
     is_public = 0;
     priceInput = '';
+    priceConsumerInput = '';
     hppOverrideInput = '';
     recipeLines = [];
     photoFile = null;
@@ -161,6 +165,9 @@ import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
       const price = priceInput;
       if (Number.isNaN(price) || price < 0 || !Number.isInteger(price))
         errors.price_to_outlet = 'Harga outlet wajib diisi dan tidak boleh negatif';
+      const consumerPrice = priceConsumerInput;
+      if (Number.isNaN(consumerPrice) || consumerPrice < 0 || !Number.isInteger(consumerPrice))
+        errors.price_to_consumer = 'Harga konsumen wajib diisi dan tidak boleh negatif';
       if (hppOverrideInput !== undefined && hppOverrideInput !== null) {
         const override = Number(hppOverrideInput);
         if (Number.isNaN(override) || override < 0 || !Number.isInteger(override))
@@ -184,6 +191,7 @@ import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
     if (!canManageFinancial) return payload;
     const hasRecipe = recipeLines.length > 0;
     payload.price_to_outlet = priceInput;
+    payload.price_to_consumer = priceConsumerInput;
     payload.recipe_lines = hasRecipe ? recipeLines : undefined;
     if (!hasRecipe && String(hppOverrideInput).trim() !== '') {
       payload.hpp_override = hppOverrideInput;
@@ -198,6 +206,7 @@ import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
     if (!canManageFinancial) return payload;
     const hasRecipe = recipeLines.length > 0;
     payload.price_to_outlet = Number(priceInput);
+    payload.price_to_consumer = Number(priceConsumerInput);
     payload.recipe_lines = hasRecipe ? recipeLines : undefined;
     if (!hasRecipe && String(hppOverrideInput).trim() !== '') {
       payload.hpp_override = Number(hppOverrideInput);
@@ -471,6 +480,15 @@ import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
           label="Harga ke Outlet (Rp)"
           bind:value={priceInput}
           error={fieldErrors.price_to_outlet}
+          helper="Harga jual ke warung (dipakai untuk hitung pendapatan)."
+          required
+          min={0}
+        />
+        <FormattedInput
+          label="Harga ke Konsumen (Rp)"
+          bind:value={priceConsumerInput}
+          error={fieldErrors.price_to_consumer}
+          helper="Harga yang tampil di halaman publik / storefront."
           required
           min={0}
         />
