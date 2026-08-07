@@ -2,30 +2,43 @@
 title: Image Processing Service agent 2
 type: task
 permalink: konsinyasi/tasks/image-processing-service-agent-2
+note_type: task
+status: done
+priority: high
+assigned_to: claude
+started: 2026-08-05
+completed: 2026-08-07
+current_step: 4
 ---
 
 # Image Processing Service agent 2
 
 Create a shared Cloudflare-Workers-compatible image-processing service for validation, metadata, resize/compression, R2 upload, and old-photo cleanup.
 
-## Observations
+## Status
 
-- [description] Build reusable worker service that validates image uploads, extracts dimensions, resizes/compresses using OffscreenCanvas, uploads to R2, and deletes the previous object when a replacement is stored.
-- [status] active
-- [assigned_to] claude
-- [current_step] 1
+- done
 
 ## Steps
 
-1. [ ] Inspect existing outlet/media upload code and shared patterns
-2. [ ] Implement `src/worker/services/image-processing.ts`
-3. [ ] Update `src/worker/routes/outlets.ts` to delegate photo uploads to the service
-4. [ ] Write unit tests and run typecheck/lint/test
+1. [x] Inspect existing outlet/media upload code and shared patterns
+2. [x] Implement `src/worker/services/image-processing.ts`
+3. [x] Update `src/worker/routes/outlets.ts` to delegate photo uploads to the service
+4. [x] Write unit tests and run typecheck/lint/test
 
-## Context
+## What was implemented
 
-- Project root: /workspaces/konsinyasi
-- Existing image helpers: `src/web/lib/photo.ts` (browser-only canvas), `src/worker/routes/outlets.ts` (inline upload/validation/cleanup), `src/worker/routes/media.ts` (R2 read proxy)
-- R2 binding: `PHOTOS`; media URL prefix: `/api/media/`
-- Worker service pattern lives under `src/worker/services/`
-- Errors live in `src/worker/lib/errors.ts` and are used in `app.onError`
+- `src/worker/services/image-processing.ts` (baru): service bersama `processImageUpload({ bucket, file, scope, oldKey, publicUrlBase })` — validasi file, upload R2, hapus foto lama, build URL publik; plus helper `deleteImageFromR2` / `isSafeImageKey`.
+- `src/worker/routes/outlets.ts`: `POST /:id/photo` mendelegasikan upload ke service (scope `outlets/{id}`).
+- `src/worker/routes/products.ts`: `POST /:id/photo` + `DELETE /:id/photo` memakai service yang sama (scope `products/{id}`) — bagian dari Product Photo Upload.
+- Semua unit test hijau (full suite 266/266) + typecheck worker bersih + build bersih.
+
+## Verification
+
+- `pnpm test` ✅ (266/266)
+- `npx tsc -p tsconfig.worker.json --noEmit` ✅
+- `npx vite build` ✅
+
+## Notes
+
+Task file sempat berstatus "active" padahal implementasi sudah selesai di working tree — ditandai done pada sesi 2026-08-07 setelah verifikasi.

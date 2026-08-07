@@ -35,6 +35,12 @@
 | Dokumentasi Page Titles        | ✅ Selesai | `docs/PAGE_TITLES.md`                                       |
 | Dokumentasi Web Frontend       | ✅ Selesai | `docs/WEB_FRONTEND_SUMMARY.md`                              |
 | Mobile TODOs Plan              | ✅ Selesai | `mobile/docs/MOBILE_UI_SEPARATION_TODOS.md`                 |
+| Image Processing Service       | ✅ Selesai | `src/worker/services/image-processing.ts`                   |
+| Product Photo Upload           | ✅ Selesai | `POST/DELETE /api/products/:id/photo` + UI                   |
+| Clean URLs (hapus #)           | ✅ Selesai | `src/web/lib/router/clean-url.ts` + integration test          |
+| Brand name konsisten           | ✅ Selesai | `page-title.ts` + `PlaceCoffeePage`                          |
+| FormattedInput untuk settings  | ✅ Selesai | `src/web/shared/ui/FormattedInput.svelte`                    |
+| Harga resep per item           | ✅ Selesai | `RecipeEditor.svelte`                                        |
 
 ---
 
