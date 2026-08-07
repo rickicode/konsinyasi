@@ -9,7 +9,7 @@ PUBLIC_R2_CDN_URL = "https://cdn.kopi.hijitoko.com"
 # Comma-separated allow-list of trusted origins for CORS. DO NOT set DEBUG in
 # production vars — debug stack traces are enabled per-environment via
 # `wrangler secret put DEBUG` only when needed.
-ALLOWED_ORIGINS = "https://konsi.rickicode.workers.dev"
+ALLOWED_ORIGINS = "https://konsi.rickicode.workers.dev,*.hijitoko.com,*.rericoffee.me"
 # Worker version — inject at deploy time via `wrangler deploy --var WORKER_VERSION:...`
 # or set to a commit SHA in CI. Used by /api/health for version tracking.
 WORKER_VERSION = "dev"

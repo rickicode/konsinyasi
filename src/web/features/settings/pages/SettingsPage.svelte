@@ -5,6 +5,7 @@
   import Card from '../../../shared/ui/Card.svelte';
   import Icon from '../../../shared/ui/icons/Icon.svelte';
   import Input from '../../../shared/ui/Input.svelte';
+  import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
   import Button from '../../../shared/ui/Button.svelte';
   import { useToast } from '$lib/stores/toast.svelte.js';
   import { getAppConfig } from '$lib/stores/app-config.svelte.js';
@@ -194,7 +195,7 @@
         label="Nama Brand"
         name="brand_name"
         type="text"
-        placeholder="Contoh: RERICoffe"
+        placeholder="Contoh: Kopi Nusantara"
         helper="Nama ini akan muncul di halaman login, sidebar, dan judul halaman."
         bind:value={brandName}
         error={brandError}
@@ -334,19 +335,22 @@
       </div>
       
       <div class="grid grid-cols-2 gap-4">
-        <Input
+        <!-- No min/max props: FormattedInput clamps the value while typing and
+             desyncs display vs value. Range is validated by the worker schema
+             (24-720 / 12-480) and the yellow<red check below. -->
+        <FormattedInput
           label="Jam Kuning (peringatan)"
           name="cycle_yellow_hours"
-          type="number"
+          prefix=""
           placeholder="72"
           helper="Stok dianggap perlu perhatian"
           bind:value={cycleYellowHours}
           disabled={updateCycleAgeMutation.isPending}
         />
-        <Input
+        <FormattedInput
           label="Jam Merah (wajib tarik)"
           name="cycle_red_hours"
-          type="number"
+          prefix=""
           placeholder="96"
           helper="Stok wajib ditarik dari warung"
           bind:value={cycleRedHours}

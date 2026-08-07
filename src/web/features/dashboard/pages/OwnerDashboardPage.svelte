@@ -32,6 +32,34 @@
   const geo = useGeolocation();
   const network = useNetwork();
   const queryClient = useQueryClient();
+
+let locationAddress = $state<string | null>(null);
+
+async function reverseGeocode(lat: number, lng: number) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      { headers: { "Accept-Language": "id" } }
+    );
+    const data = await res.json();
+    if (data.address) {
+      const addr = data.address;
+      const parts: string[] = [];
+      if (addr.road) parts.push(addr.road);
+      if (addr.village || addr.suburb || addr.neighbourhood)
+        parts.push(addr.village || addr.suburb || addr.neighbourhood);
+      if (addr.city || addr.town || addr.regency)
+        parts.push(addr.city || addr.town || addr.regency);
+      locationAddress = parts.join(", ") || null;
+    }
+  } catch {}
+}
+
+$effect(() => {
+  if (geo.coords) {
+    reverseGeocode(geo.coords.latitude, geo.coords.longitude);
+  }
+});
   const query = createQuery(() => dashboardQueryOptions());
 
   const colorRank = { red: 0, yellow: 1, green: 2, none: 3 };
@@ -87,7 +115,7 @@
           </div>
           <div class="min-w-0 flex-1">
             <p class="text-sm font-bold text-white">Lokasi Aktif</p>
-            <p class="truncate text-xs text-white/75">{geo.coords.latitude.toFixed(4)}, {geo.coords.longitude.toFixed(4)}</p>
+            <p class="truncate text-xs text-white/75">{locationAddress || `${geo.coords.latitude.toFixed(4)}, ${geo.coords.longitude.toFixed(4)}`}</p>
           </div>
           <span class="shrink-0 rounded-lg bg-white/20 px-2.5 py-1 text-xs font-semibold text-white">✓ Aktif</span>
         </div>

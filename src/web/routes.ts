@@ -75,15 +75,7 @@ export const ownerRoutes = {
   '/master': lazy(() => import('./features/admin/pages/MasterPage.svelte'), {
     conditions: [requireAuth, requireOwner],
   }),
-  '/master/produk': lazy(() => import('./features/products/pages/ProductListPage.svelte'), {
-    conditions: [requireAuth, requireOwner],
-  }),
-  '/master/bahan': lazy(() => import('./features/raw-materials/pages/RawMaterialListPage.svelte'), {
-    conditions: [requireAuth, requireOwner],
-  }),
-  '/master/warung': lazy(() => import('./features/outlets/pages/OutletListPage.svelte'), {
-    conditions: [requireAuth, requireOwner],
-  }),
+  // Master sub-routes removed - use /master?tab=produk|bahan|warung instead
 
   // Kunjungan - owner bisa lihat semua
   '/kunjungan': lazy(() => import('./features/visits/pages/VisitListPage.svelte'), {

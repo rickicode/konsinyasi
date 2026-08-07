@@ -33,10 +33,10 @@
   }
 
   // --- Kunjungi tab (existing outlet list) ---
-  const outletsQuery = createInfiniteQuery(() => outletsInfiniteQueryOptions(debouncedSearch));
 
   let search = $state('');
   let debouncedSearch = $state('');
+  const outletsQuery = createInfiniteQuery(() => outletsInfiniteQueryOptions(debouncedSearch));
   let searchTimeout: ReturnType<typeof setTimeout> | null = null;
   let searchFocused = $state(false);
 

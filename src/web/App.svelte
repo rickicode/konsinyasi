@@ -1,6 +1,16 @@
+<script module lang="ts">
+  // Seed the router with the location from the pathname BEFORE the <Router>
+  // component mounts. This makes deep links (/kunjungan/123) render the right
+  // page and keeps the address bar clean (no #/ fragments) even though
+  // svelte-spa-router navigates internally via the hash.
+  import { initCleanUrl } from './lib/router/clean-url.js';
+
+  initCleanUrl();
+</script>
+
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Router from 'svelte-spa-router';
+  import Router, { router } from 'svelte-spa-router';
   import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
   import { setAuthContext, auth } from './lib/stores/auth.svelte';
   import { setNetworkContext, network } from './lib/stores/network.svelte';
@@ -31,6 +41,13 @@
     },
   });
 
+  // Current route (path + querystring) as seen by the router. Reactive, so the
+  // page title below updates on every in-app navigation, deep link and
+  // back/forward traversal.
+  const currentRoute = $derived(
+    router.location + (router.querystring ? `?${router.querystring}` : '')
+  );
+
   function updateFavicon(logoUrl: string | null) {
     const link = document.getElementById('brand-favicon') as HTMLLinkElement | null;
     if (!link) return;
@@ -48,40 +65,23 @@
     appConfig.load().then(() => {
       setBrandTitle(appConfig.brandName);
       updateFavicon(appConfig.brandLogoUrl);
-      const hash = window.location.hash || '#/';
-      const route = hash.replace('#', '');
-      updatePageTitle(route);
     });
     // Prime auth state before the router resolves protected routes.
     auth.ensureLoaded();
     // Start listening for browser online/offline events.
     network.start();
 
-    // Listen for route changes to update page title
-    const handleRouteChange = () => {
-      const hash = window.location.hash || '#/';
-      const route = hash.replace('#', '');
-      updatePageTitle(route);
-    };
-
-    // Update title on hash change
-    window.addEventListener('hashchange', handleRouteChange);
-    // Update title on initial load
-    handleRouteChange();
-
     return () => {
       network.stop();
-      window.removeEventListener('hashchange', handleRouteChange);
     };
   });
 
-  // Keep document title and favicon in sync when the brand config changes.
+  // Keep document title and favicon in sync with the brand config and the
+  // current route.
   $effect(() => {
     setBrandTitle(appConfig.brandName);
     updateFavicon(appConfig.brandLogoUrl);
-    const hash = window.location.hash || '#/';
-    const route = hash.replace('#', '');
-    updatePageTitle(route);
+    updatePageTitle(currentRoute);
   });
 
   // Select routes based on user role
@@ -89,10 +89,15 @@
 </script>
 
 <!-- Skip link: lets keyboard / screen-reader users jump past navigation to content. -->
+<!-- preventDefault: the fragment jump would fire hashchange, and the router's
+     getLocation() maps any non-#/ fragment to '/', resetting the route. -->
 <a
   href="#main-content"
   class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-coffee-900 focus:px-4 focus:py-2 focus:text-cream"
-  onclick={() => document.getElementById('main-content')?.focus()}
+  onclick={(e) => {
+    e.preventDefault();
+    document.getElementById('main-content')?.focus();
+  }}
 >
   Langsung ke konten utama
 </a>

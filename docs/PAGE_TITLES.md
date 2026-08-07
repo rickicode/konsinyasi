@@ -21,7 +21,7 @@ Setiap halaman sekarang memiliki title yang unik di browser tab.
 
 | Route                  | Title                  |
 | ---------------------- | ---------------------- |
-| `/`                    | Tempatkan Kopi — Konsi |
+| `/`                    | Beranda — Konsi        |
 | `/beranda`             | Beranda — Konsi        |
 | `/kunjungan`           | Kunjungan — Konsi      |
 | `/kunjungan/:outletId` | Form Kunjungan — Konsi |
@@ -42,6 +42,9 @@ Setiap halaman sekarang memiliki title yang unik di browser tab.
 | `/laporan`       | Laporan Keuangan — Konsi |
 | `/pengguna`      | Pengguna — Konsi         |
 | `/pengaturan`    | Pengaturan — Konsi       |
+| `/analytics`     | Analitik Keuangan — Konsi |
+| `/analytics/outlet/:id` | Detail Analitik Warung — Konsi |
+| `/analytics/product/:id` | Detail Analitik Produk — Konsi |
 
 ### Public Pages
 
@@ -70,9 +73,9 @@ Setiap halaman sekarang memiliki title yang unik di browser tab.
 
 ### How it works:
 
-1. User navigates to a route
-2. `hashchange` event fires
-3. `updatePageTitle()` is called
+1. User navigates to a route (`push` / `replace` / `use:link` / back-forward)
+2. The router's reactive `location` changes (`src/web/lib/router/clean-url.ts` keeps the address bar clean — no `#/` fragments)
+3. `App.svelte` derives the current route from `router.location` and calls `updatePageTitle()`
 4. Document title is updated
 5. TopBar shows the same title
 

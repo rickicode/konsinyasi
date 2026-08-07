@@ -3,6 +3,8 @@
  * Tracks request metrics, error rates, and response times
  */
 
+import type { MiddlewareHandler } from 'hono';
+
 interface MetricEntry {
   name: string;
   value: number;
@@ -186,4 +188,33 @@ export function cleanupMetrics(): void {
   while (requestMetrics.length > 0 && requestMetrics[0].timestamp < cutoff) {
     requestMetrics.shift();
   }
+}
+
+/**
+ * Analytics middleware for Hono.
+ * Tracks request duration and metrics.
+ *
+ * Error responses are already covered: Hono's compose() converts a thrown
+ * Error into a response by invoking the app's onError handler and RESOLVES
+ * `next()` — the rejection never reaches this middleware, so `c.res.status`
+ * below reflects error responses too (e.g. 403 from an AppError under the
+ * project's onError). The `finally` is a safety net for non-Error throws
+ * (`throw 'oops'`), which compose() cannot route to onError: tracking still
+ * runs (with the default 500) and the rejection propagates on its own.
+ */
+export function analyticsMiddleware(): MiddlewareHandler {
+  return async (c, next) => {
+    const start = Date.now();
+    let status = 500;
+    try {
+      await next();
+      status = c.res.status;
+    } finally {
+      const duration = Date.now() - start;
+      trackRequest(c.req.path, c.req.method, status, duration);
+      if (duration > 1000) {
+        console.warn(`Slow request: ${c.req.method} ${c.req.path} took ${duration}ms`);
+      }
+    }
+  };
 }

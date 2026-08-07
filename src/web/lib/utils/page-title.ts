@@ -8,7 +8,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/profil': 'Profil',
   // Staff & Owner
   '/beranda': 'Beranda',
-  '/': 'Tempatkan Kopi',
+  '/': 'Beranda',
   // Kunjungan
   '/kunjungan': 'Kunjungan',
   '/kunjungan/:outletId': 'Form Kunjungan',

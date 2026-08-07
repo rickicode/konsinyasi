@@ -1,16 +1,24 @@
 ---
-// Header.astro - Clean minimal header
+// Header.astro - Clean minimal header with brand logo support
 ---
-
 <header class="header" role="banner">
   <div class="header-inner">
     <a href="/" class="logo" aria-label="Konsi - Temukan Kopi">
       <div class="logo-mark">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M6 1v3M10 1v3M14 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
+        <img 
+          id="brand-logo-img" 
+          src="" 
+          alt="Logo" 
+          style="display: none; width: 100%; height: 100%; object-fit: contain; border-radius: 10px;"
+          onerror="this.style.display='none'; document.getElementById('brand-logo-fallback').style.display='';"
+        />
+        <div id="brand-logo-fallback" class="logo-fallback">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 1v3M10 1v3M14 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
       </div>
       <span class="logo-text" id="brand-logo-text">Konsi</span>
     </a>
@@ -23,7 +31,6 @@
     </a>
   </div>
 </header>
-
 <style>
   .header {
     position: sticky;
@@ -35,7 +42,6 @@
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     padding: env(safe-area-inset-top) 0 0;
   }
-
   .header-inner {
     max-width: 480px;
     margin: 0 auto;
@@ -44,7 +50,6 @@
     align-items: center;
     justify-content: space-between;
   }
-
   .logo {
     display: flex;
     align-items: center;
@@ -52,7 +57,6 @@
     text-decoration: none;
     color: var(--coffee-800);
   }
-
   .logo-mark {
     width: 36px;
     height: 36px;
@@ -62,14 +66,20 @@
     align-items: center;
     justify-content: center;
     color: white;
+    overflow: hidden;
   }
-
+  .logo-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
   .logo-text {
     font-size: 20px;
     font-weight: 800;
     letter-spacing: -0.5px;
   }
-
   .produk-btn {
     width: 40px;
     height: 40px;
@@ -85,11 +95,9 @@
     -webkit-tap-highlight-color: transparent;
     text-decoration: none;
   }
-
   .produk-btn:hover {
     background: var(--coffee-100);
   }
-
   .produk-btn:active {
     transform: scale(0.95);
   }

@@ -15,6 +15,7 @@
   } from '@shared/schemas/raw-material.schema.js';
   import Button from '../../../shared/ui/Button.svelte';
   import Input from '../../../shared/ui/Input.svelte';
+import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
   import Select from '../../../shared/ui/Select.svelte';
   import ErrorState from '../../../shared/ui/ErrorState.svelte';
   import Sheet from '../../../shared/ui/Sheet.svelte';
@@ -45,7 +46,7 @@ const uomsQuery = createQuery(() => uomsQueryOptions());
 
   let formName = $state('');
   let formUnit = $state<string>('');
-  let formPrice = $state('');
+  let formPrice = $state<number>(0);
   let formError = $state<string | null>(null);
   let fieldErrors = $state<Record<string, string>>({});
 
@@ -54,13 +55,13 @@ const uomsQuery = createQuery(() => uomsQueryOptions());
     if (isCreate) {
       formName = '';
       formUnit = unitOptions[0]?.value ?? '';
-      formPrice = '';
+      formPrice = 0;
       formError = null;
       fieldErrors = {};
     } else if (detailQuery.data) {
       formName = detailQuery.data.name;
       formUnit = detailQuery.data.base_unit;
-      formPrice = String(detailQuery.data.price_per_base_unit);
+      formPrice = detailQuery.data.price_per_base_unit;
       formError = null;
       fieldErrors = {};
     }
@@ -75,7 +76,7 @@ const uomsQuery = createQuery(() => uomsQueryOptions());
   function validate(): boolean {
     fieldErrors = {};
     formError = null;
-    const price = String(formPrice).trim() === '' ? NaN : Number(formPrice);
+    const price = formPrice;
     const payload = {
       name: formName.trim(),
       base_unit: formUnit,
@@ -100,7 +101,7 @@ const uomsQuery = createQuery(() => uomsQueryOptions());
     const payload = {
       name: formName.trim(),
       base_unit: formUnit,
-      price_per_base_unit: Number(formPrice),
+      price_per_base_unit: formPrice,
     };
     try {
       if (isCreate) {
@@ -168,17 +169,13 @@ const uomsQuery = createQuery(() => uomsQueryOptions());
           bind:value={formUnit}
           error={fieldErrors.base_unit}
         />
-        <Input
+        <FormattedInput
           label="Harga per Satuan (Rp)"
-          type="number"
-          inputmode="numeric"
-          min="0"
-          step="1"
-          placeholder="0"
-          required
-          disabled={!auth.isOwner}
           bind:value={formPrice}
           error={fieldErrors.price_per_base_unit}
+          required
+          disabled={!auth.isOwner}
+          min={0}
         />
         <div class="flex gap-2 pt-2">
           <Button

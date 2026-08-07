@@ -4,7 +4,7 @@
   import { useToast } from '$lib/stores/toast.svelte.js';
   import { settingsQueryOptions, updateGeofenceMutationOptions } from '../api/index.js';
   import Button from '../../../shared/ui/Button.svelte';
-  import Input from '../../../shared/ui/Input.svelte';
+  import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
   import ErrorState from '../../../shared/ui/ErrorState.svelte';
   import Icon from '../../../shared/ui/icons/Icon.svelte';
 
@@ -14,7 +14,7 @@
   const settingsQuery = createQuery(() => settingsQueryOptions());
   const updateMutation = createMutation(() => updateGeofenceMutationOptions());
 
-  let radius = $state<number | string>(100);
+  let radius = $state<number>(100);
   let clientError = $state('');
 
   $effect(() => {
@@ -86,13 +86,13 @@
       </div>
     </div>
 
-    <Input
+    <!-- No min/max props: FormattedInput clamps the value while typing, which
+         would snap e.g. "1" (intending 100) to 20 and desync display vs value.
+         Range is enforced by handleSubmit below instead. -->
+    <FormattedInput
       label="Radius Geofence (meter)"
       name="radius_m"
-      type="number"
-      inputmode="numeric"
-      min={20}
-      max={2000}
+      prefix=""
       placeholder="Contoh: 100"
       helper="Rentang yang diizinkan: 20 m – 2000 m."
       required

@@ -135,7 +135,8 @@
           <div class="space-y-2">
             {#each data.by_product as product (product.id)}
               <a
-                href="#/analytics/product/{product.id}"
+                href="/analytics/product/{product.id}"
+                use:link
                 class="block rounded-xl border border-coffee-200 bg-cream p-3 transition-all hover:border-orange-300"
               >
                 <div class="flex items-center justify-between">

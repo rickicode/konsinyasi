@@ -111,6 +111,7 @@ type ProductResponse = {
   name: string;
   description?: string | null;
   status: 'active' | 'inactive';
+  is_public: boolean;
   photo_key?: string | null;
   photo_url?: string | null;
   recipe_lines?: EnrichedRecipeLine[];
@@ -133,6 +134,7 @@ function pickProduct(
     name: row.name,
     description: row.description,
     status: row.status as 'active' | 'inactive',
+    is_public: row.is_public === 1,
     photo_key: row.photo_key,
     photo_url: row.photo_key ? buildImageUrl(row.photo_key, cdnBase) : null,
     deleted_at: row.deleted_at,

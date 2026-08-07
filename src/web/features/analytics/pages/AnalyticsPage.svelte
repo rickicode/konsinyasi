@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createQuery } from '@tanstack/svelte-query';
+  import { link } from 'svelte-spa-router';
   import {
     BarChart3,
     TrendingUp,
@@ -497,7 +498,8 @@
       <div class="space-y-3">
         {#each outlets as outlet (outlet.id)}
           <a
-            href="#/analytics/outlet/{outlet.id}"
+            href="/analytics/outlet/{outlet.id}"
+            use:link
             class="block rounded-2xl border border-coffee-200 bg-cream p-4 shadow-card transition-all hover:border-orange-300 hover:shadow-md"
           >
             <div class="flex items-start justify-between gap-3">
@@ -556,7 +558,8 @@
       <div class="space-y-3">
         {#each products as product (product.id)}
           <a
-            href="#/analytics/product/{product.id}"
+            href="/analytics/product/{product.id}"
+            use:link
             class="block rounded-2xl border border-coffee-200 bg-cream p-4 shadow-card transition-all hover:border-orange-300 hover:shadow-md"
           >
             <div class="flex items-start justify-between gap-3">

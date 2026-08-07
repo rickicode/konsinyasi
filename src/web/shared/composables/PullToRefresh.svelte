@@ -30,6 +30,11 @@
   let refreshing = $state(false);
   let offline = $state(false);
 
+  // Minimum pull distance before the hint becomes visible. Without this,
+  // small accidental finger movements at the top of a page (or native
+  // overscroll bounce) would flash the "Tarik ke bawah" text.
+  const HINT_DEADZONE = 16;
+
   onMount(() => {
     const el = container;
     if (!el) return;
@@ -163,8 +168,9 @@
     class={cn('relative min-h-0 flex-1', className)}
   >
     <div
-      class="pointer-events-none absolute left-0 right-0 top-0 z-10 flex h-20 -translate-y-full items-end justify-center pb-3"
+      class="pointer-events-none absolute left-0 right-0 top-0 z-10 flex h-20 items-end justify-center pb-3 transition-opacity duration-150 {distance >= HINT_DEADZONE ? 'opacity-100' : 'opacity-0'}"
       style:transform={`translateY(${Math.min(distance - 80, 0)}px)`}
+      aria-hidden={distance < HINT_DEADZONE ? 'true' : undefined}
     >
       <div class="flex items-center gap-2 text-coffee-500">
         {#if refreshing}

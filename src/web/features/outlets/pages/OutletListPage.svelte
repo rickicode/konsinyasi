@@ -18,13 +18,13 @@ import { push } from 'svelte-spa-router';
   const auth = getAuth();
   const geolocation = useGeolocation();
 
-  const outletsQuery = createInfiniteQuery(() => outletsInfiniteQueryOptions(debouncedSearch, statusFilter));
-
   let search = $state('');
   let debouncedSearch = $state('');
+  let statusFilter = $state<'all' | 'active' | 'inactive'>('all');
+  const outletsQuery = createInfiniteQuery(() => outletsInfiniteQueryOptions(debouncedSearch, statusFilter));
+
   let searchTimeout: ReturnType<typeof setTimeout> | null = null;
   let editingId = $state<string | null>(null);
-  let statusFilter = $state<'all' | 'active' | 'inactive'>('all');
   let sortBy = $state<'nearest' | 'name'>('nearest');
   let searchFocused = $state(false);
 

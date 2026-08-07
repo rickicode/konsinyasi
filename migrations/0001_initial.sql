@@ -1,6 +1,5 @@
--- Konsinyasi Initial Schema — consolidated migration
--- All tables, indexes, triggers, and seed data in one file.
-
+-- Konsinyasi — Single consolidated migration
+-- Merges 0001_initial + 0002_is_public + 0003_cycle_indexes + 0004_visit_delta
 PRAGMA foreign_keys = off;
 
 -- =============================================================================
@@ -20,7 +19,7 @@ CREATE TABLE users (
 CREATE UNIQUE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_status_role ON users(status, role);
 CREATE TRIGGER trg_users_updated_at
-AFTER UPDATE ON users
+  AFTER UPDATE ON users
 BEGIN
   UPDATE users SET updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = NEW.id;
 END;
@@ -45,7 +44,7 @@ CREATE TABLE app_settings (
   updated_by  TEXT REFERENCES users(id)
 );
 CREATE TRIGGER trg_app_settings_updated_at
-AFTER UPDATE ON app_settings
+  AFTER UPDATE ON app_settings
 BEGIN
   UPDATE app_settings SET updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE key = NEW.key;
 END;
@@ -65,7 +64,7 @@ CREATE TABLE uoms (
 );
 CREATE UNIQUE INDEX idx_uoms_symbol_active ON uoms(symbol) WHERE deleted_at IS NULL;
 CREATE TRIGGER trg_uoms_updated_at
-AFTER UPDATE ON uoms
+  AFTER UPDATE ON uoms
 BEGIN
   UPDATE uoms SET updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = NEW.id;
 END;
@@ -84,7 +83,7 @@ CREATE TABLE raw_materials (
 );
 CREATE UNIQUE INDEX idx_raw_materials_name_unique ON raw_materials(name) WHERE deleted_at IS NULL;
 CREATE TRIGGER trg_raw_materials_updated_at
-AFTER UPDATE ON raw_materials
+  AFTER UPDATE ON raw_materials
 BEGIN
   UPDATE raw_materials SET updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = NEW.id;
 END;
@@ -99,6 +98,7 @@ CREATE TABLE products (
   hpp_override    INTEGER,
   price_to_outlet INTEGER NOT NULL CHECK (price_to_outlet >= 0),
   status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  is_public       INTEGER NOT NULL DEFAULT 0,
   photo_key       TEXT,
   description     TEXT,
   deleted_at      TEXT,
@@ -108,8 +108,9 @@ CREATE TABLE products (
 CREATE INDEX idx_products_deleted_at_name ON products(deleted_at, name);
 CREATE INDEX idx_products_status_deleted_at_name ON products(status, deleted_at, name);
 CREATE UNIQUE INDEX idx_products_name_active ON products(name) WHERE deleted_at IS NULL;
+CREATE INDEX idx_products_is_public ON products(is_public) WHERE deleted_at IS NULL AND is_public = 1;
 CREATE TRIGGER trg_products_updated_at
-AFTER UPDATE ON products
+  AFTER UPDATE ON products
 BEGIN
   UPDATE products SET updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = NEW.id;
 END;
@@ -126,7 +127,7 @@ CREATE TABLE product_recipes (
 CREATE UNIQUE INDEX idx_recipes_unique_product_raw ON product_recipes(product_id, raw_material_id);
 CREATE INDEX idx_recipes_product ON product_recipes(product_id);
 CREATE TRIGGER trg_product_recipes_updated_at
-AFTER UPDATE ON product_recipes
+  AFTER UPDATE ON product_recipes
 BEGIN
   UPDATE product_recipes SET updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = NEW.id;
 END;
@@ -155,7 +156,7 @@ CREATE INDEX idx_outlets_active ON outlets(status) WHERE deleted_at IS NULL;
 CREATE INDEX idx_outlets_name ON outlets(name);
 CREATE UNIQUE INDEX idx_outlets_name_active ON outlets(name) WHERE deleted_at IS NULL;
 CREATE TRIGGER trg_outlets_updated_at
-AFTER UPDATE ON outlets
+  AFTER UPDATE ON outlets
 BEGIN
   UPDATE outlets SET updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = NEW.id;
 END;
@@ -185,7 +186,9 @@ CREATE TABLE visit_submissions (
   notes                    TEXT,
   amount_collected_total   INTEGER NOT NULL DEFAULT 0,
   qty_sold_total           INTEGER NOT NULL DEFAULT 0,
-  qty_remaining_total      INTEGER NOT NULL DEFAULT 0,  -- Good products stay at warung
+  qty_remaining_total      INTEGER NOT NULL DEFAULT 0,
+  amount_collected_delta   INTEGER NOT NULL DEFAULT 0,
+  qty_sold_delta           INTEGER NOT NULL DEFAULT 0,
   status                   TEXT NOT NULL DEFAULT 'committed' CHECK (status IN ('committed', 'voided')),
   voided_at                TEXT,
   voided_by                TEXT REFERENCES users(id),
@@ -254,8 +257,10 @@ CREATE INDEX idx_cycles_dropped_at ON consignment_cycles(dropped_at);
 CREATE INDEX idx_cycles_product ON consignment_cycles(product_id);
 CREATE INDEX idx_consignment_cycles_visit_submission_id ON consignment_cycles(visit_submission_id);
 CREATE INDEX idx_consignment_cycles_created_at ON consignment_cycles(created_at);
+CREATE INDEX idx_cycles_status ON consignment_cycles(status);
+CREATE INDEX idx_cycles_outlet_created ON consignment_cycles(outlet_id, created_at);
 CREATE TRIGGER trg_consignment_cycles_updated_at
-AFTER UPDATE ON consignment_cycles
+  AFTER UPDATE ON consignment_cycles
 BEGIN
   UPDATE consignment_cycles SET updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = NEW.id;
 END;
@@ -281,7 +286,7 @@ CREATE INDEX idx_product_batches_production_date ON product_batches(production_d
 CREATE INDEX idx_product_batches_expired_date ON product_batches(expired_date);
 CREATE INDEX idx_product_batches_created_at ON product_batches(created_at);
 CREATE TRIGGER trg_product_batches_updated_at
-AFTER UPDATE ON product_batches
+  AFTER UPDATE ON product_batches
 BEGIN
   UPDATE product_batches SET updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE id = NEW.id;
 END;
@@ -302,10 +307,9 @@ PRAGMA foreign_keys = on;
 -- =============================================================================
 
 -- Default admin user (password: hijilabs)
--- bcrypt hash generated via: await Bun.password.hash('hijilabs')
-INSERT INTO users (id, email, username, name, password_hash, role, status)
+INSERT OR IGNORE INTO users (id, email, username, name, password_hash, role, status)
 VALUES (
-  'user-1',
+  'c5b38c0d-af27-4ac6-92e5-ec8aedd7cd33',
   'admin@konsi.com',
   'admin',
   'Admin',
@@ -315,73 +319,42 @@ VALUES (
 );
 
 -- App settings
-INSERT INTO app_settings (key, value) VALUES ('geofence_radius_m', '100');
-INSERT INTO app_settings (key, value) VALUES ('cycle_red_hours', '96');
-INSERT INTO app_settings (key, value) VALUES ('cycle_yellow_hours', '72');
-INSERT INTO app_settings (key, value) VALUES ('brand_name', 'Tempatkan Kopi');
+INSERT OR IGNORE INTO app_settings (key, value) VALUES ('geofence_radius_m', '100');
+INSERT OR IGNORE INTO app_settings (key, value) VALUES ('cycle_red_hours', '96');
+INSERT OR IGNORE INTO app_settings (key, value) VALUES ('cycle_yellow_hours', '72');
+INSERT OR IGNORE INTO app_settings (key, value) VALUES ('brand_name', 'Tempatkan Kopi');
 
 -- UOMs
-INSERT INTO uoms (id, name, symbol, dimension, multiplier) VALUES
-  ('uom-gram',    'Gram',      'g',   'mass', 1),
-  ('uom-kg',      'Kilogram',  'kg',  'mass', 1000),
-  ('uom-ons',     'Ons',       'ons', 'mass', 100),
-  ('uom-ml',      'Mililiter', 'ml',  'vol',  1),
-  ('uom-liter',   'Liter',     'L',   'vol',  1000),
-  ('uom-pcs',     'Pieces',    'pcs', 'count', 1);
+INSERT OR IGNORE INTO uoms (id, name, symbol, dimension, multiplier) VALUES
+  ('83aa42c3-a450-4cef-b503-ea6318b12189', 'Gram',      'g',   'mass', 1),
+  ('a15e8f1c-4ec2-4220-9f45-d3af3292e622', 'Kilogram',  'kg',  'mass', 1000),
+  ('71eab4ab-dd58-4f96-ad42-d8ff0c8fa65b', 'Ons',       'ons', 'mass', 100),
+  ('c40caf87-788a-4913-9474-949829be079d', 'Mililiter', 'ml',  'vol',  1),
+  ('b504647a-7db9-441a-ad91-0f1a511f214c', 'Liter',     'L',   'vol',  1000),
+  ('ab9e4db5-434d-4a2e-91f5-b269b70ccff6', 'Pieces',    'pcs', 'count', 1);
 
--- =============================================================================
--- RAW MATERIALS (harga per base unit dalam Rupiah)
--- =============================================================================
--- Espresso 1 Shot (50 ml): Rp900
---   Blend Rp110k/kg: 40% Arabika + 20% Robusta + 40% Robusta Murah
-INSERT INTO raw_materials (id, name, base_unit, price_per_base_unit) VALUES
-  ('rm-espresso',   'Espresso 1 Shot (50 ml)',  'ml',  18);   -- Rp900 / 50ml = Rp18/ml
+-- Raw Materials
+INSERT OR IGNORE INTO raw_materials (id, name, base_unit, price_per_base_unit) VALUES
+  ('9b5ea803-10d8-416b-bd7a-2bc8b0008828', 'Espresso 1 Shot (50 ml)',  'ml',  18),
+  ('9a70bf1d-832c-4405-8440-8d3af85afbbd', 'Susu UHT',                'ml',  18),
+  ('91395fa7-acd2-48c9-b489-9180282b1f20', 'Gula Aren Liquid',         'ml',  40),
+  ('c638d61f-cf0f-4bc1-8214-610a6e2d46e6', 'Krimer Bubuk',             'g',   39),
+  ('cbf83c09-e23b-4caf-ba9c-9d5c222e814f', 'Botol Saku 200 ml',        'pcs', 950),
+  ('6f652c7c-6afa-465c-9a4a-3fc09e025863', 'Stiker Label A3+',         'pcs', 234);
 
--- Susu UHT: Rp18.000/L = Rp18/ml
-INSERT INTO raw_materials (id, name, base_unit, price_per_base_unit) VALUES
-  ('rm-susu-uht',   'Susu UHT',                'ml',  18);   -- Rp18.000/L = Rp18/ml
+-- Products
+INSERT OR IGNORE INTO products (id, name, hpp, hpp_override, price_to_outlet, status, is_public) VALUES
+  ('2cfbc55b-a176-4906-81d2-2da9e4696c29', 'Kopi Susu Gula Aren', 5349, NULL, 9000, 'active', 1),
+  ('8698e947-40c6-469c-98ce-ffd62049131e', 'Iced Americano', 1724, NULL, 6000, 'active', 1);
 
--- Gula Aren Liquid: Rp40.000/L = Rp40/ml
-INSERT INTO raw_materials (id, name, base_unit, price_per_base_unit) VALUES
-  ('rm-gula-aren',  'Gula Aren Liquid',         'ml',  40);   -- Rp40.000/L = Rp40/ml
-
--- Krimer Bubuk: Rp39.000/kg = Rp39/gram
-INSERT INTO raw_materials (id, name, base_unit, price_per_base_unit) VALUES
-  ('rm-krimer',     'Krimer Bubuk',             'g',   39);   -- Rp39.000/kg = Rp39/g
-
--- Botol Saku 200 ml: Rp950/pcs
-INSERT INTO raw_materials (id, name, base_unit, price_per_base_unit) VALUES
-  ('rm-botol',      'Botol Saku 200 ml',        'pcs', 950);  -- Rp950/pcs
-
--- Stiker Label A3+ (Rp7.000 isi 30 pcs = Rp234/pcs)
-INSERT INTO raw_materials (id, name, base_unit, price_per_base_unit) VALUES
-  ('rm-stiker',     'Stiker Label A3+',         'pcs', 234);  -- Rp7000/30 = ~Rp234/pcs
-
--- =============================================================================
--- PRODUCTS
--- =============================================================================
-
--- A. Kopi Susu Gula Aren
---    HPP: Espresso(40ml) + GulaAren(40ml) + Krimer(15g) + SusuUHT(70ml) + Kemasan(botol+stiker)
---    = 720 + 1600 + 585 + 1260 + 1184 = Rp5.349
-INSERT INTO products (id, name, hpp, hpp_override, price_to_outlet, status) VALUES
-  ('prod-kopi-susu', 'Kopi Susu Gula Aren', 5349, NULL, 9000, 'active');
-
-INSERT INTO product_recipes (id, product_id, raw_material_id, quantity, unit) VALUES
-  ('rec-ks-espresso',  'prod-kopi-susu', 'rm-espresso',  40,   'ml'),
-  ('rec-ks-gula',      'prod-kopi-susu', 'rm-gula-aren', 40,   'ml'),
-  ('rec-ks-krimer',    'prod-kopi-susu', 'rm-krimer',    15,   'g'),
-  ('rec-ks-susu',      'prod-kopi-susu', 'rm-susu-uht',  70,   'ml'),
-  ('rec-ks-botol',     'prod-kopi-susu', 'rm-botol',     1,    'pcs'),
-  ('rec-ks-stiker',    'prod-kopi-susu', 'rm-stiker',    1,    'pcs');
-
--- B. Iced Americano
---    HPP: Espresso(30ml) + Kemasan(botol+stiker)
---    = 540 + 1184 = Rp1.724
-INSERT INTO products (id, name, hpp, hpp_override, price_to_outlet, status) VALUES
-  ('prod-americano', 'Iced Americano', 1724, NULL, 6000, 'active');
-
-INSERT INTO product_recipes (id, product_id, raw_material_id, quantity, unit) VALUES
-  ('rec-am-espresso',  'prod-americano', 'rm-espresso', 30,   'ml'),
-  ('rec-am-botol',     'prod-americano', 'rm-botol',    1,    'pcs'),
-  ('rec-am-stiker',    'prod-americano', 'rm-stiker',   1,    'pcs');
+-- Product Recipes
+INSERT OR IGNORE INTO product_recipes (id, product_id, raw_material_id, quantity, unit) VALUES
+  ('fa2200f2-8163-4b7d-9c3b-9812c3f1052d', '2cfbc55b-a176-4906-81d2-2da9e4696c29', '9b5ea803-10d8-416b-bd7a-2bc8b0008828', 40, 'ml'),
+  ('040c6863-b94e-44be-ac5e-5d7f85ad5fd6', '2cfbc55b-a176-4906-81d2-2da9e4696c29', '91395fa7-acd2-48c9-b489-9180282b1f20', 40, 'ml'),
+  ('2e49ff19-1192-4be7-a5ab-c5f16fda2f00', '2cfbc55b-a176-4906-81d2-2da9e4696c29', 'c638d61f-cf0f-4bc1-8214-610a6e2d46e6', 15, 'g'),
+  ('20b21609-ccd3-4907-9f41-883b499b89b5', '2cfbc55b-a176-4906-81d2-2da9e4696c29', '9a70bf1d-832c-4405-8440-8d3af85afbbd', 70, 'ml'),
+  ('b8bf967c-8d30-4e8e-a1ee-4a05ba16d969', '2cfbc55b-a176-4906-81d2-2da9e4696c29', 'cbf83c09-e23b-4caf-ba9c-9d5c222e814f', 1,  'pcs'),
+  ('28623435-5955-4c79-942e-90f8a1bc53c8', '2cfbc55b-a176-4906-81d2-2da9e4696c29', '6f652c7c-6afa-465c-9a4a-3fc09e025863', 1,  'pcs'),
+  ('b8a26cf5-2ee0-4682-8d68-71cc1d0212d7', '8698e947-40c6-469c-98ce-ffd62049131e', '9b5ea803-10d8-416b-bd7a-2bc8b0008828', 30, 'ml'),
+  ('b54a7a36-d5d1-4ee5-95d4-198b7398a878', '8698e947-40c6-469c-98ce-ffd62049131e', 'cbf83c09-e23b-4caf-ba9c-9d5c222e814f', 1,  'pcs'),
+  ('8276ec6b-4aa6-4867-9f41-98178c322e9a', '8698e947-40c6-469c-98ce-ffd62049131e', '6f652c7c-6afa-465c-9a4a-3fc09e025863', 1,  'pcs');

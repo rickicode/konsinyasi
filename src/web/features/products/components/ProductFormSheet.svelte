@@ -23,6 +23,7 @@
   import RecipeEditor from './RecipeEditor.svelte';
   import Button from '../../../shared/ui/Button.svelte';
   import Input from '../../../shared/ui/Input.svelte';
+import FormattedInput from '../../../shared/ui/FormattedInput.svelte';
   import TextArea from '../../../shared/ui/TextArea.svelte';
   import ErrorState from '../../../shared/ui/ErrorState.svelte';
   import Sheet from '../../../shared/ui/Sheet.svelte';
@@ -56,8 +57,8 @@
   let description = $state('');
   let status = $state<'active' | 'inactive'>('active');
   let is_public = $state(0);
-  let priceInput = $state('');
-  let hppOverrideInput = $state('');
+  let priceInput = $state<number>(0);
+  let hppOverrideInput = $state<number | undefined>(undefined);
   let recipeLines = $state<RecipeLineInput[]>([]);
   let fieldErrors = $state<Record<string, string>>({});
   let formError = $state<string | null>(null);
@@ -112,11 +113,8 @@
       description = product.description ?? '';
       status = product.status;
       is_public = product.is_public ? 1 : 0;
-      priceInput = product.price_to_outlet !== undefined ? String(product.price_to_outlet) : '';
-      hppOverrideInput =
-        product.hpp_override !== null && product.hpp_override !== undefined
-          ? String(product.hpp_override)
-          : '';
+      priceInput = product.price_to_outlet ?? 0;
+      hppOverrideInput = product.hpp_override ?? undefined;
       recipeLines =
         product.recipe_lines?.map((l) => ({
           raw_material_id: l.raw_material_id,
@@ -160,10 +158,10 @@
     const errors: Record<string, string> = {};
     if (!name.trim()) errors.name = 'Nama produk wajib diisi';
     if (canManageFinancial) {
-      const price = String(priceInput).trim() === '' ? NaN : Number(priceInput);
+      const price = priceInput;
       if (Number.isNaN(price) || price < 0 || !Number.isInteger(price))
         errors.price_to_outlet = 'Harga outlet wajib diisi dan tidak boleh negatif';
-      if (String(hppOverrideInput).trim() !== '') {
+      if (hppOverrideInput !== undefined && hppOverrideInput !== null) {
         const override = Number(hppOverrideInput);
         if (Number.isNaN(override) || override < 0 || !Number.isInteger(override))
           errors.hpp_override = 'Override HPP tidak boleh negatif';
@@ -185,10 +183,10 @@
     if (description.trim()) payload.description = description.trim();
     if (!canManageFinancial) return payload;
     const hasRecipe = recipeLines.length > 0;
-    payload.price_to_outlet = Number(priceInput);
+    payload.price_to_outlet = priceInput;
     payload.recipe_lines = hasRecipe ? recipeLines : undefined;
     if (!hasRecipe && String(hppOverrideInput).trim() !== '') {
-      payload.hpp_override = Number(hppOverrideInput);
+      payload.hpp_override = hppOverrideInput;
     }
     return payload;
   }
@@ -469,27 +467,19 @@
     <section class="rounded-2xl border border-coffee-100 bg-milk p-4">
       <h3 class="mb-3 text-sm font-semibold text-coffee-800">Harga</h3>
       <div class="space-y-4">
-        <Input
+        <FormattedInput
           label="Harga ke Outlet (Rp)"
-          type="number"
-          inputmode="numeric"
-          min="0"
-          step="1"
-          placeholder="0"
-          required
           bind:value={priceInput}
           error={fieldErrors.price_to_outlet}
+          required
+          min={0}
         />
-        <Input
+        <FormattedInput
           label="Override HPP (Rp)"
-          type="number"
-          inputmode="numeric"
-          min="0"
-          step="1"
-          placeholder="Kosongkan jika pakai resep"
-          helper="Diabaikan saat resep tersedia."
           bind:value={hppOverrideInput}
           error={fieldErrors.hpp_override}
+          helper="Diabaikan saat resep tersedia."
+          min={0}
         />
       </div>
     </section>

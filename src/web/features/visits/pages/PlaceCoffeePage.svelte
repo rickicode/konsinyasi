@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
   import { push } from 'svelte-spa-router';
+  import { getAppConfig } from '$lib/stores/app-config.svelte.js';
   import { outletsInfiniteQueryOptions } from '../../outlets/api/index.js';
   import { queryKeys } from '$lib/api/query-keys.js';
   import { useGeolocation } from '$lib/stores/geolocation.svelte.js';
@@ -15,6 +16,7 @@
 
   const queryClient = useQueryClient();
   const geolocation = useGeolocation();
+  const appConfig = getAppConfig();
 
   const outletsQuery = createInfiniteQuery(() => outletsInfiniteQueryOptions());
 
@@ -59,7 +61,7 @@
       <Icon name="package" size={20} />
     </div>
     <div>
-      <h1 class="text-xl font-bold text-coffee-900">Tempatkan Kopi</h1>
+      <h1 class="text-xl font-bold text-coffee-900">{appConfig.brandName}</h1>
       <p class="text-sm text-coffee-500">Pilih warung untuk menitipkan kopi</p>
     </div>
   </div>

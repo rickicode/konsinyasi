@@ -3,6 +3,7 @@ import { createQuery } from '@tanstack/svelte-query';
 import { uomsQueryOptions } from '../../uoms/api/index.js';
 import type { RawMaterial } from '@shared/schemas/raw-material.schema.js';
 import type { RecipeLineInput } from '@shared/schemas/product.schema.js';
+import { formatRupiah } from '$lib/utils/format.js';
 import Button from '../../../shared/ui/Button.svelte';
 import Icon from '../../../shared/ui/icons/Icon.svelte';
 import RawMaterialPicker from '../../raw-materials/components/RawMaterialPicker.svelte';
@@ -29,6 +30,39 @@ const unitOptions = $derived(
 );
 const uomBySymbol = $derived(Object.fromEntries(uoms.map((u) => [u.symbol, u])));
 const materialById = $derived(Object.fromEntries(materials.map((m) => [m.id, m])));
+
+function calculateLinePrice(index: number): number | null {
+  const line = lines[index];
+  if (!line || !line.raw_material_id || !line.quantity || line.quantity <= 0) return null;
+  const material = materialById[line.raw_material_id];
+  if (!material) return null;
+  const uom = uomBySymbol[line.unit];
+  const baseUom = uomBySymbol[material.base_unit];
+  if (!uom || !baseUom) return null;
+  const qtyInBase = line.quantity * (uom.multiplier / baseUom.multiplier);
+  return Math.round(qtyInBase * material.price_per_base_unit);
+}
+
+/** Price of one unit in the line's selected unit (e.g. per gram when unit is 'g'). */
+function calculateUnitPrice(index: number): number | null {
+  const line = lines[index];
+  if (!line || !line.raw_material_id) return null;
+  const material = materialById[line.raw_material_id];
+  if (!material) return null;
+  const uom = uomBySymbol[line.unit];
+  const baseUom = uomBySymbol[material.base_unit];
+  if (!uom || !baseUom) return null;
+  // Convert the per-base-unit price to the line's unit, matching the conversion
+  // used in calculateLinePrice (e.g. Rp35.000/kg -> Rp35 per gram).
+  return Math.round(material.price_per_base_unit * (uom.multiplier / baseUom.multiplier));
+}
+
+const totalHpp = $derived(
+  lines.reduce((sum, _, i) => {
+    const price = calculateLinePrice(i);
+    return sum + (price ?? 0);
+  }, 0)
+);
 const selectedMaterials = $derived(
   lines.map((line) => materialById[line.raw_material_id] ?? null)
 );
@@ -115,6 +149,8 @@ $effect(() => {
             {@const selectedBaseUom = selectedMaterial
               ? uomBySymbol[selectedMaterial.base_unit]
               : undefined}
+            {@const linePrice = calculateLinePrice(index)}
+            {@const unitPrice = calculateUnitPrice(index)}
         <li class="rounded-xl border border-coffee-200 bg-white p-3 shadow-sm">
           <div class="space-y-3">
                 <div class="space-y-1.5">
@@ -181,7 +217,20 @@ $effect(() => {
               </div>
             </div>
             {#if !disabled}
-              <div class="mt-3 flex justify-end">
+              <div class="mt-3 flex items-center justify-between gap-3">
+                {#if unitPrice !== null && linePrice !== null}
+                  <div class="min-w-0">
+                    <p class="text-xs font-medium text-coffee-500">
+                      Harga: {formatRupiah(unitPrice)}
+                      {#if lines[index].unit}/{lines[index].unit}{/if}
+                    </p>
+                    {#if linePrice !== unitPrice}
+                      <p class="text-sm font-bold text-coffee-900">
+                        Subtotal {formatRupiah(linePrice)}
+                      </p>
+                    {/if}
+                  </div>
+                {/if}
                 <Button
                   type="button"
                   variant="ghost"
@@ -199,6 +248,13 @@ $effect(() => {
       {/each}
     </ul>
   {/if}
+{#if lines.length > 0 && totalHpp > 0}
+  <div class="rounded-xl border border-coffee-200 bg-coffee-50 p-3 flex items-center justify-between">
+    <span class="text-sm font-medium text-coffee-700">Total HPP</span>
+    <span class="text-base font-bold text-coffee-900">{formatRupiah(totalHpp)}</span>
+  </div>
+{/if}
+
 <RawMaterialPicker
   open={pickerOpen}
   selectedId={pickerSelectedId}

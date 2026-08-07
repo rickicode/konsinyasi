@@ -33,7 +33,7 @@ const app = new Hono<Env>({ strict: false });
 app.use('*', requestContext);
 
 // Analytics middleware: tracks request latency, status codes, and error rates.
-app.use('*', analyticsMiddleware);
+app.use('*', analyticsMiddleware());
 
 // Global middleware: register CORS and security headers before any routes so Hono
 // runs them for every API response. Previously CORS was after routes and was skipped.
@@ -209,27 +209,37 @@ app.use('/api/labels', requireAuth);
 app.route('/api/labels', labels);
 
 app.onError((err, c) => {
-  if (err instanceof AppError) {
-    logError(c, err, { code: err.code, expected: true });
-    return c.json({ code: err.code, message: err.message }, err.status as 200);
-  }
+	if (err instanceof AppError) {
+		logError(c, err, { code: err.code, expected: true });
+		return c.json({ code: err.code, message: err.message }, err.status as 200);
+	}
 
-  // c.env may be undefined in unit tests, so guard the DEBUG read.
-  const isDebug = c.env?.DEBUG === '1' || c.env?.DEBUG === 'true';
-  const message = err.message ?? 'Terjadi kesalahan server';
+	// Always include error details for debugging
+	const message = err instanceof Error ? err.message : String(err);
+	const details: Record<string, unknown> = {
+		name: err instanceof Error ? err.name : 'UnknownError',
+		message,
+	};
 
-  // Structured error logging with request context enrichment.
-  logError(c, err, {
-    code: 'INTERNAL_ERROR',
-    message,
-    ...(isDebug && err instanceof Error && { stack: err.stack }),
-  });
+	// Include stack trace in development or when DEBUG is enabled
+	const isDebug = c.env?.DEBUG === '1' || c.env?.DEBUG === 'true';
+	if (isDebug && err instanceof Error && err.stack) {
+		details.stack = err.stack;
+	}
 
-  if (isDebug) {
-    return c.json({ code: 'INTERNAL_ERROR', message, stack: err.stack }, 500);
-  }
-  return c.json({ code: 'INTERNAL_ERROR', message: 'Terjadi kesalahan server' }, 500);
+	// Structured error logging with request context enrichment.
+	logError(c, err, { code: 'INTERNAL_ERROR', details });
+
+	return c.json(
+		{
+			code: 'INTERNAL_ERROR',
+			message: 'Terjadi kesalahan server',
+			details,
+		},
+		500
+	);
 });
+
 
 // SPA fallback: serve index.html for any non-API path so path-based routing works.
 app.get('*', async (c) => {
