@@ -1,5 +1,7 @@
 ---
 // produk.astro - Products page
+// Uses only shared building blocks: BaseLayout (global config + brand),
+// Header component, design-system.css, and scripts/api + scripts/format.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 
@@ -38,256 +40,60 @@ const jsonLd = {
   </main>
 </BaseLayout>
 
-<style is:inline>
-  .main {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 16px;
-    padding-bottom: 100px;
+<script>
+  import { apiFetch } from '../scripts/api';
+  import { escapeHtml, formatNumber, emptyHtml, errorHtml } from '../scripts/format';
+
+  interface ProductItem {
+    id: string;
+    name: string;
+    description?: string | null;
+    price: number;
+    photo_url?: string | null;
   }
-
-  .page-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-
-  .back-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    border: none;
-    background: var(--coffee-50);
-    color: var(--coffee-700);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    -webkit-tap-highlight-color: transparent;
-    text-decoration: none;
-  }
-
-  .back-btn:hover {
-    background: var(--coffee-100);
-  }
-
-  .page-title {
-    font-size: 20px;
-    font-weight: 800;
-    color: var(--coffee-900);
-  }
-
-  /* Products List */
-  .products-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .product-card {
-    background: white;
-    border-radius: 14px;
-    padding: 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    transition: transform 0.15s ease;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .product-card:active {
-    transform: scale(0.98);
-  }
-
-  .product-thumb {
-    width: 56px;
-    height: 56px;
-    background: var(--coffee-100);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-
-  .product-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .product-thumb-placeholder {
-    color: var(--coffee-400);
-  }
-
-  .product-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .product-name {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--coffee-900);
-    margin-bottom: 2px;
-  }
-
-  .product-desc {
-    font-size: 12px;
-    color: var(--coffee-500);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .product-price {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--caramel);
-    flex-shrink: 0;
-  }
-
-  /* Loading */
-  .loading {
-    text-align: center;
-    padding: 40px;
-  }
-
-  .spinner {
-    width: 36px;
-    height: 36px;
-    border: 3px solid var(--coffee-100);
-    border-top-color: var(--coffee-700);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 12px;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .loading p {
-    font-size: 13px;
-    color: var(--coffee-500);
-  }
-
-  /* Empty State */
-  .empty-state {
-    text-align: center;
-    padding: 48px 24px;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  }
-
-  .empty-state svg {
-    color: var(--coffee-300);
-    margin-bottom: 16px;
-  }
-
-  .empty-state h3 {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--coffee-900);
-    margin-bottom: 8px;
-  }
-
-  .empty-state p {
-    font-size: 13px;
-    color: var(--coffee-500);
-  }
-</style>
-
-<script is:inline define:vars={{ apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '' }}>
-  // Must match index.astro — without it, API fetches would go to the Pages
-  // origin (kopi.hijitoko.com) and return an HTML page instead of JSON.
-  window.__API_BASE_URL__ = apiBaseUrl;
-</script>
-
-<script is:inline>
-  const API_BASE = window.__API_BASE_URL__ || '';
 
   async function loadProducts() {
     const listEl = document.getElementById('products-list');
+    if (!listEl) return;
 
     try {
-      const res = await fetch(API_BASE + '/api/public/products');
-      if (!res.ok) throw new Error('Failed to fetch');
-
-      const data = await res.json();
+      const data = await apiFetch<{ products: ProductItem[] }>('/api/public/products');
       const products = data.products || [];
 
       if (!products.length) {
-        if (listEl) {
-          listEl.innerHTML = `
-            <div class="empty-state">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M18 8h1a4 4 0 010 8h-1"/>
-                <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>
-                <path d="M6 1v3M10 1v3M14 1v3"/>
-              </svg>
-              <h3>Belum Ada Produk</h3>
-              <p>Produk akan muncul di sini</p>
-            </div>
-          `;
-        }
+        listEl.innerHTML = emptyHtml('Belum Ada Produk', 'Produk akan muncul di sini');
         return;
       }
 
-      let html = '';
-      products.forEach(p => {
-        const thumbHtml = p.photo_url
-          ? `<img src="${escapeHtml(p.photo_url)}" alt="${escapeHtml(p.name)}" width="56" height="56" loading="lazy">`
-          : `<svg class="product-thumb-placeholder" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M18 8h1a4 4 0 010 8h-1"/>
-              <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>
-              <path d="M6 1v3M10 1v3M14 1v3"/>
-            </svg>`;
+      listEl.innerHTML = products
+        .map((p) => {
+          const thumb = p.photo_url
+            ? `<img src="${escapeHtml(p.photo_url)}" alt="${escapeHtml(p.name)}" width="56" height="56" loading="lazy">`
+            : `<svg class="product-thumb-placeholder" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M18 8h1a4 4 0 010 8h-1"/>
+                <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>
+                <path d="M6 1v3M10 1v3M14 1v3"/>
+              </svg>`;
 
-        html += `
-          <div class="product-card">
-            <div class="product-thumb">
-              ${thumbHtml}
+          return `
+            <div class="product-card">
+              <div class="product-thumb">
+                ${thumb}
+              </div>
+              <div class="product-info">
+                <div class="product-name">${escapeHtml(p.name)}</div>
+                ${p.description ? `<div class="product-desc">${escapeHtml(p.description)}</div>` : ''}
+              </div>
+              <div class="product-price">Rp ${formatNumber(p.price)}</div>
             </div>
-            <div class="product-info">
-              <div class="product-name">${escapeHtml(p.name)}</div>
-              ${p.description ? `<div class="product-desc">${escapeHtml(p.description)}</div>` : ''}
-            </div>
-            <div class="product-price">Rp ${formatNumber(p.price)}</div>
-          </div>
-        `;
-      });
-
-      if (listEl) listEl.innerHTML = html;
-
+          `;
+        })
+        .join('');
     } catch (e) {
-      console.error('Error:', e);
-      if (listEl) {
-        listEl.innerHTML = `
-          <div class="empty-state">
-            <h3>Gagal Memuat</h3>
-            <p>Coba refresh halaman</p>
-          </div>
-        `;
-      }
+      console.error('Gagal memuat produk:', e);
+      listEl.innerHTML = errorHtml('Gagal Memuat', 'Coba refresh halaman');
     }
   }
 
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  function formatNumber(num) {
-    return new Intl.NumberFormat('id-ID').format(num);
-  }
-
-  document.addEventListener('DOMContentLoaded', loadProducts);
+  loadProducts();
 </script>

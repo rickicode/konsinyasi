@@ -16,10 +16,9 @@ interface Warung {
   _dist?: number;
 }
 
-interface BrandData {
-  brand_name?: string;
-  logo_url?: string;
-}
+// Shared helpers (single source: ./format.ts & ./config.ts)
+import { escapeHtml as esc, formatNumber as fmt, formatDist } from './format';
+import { apiBase, baseUrl } from './config';
 
 // State
 let warungs: Warung[] = [];
@@ -30,16 +29,6 @@ let isRefreshing = false;
 
 // DOM helper
 const $ = (id: string) => document.getElementById(id);
-
-// HTML escape - faster string replacement
-function esc(t: string): string {
-  return t
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
 
 // Search state
 let searchTimeout: number | null = null;
@@ -296,8 +285,7 @@ async function load() {
   }
 
   try {
-    const API_BASE = (window as any).__API_BASE_URL__ || '';
-    const res = await fetch(API_BASE + '/api/public/warungs');
+    const res = await fetch(apiBase() + '/api/public/warungs');
     
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
@@ -477,14 +465,6 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function formatDist(km: number): string {
-  if (km < 1) return `${Math.round(km * 1000)} m`;
-  return `${km.toFixed(1)} km`;
-}
-
-function fmt(n: number): string {
-  return new Intl.NumberFormat('id-ID').format(n);
-}
 
 // Render
 function sortAndRender() {
@@ -672,13 +652,13 @@ function updateJsonLd() {
   const el = document.getElementById('json-ld');
   if (!el) return;
   const brand = document.querySelector('meta[property="og:site_name"]')?.getAttribute('content') || 'Konsi';
-  const baseUrl = (window as any).__BASE_URL__ || 'https://kopi.hijitoko.com';
+  const siteBaseUrl = baseUrl();
 
   const stores = warungs.map((w) => ({
     '@type': 'Store',
     name: w.name,
     description: `Warung kopi dengan ${w.products?.length || 0} produk tersedia`,
-    url: baseUrl + '/',
+    url: siteBaseUrl + '/',
     address: {
       '@type': 'PostalAddress',
       streetAddress: w.address || '',
@@ -717,7 +697,7 @@ function updateJsonLd() {
       {
         '@type': 'WebSite',
         name: brand,
-        url: baseUrl + '/',
+        url: siteBaseUrl + '/',
         description:
           'Temukan warung kopi terdekat yang masih punya stok kopi segar. Cek lokasi, produk tersedia, dan navigasi langsung ke warung kesukaanmu.',
         inLanguage: 'id-ID',
@@ -736,48 +716,6 @@ function updateJsonLd() {
   el.textContent = JSON.stringify(jsonLd);
 }
 
-// Brand update
-function updateBrand(brandName: string, logoUrl: string | null) {
-  const pageTitle = brandName + ' — Temukan Kopi';
-  document.title = pageTitle;
-
-  const siteName = document.querySelector('meta[property="og:site_name"]');
-  if (siteName) siteName.setAttribute('content', brandName);
-
-  document
-    .querySelectorAll('meta[property="og:title"], meta[name="twitter:title"]')
-    .forEach((m) => m.setAttribute('content', pageTitle));
-
-  const logoText = $('brand-logo-text');
-  if (logoText) logoText.textContent = brandName;
-
-  const logoImg = $('brand-logo-img') as HTMLImageElement;
-  const fallback = $('brand-logo-fallback');
-
-  if (logoImg) {
-    if (logoUrl) {
-      const fullUrl = logoUrl.startsWith('/') ? ((window as any).__API_BASE_URL__ || '') + logoUrl : logoUrl;
-      logoImg.src = fullUrl;
-      logoImg.style.display = '';
-      if (fallback) fallback.style.display = 'none';
-    } else {
-      logoImg.style.display = 'none';
-      if (fallback) fallback.style.display = '';
-    }
-  }
-
-  // Update favicon
-  const link = document.getElementById('brand-favicon') as HTMLLinkElement;
-  if (link) {
-    if (logoUrl) {
-      link.href = logoUrl;
-      link.type = 'image/png';
-    } else {
-      link.href = '/favicon.svg';
-      link.type = 'image/svg+xml';
-    }
-  }
-}
 
 // Filter and Sort
 let currentSort = 'distance';
@@ -834,20 +772,7 @@ function applySort(warungsToSort: Warung[]): Warung[] {
   return sorted;
 }
 
-// Initialize brand
-(function (brand: string) {
-  updateBrand(brand, null);
-  const apiBase = (window as any).__API_BASE_URL__ || '';
-  fetch(apiBase + '/api/public/brand')
-    .then((r) => {
-      if (r.ok) return r.json();
-      throw new Error('Brand fetch failed');
-    })
-    .then((data: BrandData) => {
-      if (data.brand_name) updateBrand(data.brand_name, data.logo_url || null);
-    })
-    .catch(() => {});
-})('Konsi');
+// Brand loading now lives in ./brand.ts and runs globally via BaseLayout (site.ts).
 
 // Expose functions to global scope for onclick handlers
 (window as any).requestLocation = requestLocation;
