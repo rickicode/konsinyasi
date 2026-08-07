@@ -1,3 +1,5 @@
+/// <reference lib="webworker" />
+
 import { clientsClaim, skipWaiting } from 'workbox-core';
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
@@ -5,6 +7,12 @@ import { CacheFirst, NetworkFirst, NetworkOnly, StaleWhileRevalidate } from 'wor
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { BackgroundSyncPlugin } from 'workbox-background-sync';
+
+// `self.__WB_MANIFEST` is replaced at build time by vite-plugin-pwa
+// (injectManifest strategy) — the literal must stay exactly as-is.
+declare const self: ServiceWorkerGlobalScope & {
+  __WB_MANIFEST: (string | { url: string; revision?: string })[];
+};
 
 skipWaiting();
 clientsClaim();
@@ -89,11 +97,10 @@ registerRoute(
 const OFFLINE_FALLBACK_PAGE = '/offline.html';
 
 self.addEventListener('install', (event) => {
-  const sw = self as unknown as ServiceWorkerGlobalScope;
   event.waitUntil(
     caches.open('offline-fallback').then((cache) => cache.add(OFFLINE_FALLBACK_PAGE)),
   );
-  sw.skipWaiting();
+  self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {
